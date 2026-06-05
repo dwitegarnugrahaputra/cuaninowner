@@ -2,7 +2,8 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, MessageSquare, TrendingUp, TrendingDown, AlertTriangle 
+  Search, MessageSquare, TrendingUp, TrendingDown, AlertTriangle,
+  Bell, HelpCircle 
 } from 'lucide-react';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
@@ -92,7 +93,7 @@ export default function MainDashboard({ onNavigateView }) {
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR PROFILE & SEARCH AREA */}
+        {/* TOPBAR PROFILE & SEARCH AREA DENGAN STANDARISASI IKON */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
@@ -102,7 +103,12 @@ export default function MainDashboard({ onNavigateView }) {
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <MessageSquare size={16} /> Ask Brainy
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            
+            {/* Penambahan Ikon Sinkron Sesuai Request */}
+            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
                 <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>

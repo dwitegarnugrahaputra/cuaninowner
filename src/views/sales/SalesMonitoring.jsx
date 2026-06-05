@@ -3,9 +3,10 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Calendar, Download, TrendingUp, 
-  AlertTriangle, Shield, CheckCircle, XCircle, ArrowRight 
+  AlertTriangle, Shield, ArrowRight, MessageSquare 
 } from 'lucide-react';
 
+// Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
     <div style={{
@@ -44,7 +45,7 @@ export default function SalesMonitoring({ onNavigateView }) {
           <CuaninLogoMini />
           <div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
-            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BI PLATFORM</span>
+            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
           </div>
         </div>
 
@@ -56,13 +57,13 @@ export default function SalesMonitoring({ onNavigateView }) {
             <ShoppingBag size={18} /> <span style={{ fontSize: '14px' }}>Sales</span>
           </div>
           {[
-            { name: 'Stock', icon: <Archive size={18}/> },
-            { name: 'Menu Management', icon: <Menu size={18}/> },
-            { name: 'Staf Management', icon: <Users size={18}/> }
+            { name: 'Stock', icon: <Archive size={18}/>, target: 'stock' },
+            { name: 'Menu Management', icon: <Menu size={18}/>, target: 'menu' },
+            { name: 'Staf Management', icon: <Users size={18}/>, target: 'staff' }
           ].map((menu, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }} onClick={() => onNavigateView(menu.target)}>
               {menu.icon} <span style={{ fontSize: '14px', fontWeight: '500' }}>{menu.name}</span>
-            </div>
+          </div>
           ))}
         </div>
 
@@ -83,24 +84,30 @@ export default function SalesMonitoring({ onNavigateView }) {
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR HEADER AREA */}
+        {/* TOPBAR HEADER AREA (SUDAH DISINKRONKAN 100% DENGAN DASHBOARD & ICON MESSAGESQUARE) */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '400px' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
-            <input type="text" placeholder="Search transactions, receipts, or staff..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
+            <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-               Ask Brainy
+            {/* Tombol Ask Brainy Hijau Tua Lengkap Dengan Ikon Sesuai Request */}
+            <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+               <MessageSquare size={16} /> Ask Brainy
             </button>
+            
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            
+            {/* Profil Data Identitas Alex Graham */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>Admin</p>
-                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>ONLINE</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
+                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>
               </div>
-              <div style={{ width: '36px', height: '36px', backgroundColor: '#10B981', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>A</div>
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#E5E7EB', borderRadius: '50%', overflow: 'hidden' }}>
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
             </div>
           </div>
         </div>
@@ -126,7 +133,6 @@ export default function SalesMonitoring({ onNavigateView }) {
 
           {/* THREE HEAD ROW SUMMARY CARDS */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.1fr', gap: '20px' }}>
-            {/* Today's Revenue */}
             <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
@@ -136,7 +142,6 @@ export default function SalesMonitoring({ onNavigateView }) {
               <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>Rp 14.250.000</h2>
             </div>
 
-            {/* Total Transactions */}
             <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
               <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '18px' }}>🧾</div>
               <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Total Transactions</span>
@@ -144,7 +149,6 @@ export default function SalesMonitoring({ onNavigateView }) {
               <span style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>⏰ Peak Hour: 12:00 - 13:00</span>
             </div>
 
-            {/* Void Alerts (CRITICAL CARD) */}
             <div style={{ backgroundColor: '#991B1B', padding: '24px', borderRadius: '16px', color: '#ffffff', position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div style={{ width: '36px', height: '36px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={20} color="#fff" /></div>
@@ -158,8 +162,6 @@ export default function SalesMonitoring({ onNavigateView }) {
 
           {/* LOWER SECTION LAYOUT MIX (FEED VS CASHIER TARGET) */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
-            
-            {/* LEFT CONTAINER: LIVE TRANSACTION FEED TABLE */}
             <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3>
@@ -168,7 +170,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                 </span>
               </div>
 
-              {/* TABLE AREA */}
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
@@ -180,7 +181,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Row 1 */}
                   <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                     <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:45</td>
                     <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90215</td>
@@ -190,7 +190,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                       <span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span>
                     </td>
                   </tr>
-                  {/* Row 2 (VOID ROW CRASH MATCH WITH MOCKUP) */}
                   <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}>
                     <td style={{ padding: '14px 8px', fontWeight: '500' }}>14:42</td>
                     <td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td>
@@ -200,7 +199,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                       <span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>VOID</span>
                     </td>
                   </tr>
-                  {/* Row 3 */}
                   <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                     <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:38</td>
                     <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90211</td>
@@ -210,7 +208,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                       <span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span>
                     </td>
                   </tr>
-                  {/* Row 4 */}
                   <tr style={{ color: '#111827' }}>
                     <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:30</td>
                     <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90210</td>
@@ -224,13 +221,9 @@ export default function SalesMonitoring({ onNavigateView }) {
               </table>
             </div>
 
-            {/* RIGHT CONTAINER: CASHIER PERFORMANCE & TARGET BLOCK */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* Box A: Cashier Performance Rank */}
               <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance</h3>
-                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {[
                     { rank: 1, name: 'Andi S.', orders: '128 ORDERS', sales: 'Rp 5.2M', color: '#FBBF24', bg: '#FEF3C7' },
@@ -253,13 +246,11 @@ export default function SalesMonitoring({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* Box B: Team Target Progress */}
               <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontSize: '12px', color: '#111827', fontWeight: 'bold' }}>TEAM TARGET</span>
                   <span style={{ fontSize: '12px', color: '#10B981', fontWeight: 'bold' }}>72%</span>
                 </div>
-                {/* Progress Bar Component */}
                 <div style={{ width: '100%', height: '8px', backgroundColor: '#E5E7EB', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
                   <div style={{ width: '72%', height: '100%', backgroundColor: '#10B981', borderRadius: '4px' }} />
                 </div>
@@ -268,7 +259,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                   <span>Rp 20M</span>
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -284,10 +274,8 @@ export default function SalesMonitoring({ onNavigateView }) {
               </p>
             </div>
 
-            {/* Circle Badge Score & Action */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
               <div style={{ textAlign: 'center' }}>
-                {/* Radial Donut Anomaly */}
                 <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'conic-gradient(#10B981 0% 14%, #1E293B 14% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}>
                   <div style={{ width: '50px', height: '50px', backgroundColor: '#0B1530', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>
                     14%

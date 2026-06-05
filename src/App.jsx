@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import MainDashboard from './views/dashboard/MainDashboard.jsx';
 import BrainyChat from './views/ai-chat/BrainyChat.jsx';
-import SalesMonitoring from './views/sales/SalesMonitoring.jsx'; // Import view sales baru
+import SalesMonitoring from './views/sales/SalesMonitoring.jsx';
+import StockIntelligence from './views/stock/StockIntelligence.jsx';
+import MenuManagement from './views/menu/MenuManagement.jsx'; // Import view menu baru
 import Login from './views/auth/Login.jsx';
 import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
   const { user, loading } = useAuth();
   const [screen, setScreen] = useState('login'); 
-  const [currentView, setCurrentView] = useState('dashboard'); // Pengendali view internal dashboard
+  const [currentView, setCurrentView] = useState('dashboard'); 
 
   if (loading) {
     return (
@@ -30,6 +32,10 @@ function MainRouter() {
       return <BrainyChat onNavigateView={setCurrentView} />;
     } else if (currentView === 'sales') {
       return <SalesMonitoring onNavigateView={setCurrentView} />;
+    } else if (currentView === 'stock') {
+      return <StockIntelligence onNavigateView={setCurrentView} />;
+    } else if (currentView === 'menu') {
+      return <MenuManagement onNavigateView={setCurrentView} />;
     }
   }
 
