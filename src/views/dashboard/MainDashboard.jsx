@@ -52,16 +52,23 @@ export default function MainDashboard({ onNavigateView }) {
 
         {/* Menu Items List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
+          {/* Tombol Dashboard Aktif (Hijau) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#006847', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
             <LayoutDashboard size={18} /> <span style={{ fontSize: '14px' }}>Dashboard</span>
           </div>
+          
+          {/* Tombol Sales Instan dengan Navigasi Dinamis */}
+          <div onClick={() => onNavigateView('sales')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
+            <ShoppingBag size={18} /> <span style={{ fontSize: '14px', fontWeight: '500' }}>Sales</span>
+          </div>
+
+          {/* Sisa Menu Loop Otomatis */}
           {[
-            { name: 'Sales', icon: <ShoppingBag size={18}/> },
-            { name: 'Stock', icon: <Archive size={18}/> },
-            { name: 'Menu Management', icon: <Menu size={18}/> },
-            { name: 'Staf Management', icon: <Users size={18}/> }
+            { name: 'Stock', icon: <Archive size={18}/>, target: 'stock' },
+            { name: 'Menu Management', icon: <Menu size={18}/>, target: 'menu' },
+            { name: 'Staf Management', icon: <Users size={18}/>, target: 'staff' }
           ].map((menu, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }} onClick={() => onNavigateView(menu.target)}>
               {menu.icon} <span style={{ fontSize: '14px', fontWeight: '500' }}>{menu.name}</span>
             </div>
           ))}

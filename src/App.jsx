@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import MainDashboard from './views/dashboard/MainDashboard.jsx';
-import BrainyChat from './views/ai-chat/BrainyChat.jsx'; // Import view chat baru
+import BrainyChat from './views/ai-chat/BrainyChat.jsx';
+import SalesMonitoring from './views/sales/SalesMonitoring.jsx'; // Import view sales baru
 import Login from './views/auth/Login.jsx';
 import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
   const { user, loading } = useAuth();
   const [screen, setScreen] = useState('login'); 
-  const [currentView, setCurrentView] = useState('dashboard'); // State pengatur halaman dalam dashboard
+  const [currentView, setCurrentView] = useState('dashboard'); // Pengendali view internal dashboard
 
   if (loading) {
     return (
@@ -21,13 +22,15 @@ function MainRouter() {
     );
   }
 
-  // Jika sukses login, lakukan routing internal antara Dashboard atau BrainyChat
+  // Handle Multi-Slicing View Internal untuk Akun Owner Aktif
   if (user) {
-    return currentView === 'dashboard' ? (
-      <MainDashboard onNavigateView={setCurrentView} />
-    ) : (
-      <BrainyChat onNavigateView={setCurrentView} />
-    );
+    if (currentView === 'dashboard') {
+      return <MainDashboard onNavigateView={setCurrentView} />;
+    } else if (currentView === 'chat') {
+      return <BrainyChat onNavigateView={setCurrentView} />;
+    } else if (currentView === 'sales') {
+      return <SalesMonitoring onNavigateView={setCurrentView} />;
+    }
   }
 
   return screen === 'login' ? (
