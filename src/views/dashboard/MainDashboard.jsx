@@ -2,10 +2,11 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, MessageSquare, TrendingUp, TrendingDown, AlertTriangle, ArrowRight 
+  Search, MessageSquare, TrendingUp, TrendingDown, AlertTriangle 
 } from 'lucide-react';
 
-function CuaninLogoWeb() {
+// Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
+function CuaninLogoMini() {
   return (
     <div style={{
       width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
@@ -31,41 +32,47 @@ function CuaninLogoWeb() {
   );
 }
 
-export default function MainDashboard() {
-  const { user, logout } = useAuth();
+export default function MainDashboard({ onNavigateView }) {
+  const { logout } = useAuth();
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
-      {/* ================= 1. SIDEBAR KIRI ================= */}
+      {/* ================= 1. SIDEBAR KIRI (NAVIGASI COKOK) ================= */}
       <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
+        
+        {/* Header Branding Sidebar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '32px' }}>
-          <CuaninLogoWeb />
+          <CuaninLogoMini />
           <div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
             <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
           </div>
         </div>
 
+        {/* Menu Items List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#006847', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
             <LayoutDashboard size={18} /> <span style={{ fontSize: '14px' }}>Dashboard</span>
           </div>
-          {['Sales', 'Stock', 'Menu Management', 'Staf Management'].map((menu, idx) => {
-            const icons = [<ShoppingBag size={18}/>, <Archive size={18}/>, <Menu size={18}/>, <Users size={18}/>];
-            return (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
-                {icons[idx]} <span style={{ fontSize: '14px', fontWeight: '500' }}>{menu}</span>
-              </div>
-            );
-          })}
+          {[
+            { name: 'Sales', icon: <ShoppingBag size={18}/> },
+            { name: 'Stock', icon: <Archive size={18}/> },
+            { name: 'Menu Management', icon: <Menu size={18}/> },
+            { name: 'Staf Management', icon: <Users size={18}/> }
+          ].map((menu, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
+              {menu.icon} <span style={{ fontSize: '14px', fontWeight: '500' }}>{menu.name}</span>
+            </div>
+          ))}
         </div>
 
+        {/* Footer Sidebar Profile Card */}
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
             <Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span>
           </div>
-          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#1E293B', borderRadius: '12px', marginTop: '12px', cursor: 'pointer' }}>
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '12px', cursor: 'pointer' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>WJ</div>
             <div style={{ flex: 1, textAlign: 'left' }}>
               <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
@@ -75,17 +82,17 @@ export default function MainDashboard() {
         </div>
       </div>
 
-      {/* ================= MAIN WORKSPACE KANAN ================= */}
+      {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR HEADER */}
+        {/* TOPBAR PROFILE & SEARCH AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <MessageSquare size={16} /> Ask Brainy
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -100,20 +107,22 @@ export default function MainDashboard() {
           </div>
         </div>
 
-        {/* BODY CONTAINER WITH OVERFLOW AUTO */}
+        {/* CONTAINER WORKSPACE ROLL DYNAMIC */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box' }}>
           
-          {/* SMART CARDS ROW */}
+          {/* SECTION A: SMART CARDS ROW SUMMARY MOCKUP */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            {/* Card 1: Total Penjualan */}
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CuaninLogoWeb /></div>
+                <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CuaninLogoMini /></div>
                 <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> 12.5%</div>
               </div>
               <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>TOTAL PENJUALAN</span>
               <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.450.000</h2>
             </div>
 
+            {/* Card 2: Profit Bersih */}
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
@@ -123,23 +132,25 @@ export default function MainDashboard() {
               <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 3.120.000</h2>
             </div>
 
+            {/* Card 3: Jumlah Transaksi */}
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
               <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', fontSize: '18px' }}>📝</div>
               <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>JUMLAH TRANSAKSI</span>
               <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>1.248</h2>
             </div>
 
+            {/* Card 4: Stok Kritis Alert Badge */}
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={20} /></div>
-                <div style={{ backgroundColor: '#DC2626', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold' }}>KRITIS</div>
+                <div style={{ backgroundColor: '#DC2626', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>KRITIS</div>
               </div>
               <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>STOK KRITIS</span>
               <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>12 Items</h2>
             </div>
           </div>
 
-          {/* GRAPH SECTION */}
+          {/* SECTION B: ANALYTICS GRAPH (SALES VS EXPENSES MONITOR) */}
           <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
@@ -162,29 +173,30 @@ export default function MainDashboard() {
             </div>
           </div>
 
-          {/* TOP SELLING MENU SECTION (FR-W02 COMPONENT REPLICATION) */}
+          {/* SECTION C: TOP SELLING MENU ROW (TOP 3 LIST) */}
           <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>⭐ Top Selling Menu (Top 3)</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {[
-                { name: 'Kopi Susu Gula Aren', sold: '420 sold', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' },
-                { name: 'Cafe Latte', sold: '315 sold', img: 'https://images.unsplash.com/photo-1570968915860-54d5c301fc9f?q=80&w=150' },
-                { name: 'Avocado Toast', sold: '210 sold', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }
+                { name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' },
+                { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' },
+                { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }
               ].map((menu, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
                   <img src={menu.img} alt={menu.name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
                   <div>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>{menu.name}</p>
-                    <span style={{ fontSize: '12px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span>
+                    <span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* FINANCIAL DEEP DIVE ROW */}
+          {/* SECTION D: FINANCIAL DEEP DIVE BLOCK */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '20px' }}>
-            <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Audited Profit Loss */}
+            <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>LABA RUGI (AUDITED)</h3>
                 <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>JULY 2026</span>
@@ -207,12 +219,14 @@ export default function MainDashboard() {
                 </div>
                 <h3 style={{ margin: 0, color: '#006847', fontWeight: 'bold', fontSize: '20px' }}>Rp 4.120.000</h3>
               </div>
+              {/* Smart Cards: Proactive Notification Insight Box */}
               <div style={{ backgroundColor: '#10B981', color: '#fff', padding: '16px', borderRadius: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <span style={{ fontSize: '20px' }}>💡</span>
                 <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.5', fontWeight: '500' }}><strong>Brainy Insights:</strong> Increasing 'Cafe Latte' margin by 5% could boost monthly net profit by Rp 450.000.</p>
               </div>
             </div>
 
+            {/* Supply Price Trends Tracker */}
             <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>TREN HARGA BAHAN BAKU</h3>
@@ -238,7 +252,7 @@ export default function MainDashboard() {
             </div>
           </div>
 
-          {/* FOOTER SMART COMPONENT METRICS SUMMARY */}
+          {/* SECTION E: CORE EXTRA SMART METRICS TILES */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
             <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #E5E7EB', textAlign: 'center' }}>
               <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold' }}>🤝 AVERAGE TRANSACTION</span>

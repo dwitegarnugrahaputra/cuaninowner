@@ -1,25 +1,14 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import MainDashboard from './views/dashboard/MainDashboard.jsx';
+import BrainyChat from './views/ai-chat/BrainyChat.jsx'; // Import view chat baru
 import Login from './views/auth/Login.jsx';
-import Register from './views/auth/Register.jsx'; // Mengimpor file registrasi baru
-
-function TemporaryDashboard() {
-  const { user, role, logout } = useAuth();
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center', border: '1px solid #E5E7EB', padding: '40px', borderRadius: '16px', backgroundColor: '#fff' }}>
-        <h2>Berhasil Masuk! 👑</h2>
-        <p>Email: {user?.email}</p>
-        <p>Role: <strong>{role?.toUpperCase()}</strong></p>
-        <button onClick={logout} style={{ padding: '10px 20px', backgroundColor: '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '12px' }}>Logout</button>
-      </div>
-    </div>
-  );
-}
+import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
   const { user, loading } = useAuth();
-  const [screen, setScreen] = useState('login'); // State penentu alur halaman Auth
+  const [screen, setScreen] = useState('login'); 
+  const [currentView, setCurrentView] = useState('dashboard'); // State pengatur halaman dalam dashboard
 
   if (loading) {
     return (
@@ -32,10 +21,15 @@ function MainRouter() {
     );
   }
 
-  // Jika session login aktif di Supabase, langsung lempar ke dashboard utama
-  if (user) return <TemporaryDashboard />;
+  // Jika sukses login, lakukan routing internal antara Dashboard atau BrainyChat
+  if (user) {
+    return currentView === 'dashboard' ? (
+      <MainDashboard onNavigateView={setCurrentView} />
+    ) : (
+      <BrainyChat onNavigateView={setCurrentView} />
+    );
+  }
 
-  // Jika tidak, handle alur antar muka lokal berdasarkan aksi klik user
   return screen === 'login' ? (
     <Login onNavigate={setScreen} />
   ) : (
