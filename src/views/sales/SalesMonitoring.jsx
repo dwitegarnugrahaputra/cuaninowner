@@ -35,11 +35,14 @@ function CuaninLogoMini() {
 
 export default function SalesMonitoring({ onNavigateView }) {
   const { logout } = useAuth();
+  
+  // Karena ini adalah file SalesMonitoring, maka view aktif internalnya adalah 'sales'
+  const currentView = 'sales';
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
-      {/* ================= 1. SIDEBAR KIRI ================= */}
+      {/* ================= 1. SIDEBAR KIRI (NAVIGASI DENGAN ANIMASI) ================= */}
       <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '32px' }}>
           <CuaninLogoMini />
@@ -49,24 +52,44 @@ export default function SalesMonitoring({ onNavigateView }) {
           </div>
         </div>
 
+        {/* Menu Items List dengan Implementasi Efek Animasi ON Mulus */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
-          <div onClick={() => onNavigateView('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
-            <LayoutDashboard size={18} /> <span style={{ fontSize: '14px', fontWeight: '500' }}>Dashboard</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#006847', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
-            <ShoppingBag size={18} /> <span style={{ fontSize: '14px' }}>Sales</span>
-          </div>
           {[
-            { name: 'Stock', icon: <Archive size={18}/>, target: 'stock' },
-            { name: 'Menu Management', icon: <Menu size={18}/>, target: 'menu' },
-            { name: 'Staf Management', icon: <Users size={18}/>, target: 'staff' }
-          ].map((menu, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }} onClick={() => onNavigateView(menu.target)}>
-              {menu.icon} <span style={{ fontSize: '14px', fontWeight: '500' }}>{menu.name}</span>
-          </div>
-          ))}
+            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock' },
+            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu' },
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
+          ].map((menu, idx) => {
+            const isActive = currentView === menu.target;
+
+            return (
+              <div 
+                key={idx} 
+                onClick={() => onNavigateView(menu.target)} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px', 
+                  padding: '12px 16px', 
+                  borderRadius: '10px', 
+                  cursor: 'pointer',
+                  fontWeight: isActive ? 'bold' : '500',
+                  backgroundColor: isActive ? '#006847' : 'transparent', 
+                  color: isActive ? '#ffffff' : '#93C5FD',
+                  
+                  // --- KUNCI ANIMASI MICRO-INTERACTION TRANSISI ---
+                  transition: 'all 0.3s ease-in-out',
+                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                }}
+              >
+                {menu.icon} <span style={{ fontSize: '14px' }}>{menu.name}</span>
+              </div>
+            );
+          })}
         </div>
 
+        {/* Footer Sidebar Profile Card */}
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
             <Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span>

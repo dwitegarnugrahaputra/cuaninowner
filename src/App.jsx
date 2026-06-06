@@ -4,11 +4,14 @@ import MainDashboard from './views/dashboard/MainDashboard.jsx';
 import BrainyChat from './views/ai-chat/BrainyChat.jsx';
 import SalesMonitoring from './views/sales/SalesMonitoring.jsx';
 import StockIntelligence from './views/stock/StockIntelligence.jsx';
-import MenuManagement from './views/menu/MenuManagement.jsx'; // Import view menu baru
+import MenuManagement from './views/menu/MenuManagement.jsx';
+import StaffManagement from './views/staff/StaffManagement.jsx';
 import Login from './views/auth/Login.jsx';
 import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
+  // Di sinilah kontrol utamanya, Gar.
+  // Jika useAuth() mengembalikan object 'user' yang aktif (true), dia langsung masuk ke dashboard area.
   const { user, loading } = useAuth();
   const [screen, setScreen] = useState('login'); 
   const [currentView, setCurrentView] = useState('dashboard'); 
@@ -24,7 +27,9 @@ function MainRouter() {
     );
   }
 
-  // Handle Multi-Slicing View Internal untuk Akun Owner Aktif
+  // --- JALUR SINKRONISASI AUTENTIKASI ---
+  // Jika 'user' bernilai null / tidak ada (karena belum login), kodingan di bawah ini bakal di-skip
+  // dan aplikasi bakal langsung ngerender halaman Login/Register yang ada di baris paling bawah.
   if (user) {
     if (currentView === 'dashboard') {
       return <MainDashboard onNavigateView={setCurrentView} />;
@@ -36,9 +41,12 @@ function MainRouter() {
       return <StockIntelligence onNavigateView={setCurrentView} />;
     } else if (currentView === 'menu') {
       return <MenuManagement onNavigateView={setCurrentView} />;
+    } else if (currentView === 'staff') {
+      return <StaffManagement onNavigateView={setCurrentView} />;
     }
   }
 
+  // Jika user belum login, dia nangkring di sini pertama kali
   return screen === 'login' ? (
     <Login onNavigate={setScreen} />
   ) : (
