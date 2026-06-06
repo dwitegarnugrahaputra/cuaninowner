@@ -10,8 +10,6 @@ import Login from './views/auth/Login.jsx';
 import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
-  // Di sinilah kontrol utamanya, Gar.
-  // Jika useAuth() mengembalikan object 'user' yang aktif (true), dia langsung masuk ke dashboard area.
   const { user, loading } = useAuth();
   const [screen, setScreen] = useState('login'); 
   const [currentView, setCurrentView] = useState('dashboard'); 
@@ -27,9 +25,7 @@ function MainRouter() {
     );
   }
 
-  // --- JALUR SINKRONISASI AUTENTIKASI ---
-  // Jika 'user' bernilai null / tidak ada (karena belum login), kodingan di bawah ini bakal di-skip
-  // dan aplikasi bakal langsung ngerender halaman Login/Register yang ada di baris paling bawah.
+  // --- KENDALI VIEW UTAMA INTERNAL ---
   if (user) {
     if (currentView === 'dashboard') {
       return <MainDashboard onNavigateView={setCurrentView} />;
@@ -46,7 +42,6 @@ function MainRouter() {
     }
   }
 
-  // Jika user belum login, dia nangkring di sini pertama kali
   return screen === 'login' ? (
     <Login onNavigate={setScreen} />
   ) : (

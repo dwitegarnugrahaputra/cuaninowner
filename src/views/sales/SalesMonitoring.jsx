@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Calendar, Download, TrendingUp, 
-  AlertTriangle, Shield, ArrowRight, MessageSquare 
+  AlertTriangle, Shield, ArrowRight, MessageSquare, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
@@ -11,7 +11,7 @@ function CuaninLogoMini() {
   return (
     <div style={{
       width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px'
+      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0
     }}>
       <div style={{
         width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px',
@@ -35,25 +35,62 @@ function CuaninLogoMini() {
 
 export default function SalesMonitoring({ onNavigateView }) {
   const { logout } = useAuth();
-  
-  // Karena ini adalah file SalesMonitoring, maka view aktif internalnya adalah 'sales'
   const currentView = 'sales';
+
+  // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
-      {/* ================= 1. SIDEBAR KIRI (NAVIGASI DENGAN ANIMASI) ================= */}
-      <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '32px' }}>
-          <CuaninLogoMini />
-          <div>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
-            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
+      {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
+      <div style={{ 
+        width: isMainSidebarOpen ? '260px' : '80px', 
+        backgroundColor: '#1E3A8A', 
+        color: '#ffffff', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: '24px 0', 
+        flexShrink: 0,
+        transition: 'width 0.3s ease-in-out',
+        overflow: 'hidden'
+      }}>
+        
+        {/* Header Branding Sidebar dengan Trigger Collapse */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+          padding: '0 20px', 
+          marginBottom: '32px',
+          height: '40px'
+        }}>
+          <div 
+            onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)}
+            style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}
+          >
+            <CuaninLogoMini />
+            {isMainSidebarOpen && (
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
+                <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
+              </div>
+            )}
           </div>
+
+          {isMainSidebarOpen && (
+            <div 
+              onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }}
+              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}
+            >
+              <Menu size={16} color="#93C5FD" />
+            </div>
+          )}
         </div>
 
-        {/* Menu Items List dengan Implementasi Efek Animasi ON Mulus */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
+        {/* Menu Items List dengan Validasi Isons Only saat Ter-collapse */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
@@ -67,9 +104,11 @@ export default function SalesMonitoring({ onNavigateView }) {
               <div 
                 key={idx} 
                 onClick={() => onNavigateView(menu.target)} 
+                title={!isMainSidebarOpen ? menu.name : ''}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
+                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
                   gap: '12px', 
                   padding: '12px 16px', 
                   borderRadius: '10px', 
@@ -77,29 +116,109 @@ export default function SalesMonitoring({ onNavigateView }) {
                   fontWeight: isActive ? 'bold' : '500',
                   backgroundColor: isActive ? '#006847' : 'transparent', 
                   color: isActive ? '#ffffff' : '#93C5FD',
-                  
-                  // --- KUNCI ANIMASI MICRO-INTERACTION TRANSISI ---
                   transition: 'all 0.3s ease-in-out',
-                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
                 }}
               >
-                {menu.icon} <span style={{ fontSize: '14px' }}>{menu.name}</span>
+                {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
         </div>
 
-        {/* Footer Sidebar Profile Card */}
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
-            <Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span>
-          </div>
-          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '12px', cursor: 'pointer' }}>
-            <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>WJ</div>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-              <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+        {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
+        <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          
+          {/* Tombol Settings Utama */}
+          <div 
+            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
+            title={!isMainSidebarOpen ? 'Settings' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+              padding: '12px 16px', 
+              color: isSettingsOpen ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
+            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+          </div>
+
+          {/* Sub-menu Akordion Pop-down Settings */}
+          {isMainSidebarOpen && (
+            <div style={{
+              maxHeight: isSettingsOpen ? '150px' : '0px',
+              overflow: 'hidden',
+              transition: 'all 0.4s ease-in-out',
+              opacity: isSettingsOpen ? 1 : 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              paddingLeft: '14px',
+              marginBottom: isSettingsOpen ? '4px' : '0px'
+            }}>
+              {[
+                { name: 'Info Outlet', icon: <Store size={14} />, action: () => alert('Buka Pengaturan Outlet Kopi Jaya') },
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
+              ].map((sub, i) => (
+                <div 
+                  key={i}
+                  onClick={sub.action}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
+                    borderRadius: '8px', color: '#93C5FD', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ffffff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#93C5FD'; }}
+                >
+                  {sub.icon} <span>{sub.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tombol Logout Mandiri */}
+          <div 
+            onClick={logout}
+            title={!isMainSidebarOpen ? 'Logout' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+              gap: '12px', 
+              padding: '12px 16px', 
+              color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}
+          >
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          </div>
+
+          {/* Card Profile Merchant */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+            gap: '12px', 
+            padding: '12px 16px', 
+            backgroundColor: '#111827', 
+            borderRadius: '12px', 
+            marginTop: '4px' 
+          }}>
+            <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
+            {isMainSidebarOpen && (
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -107,19 +226,20 @@ export default function SalesMonitoring({ onNavigateView }) {
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR HEADER AREA (SUDAH DISINKRONKAN 100% DENGAN DASHBOARD & ICON MESSAGESQUARE) */}
+        {/* TOPBAR HEADER AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            {/* Tombol Ask Brainy Hijau Tua Lengkap Dengan Ikon Sesuai Request */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
             
-            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <div onClick={() => alert('Notifikasi')} style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <Bell size={20} color="#4B5563" />
+            </div>
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             
             {/* Profil Data Identitas Alex Graham */}

@@ -4,14 +4,15 @@ import {
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Plus, MoreVertical, Filter, ArrowUpDown,
   ChevronLeft, ChevronRight, MessageSquare, UserPlus, Users2, UserCheck, 
-  CalendarDays, X, Image as ImageIcon, Save, Lock
+  CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
+// Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
     <div style={{
       width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px'
+      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0
     }}>
       <div style={{
         width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px',
@@ -37,23 +38,62 @@ export default function StaffManagement({ onNavigateView }) {
   const { logout } = useAuth();
   const currentView = 'staff';
 
+  // State kendali interaksi UI internal (Modal, Role, dan Collapsible Sidebar)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('Manager');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
-      {/* ================= 1. SIDEBAR KIRI ================= */}
-      <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '32px' }}>
-          <CuaninLogoMini />
-          <div>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
-            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
+      {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
+      <div style={{ 
+        width: isMainSidebarOpen ? '260px' : '80px', 
+        backgroundColor: '#1E3A8A', 
+        color: '#ffffff', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: '24px 0', 
+        flexShrink: 0,
+        transition: 'width 0.3s ease-in-out',
+        overflow: 'hidden'
+      }}>
+        
+        {/* Header Branding Sidebar dengan Trigger Collapse */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+          padding: '0 20px', 
+          marginBottom: '32px',
+          height: '40px'
+        }}>
+          <div 
+            onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)}
+            style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}
+          >
+            <CuaninLogoMini />
+            {isMainSidebarOpen && (
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
+                <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
+              </div>
+            )}
           </div>
+
+          {isMainSidebarOpen && (
+            <div 
+              onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }}
+              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}
+            >
+              <Menu size={16} color="#93C5FD" />
+            </div>
+          )}
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
+        {/* Menu Items List */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
@@ -62,35 +102,126 @@ export default function StaffManagement({ onNavigateView }) {
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
+
             return (
               <div 
                 key={idx} 
                 onClick={() => onNavigateView(menu.target)} 
+                title={!isMainSidebarOpen ? menu.name : ''}
                 style={{ 
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+                  gap: '12px', 
+                  padding: '12px 16px', 
+                  borderRadius: '10px', 
+                  cursor: 'pointer',
                   fontWeight: isActive ? 'bold' : '500',
                   backgroundColor: isActive ? '#006847' : 'transparent', 
                   color: isActive ? '#ffffff' : '#93C5FD',
                   transition: 'all 0.3s ease-in-out',
-                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
                 }}
               >
-                {menu.icon} <span style={{ fontSize: '14px' }}>{menu.name}</span>
+                {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
-            <Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span>
-          </div>
-          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '12px', cursor: 'pointer' }}>
-            <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>WJ</div>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-              <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
+        {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
+        <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          
+          {/* Tombol Settings Utama */}
+          <div 
+            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
+            title={!isMainSidebarOpen ? 'Settings' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+              padding: '12px 16px', 
+              color: isSettingsOpen ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
+            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+          </div>
+
+          {/* Sub-menu Akordion Pop-down Settings */}
+          {isMainSidebarOpen && (
+            <div style={{
+              maxHeight: isSettingsOpen ? '150px' : '0px',
+              overflow: 'hidden',
+              transition: 'all 0.4s ease-in-out',
+              opacity: isSettingsOpen ? 1 : 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              paddingLeft: '14px',
+              marginBottom: isSettingsOpen ? '4px' : '0px'
+            }}>
+              {[
+                { name: 'Info Outlet', icon: <Store size={14} />, action: () => alert('Buka Pengaturan Outlet Kopi Jaya') },
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
+              ].map((sub, i) => (
+                <div 
+                  key={i}
+                  onClick={sub.action}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
+                    borderRadius: '8px', color: '#93C5FD', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ffffff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#93C5FD'; }}
+                >
+                  {sub.icon} <span>{sub.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tombol Logout Mandiri */}
+          <div 
+            onClick={logout}
+            title={!isMainSidebarOpen ? 'Logout' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+              gap: '12px', 
+              padding: '12px 16px', 
+              color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}
+          >
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          </div>
+
+          {/* Card Profile Merchant */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+            gap: '12px', 
+            padding: '12px 16px', 
+            backgroundColor: '#111827', 
+            borderRadius: '12px', 
+            marginTop: '4px' 
+          }}>
+            <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
+            {isMainSidebarOpen && (
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -208,7 +339,7 @@ export default function StaffManagement({ onNavigateView }) {
       </div>
 
       {/* =======================================================================
-          ========= MODAL OVERLAY UPDATE: DISERTAI SEKTOR PASSWORD (image_e3b601.png) =========
+          ========= MODAL OVERLAY: ACCOUNT PASSWORD CREATION SECTOR =========
           ======================================================================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -271,7 +402,7 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* ================= BARU: INTERGATED PASSWORD FOR ACCOUNT CREATION ================= */}
+              {/* INTEGRATED PASSWORD FOR ACCOUNT CREATION */}
               <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Buat Password Akun</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
