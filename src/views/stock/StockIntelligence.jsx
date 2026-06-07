@@ -6,8 +6,9 @@ import {
   FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
-// Kita import komponen formulir mandiri InfoOutlet agar bisa dirender internal di sini
+// Import komponen form internal yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
+import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -32,8 +33,8 @@ export default function StockIntelligence({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* STATE UTAMA: Pengontrol area workspace kanan (Tabel Stok VS Form Info Outlet) */}
-  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
+  {/* KONTROL LAYOUT WORKSPACE AREA UTAMA: 'stock-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  const [activeSubView, setActiveSubView] = useState('stock-table');
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -74,7 +75,7 @@ export default function StockIntelligence({ onNavigateView }) {
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => setIsViewingInfoOutlet(false) }, 
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => setActiveSubView('stock-table') }, 
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
@@ -97,7 +98,6 @@ export default function StockIntelligence({ onNavigateView }) {
                   backgroundColor: isActive ? '#006847' : 'transparent', 
                   color: isActive ? '#ffffff' : '#93C5FD',
                   transition: 'all 0.3s ease-in-out',
-                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
                 }}
               >
                 {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
@@ -118,8 +118,8 @@ export default function StockIntelligence({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || activeSubView !== 'stock-table' ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || activeSubView !== 'stock-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -130,29 +130,21 @@ export default function StockIntelligence({ onNavigateView }) {
           </div>
 
           {/* Sub-menu Akordion Pop-down Settings */}
-          {isMainSidebarOpen && (
+          {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: isSettingsOpen ? '150px' : '0px',
-              overflow: 'hidden',
-              transition: 'all 0.4s ease-in-out',
-              opacity: isSettingsOpen ? 1 : 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              paddingLeft: '14px',
-              marginBottom: isSettingsOpen ? '4px' : '0px'
+              maxHeight: isSettingsOpen ? '150px' : '0px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: isSettingsOpen ? 1 : 0,
+              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: isSettingsOpen ? '4px' : '0px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} /> }, 
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} /> }, 
-                { name: 'Keamanan', icon: <ShieldCheck size={14} /> }
+                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
               ].map((sub, i) => {
-                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                const isSubActive = activeSubView === sub.target;
                 
-                {/* SINKRONISASI STRING FIX PERBAIKAN: Membaca teks "Info Outlet" secara tepat dan akurat */}
                 const handleSubMenuClick = () => {
-                  if (sub.name === 'Info Outlet') {
-                    setIsViewingInfoOutlet(true);
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                    setActiveSubView(sub.target);
                     setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
@@ -211,7 +203,7 @@ export default function StockIntelligence({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -231,10 +223,7 @@ export default function StockIntelligence({ onNavigateView }) {
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
              </button>
-            
-            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            
+            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
@@ -247,15 +236,19 @@ export default function StockIntelligence({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW (SCROLLABLE DYNAMIC CHANGER) */}
+        {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px 100px 32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {/* ================= KONDISI A: MERENDER COMPONENT FORM INFO OUTLET SECARA INTERNAL ================= */}
-          {isViewingInfoOutlet ? (
-            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
-          ) : (
-            
-            /* ================= KONDISI B: DATA ASLI STOCK INTELLIGENCE UTUH LAMA ================= */
+          {/* SELEKTOR INTERFACE OPERASIONAL */}
+          {activeSubView === 'info-outlet' && (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('stock-table'); }} />
+          )}
+
+          {activeSubView === 'konfigurasi-ai' && (
+            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('stock-table'); }} />
+          )}
+
+          {activeSubView === 'stock-table' && (
             <>
               {/* HEADER PAGE TITLE */}
               <div>

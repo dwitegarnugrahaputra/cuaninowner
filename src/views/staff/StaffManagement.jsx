@@ -7,8 +7,9 @@ import {
   CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
-// KUNCI UTAMA: Import komponen formulir mandiri InfoOutlet ke dalam staff management
+// Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
+import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -47,8 +48,8 @@ export default function StaffManagement({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI FITUR UTAMA: State Pengontrol area workspace kanan (Katalog Staf VS Form Info Outlet) */}
-  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
+  {/* KUNCI SINKRONISASI WORKSPACE: 'staff-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  const [activeSubView, setActiveSubView] = useState('staff-table');
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
@@ -98,14 +99,14 @@ export default function StaffManagement({ onNavigateView }) {
           )}
         </div>
 
-        {/* Menu Utama List - SIDEBAR TETAP STAY LOCK HIGHLIGHT DI MENU STAFF USERS */}
+        {/* Menu Utama List - Sidebar TETAP STAY HIGHLIGHTED DI STAFF MANAGEMENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
             { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setIsViewingInfoOutlet(false) } // Klik tab staf balikin area kanan ke tabel database kru asli
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setActiveSubView('staff-table') } // Balik ke data tim asli
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
 
@@ -147,8 +148,8 @@ export default function StaffManagement({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || activeSubView !== 'staff-table' ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || activeSubView !== 'staff-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -159,29 +160,28 @@ export default function StaffManagement({ onNavigateView }) {
           </div>
 
           {/* Sub-menu Akordion Pop-down Settings */}
-          {isMainSidebarOpen && (
+          {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: isSettingsOpen ? '150px' : '0px',
+              maxHeight: '150px',
               overflow: 'hidden',
               transition: 'all 0.4s ease-in-out',
-              opacity: isSettingsOpen ? 1 : 0,
+              opacity: 1,
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
               paddingLeft: '14px',
-              marginBottom: isSettingsOpen ? '4px' : '0px'
+              marginBottom: '4px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} /> }, 
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} /> }, 
-                { name: 'Keamanan', icon: <ShieldCheck size={14} /> }
+                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
               ].map((sub, i) => {
-                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                const isSubActive = activeSubView === sub.target;
                 
-                {/* AKURASI SINKRONISASI STRING: Tombol Info Outlet memicu rendering internal form tanpa alert browser */}
                 const handleSubMenuClick = () => {
-                  if (sub.name === 'Info Outlet') {
-                    setIsViewingInfoOutlet(true);
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                    setActiveSubView(sub.target);
                     setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
@@ -240,7 +240,7 @@ export default function StaffManagement({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -257,6 +257,7 @@ export default function StaffManagement({ onNavigateView }) {
             <input type="text" placeholder="Search team members by name or email..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* FIX KAWIN PROPS: Menghubungkan Ask Brainy langsung ke modul chat AI secara presisi */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -272,15 +273,21 @@ export default function StaffManagement({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW (LOGIKA LAYOUT DYNAMIC) */}
+        {/* CONTAINER CONTENT VIEW (DINAMIS WORKSPACE SWAPPER) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {/* ================= KONDISI A: MERENDER COMPONENT FORM INFO OUTLET SECARA INTERNAL ================= */}
-          {isViewingInfoOutlet ? (
-            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
-          ) : (
-            
-            /* ================= KONDISI B: KONTEN UTUH DATABASE TEAM AWAL ================= */
+          {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
+          {activeSubView === 'info-outlet' && (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('staff-table'); }} />
+          )}
+
+          {/* ================= KONDISI 2: TAMPILKAN FORM KONFIGURASI AI SECARA INTERNAL ================= */}
+          {activeSubView === 'konfigurasi-ai' && (
+            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('staff-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3: RENDER UTUH KATALOG UTAMA DATABASE TEAM STAF ================= */}
+          {activeSubView === 'staff-table' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -369,7 +376,7 @@ export default function StaffManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= MODAL OVERLAY: ADD NEW STAFF MEMBER ================= */}
+      {/* ================= MODAL TAMBAH STAF BARU (TETAP UTUH) ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

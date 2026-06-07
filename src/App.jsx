@@ -12,7 +12,7 @@ import Register from './views/auth/Register.jsx';
 function MainRouter() {
   const { user, loading } = useAuth();
   const [screen, setScreen] = useState('login'); 
-  const [currentView, setCurrentView] = useState('dashboard'); 
+  const [currentView, setCurrentView] = useState('dashboard'); // State rute global
 
   if (loading) {
     return (
@@ -25,12 +25,11 @@ function MainRouter() {
     );
   }
 
-  // --- ARSITEKTUR ROUTER GLOBAL CUANIN OWNER ---
+  // --- KENDALI ROUTER VIEW UTAMA GLOBAL ---
   if (user) {
     if (currentView === 'dashboard') {
       return <MainDashboard onNavigateView={setCurrentView} forcedSubView="main-dashboard" />;
     } else if (currentView === 'info-outlet') {
-      {/* SEKTOR AMAN: Kita pinjam file MainDashboard tapi paksa internal view-nya ngebuka form outlet */}
       return <MainDashboard onNavigateView={setCurrentView} forcedSubView="info-outlet" />;
     } else if (currentView === 'sales') {
       return <SalesMonitoring onNavigateView={setCurrentView} />;
@@ -40,6 +39,9 @@ function MainRouter() {
       return <MenuManagement onNavigateView={setCurrentView} />;
     } else if (currentView === 'staff') {
       return <StaffManagement onNavigateView={setCurrentView} />;
+    } else if (currentView === 'chat') {
+      {/* 👈 KUNCI UTAMA: Ketika currentView diset 'chat', kita render file BrainyChat lu yang asli */}
+      return <BrainyChat onNavigateView={setCurrentView} />;
     }
   }
 

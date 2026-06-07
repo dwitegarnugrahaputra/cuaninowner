@@ -6,8 +6,9 @@ import {
   AlertTriangle, Shield, ArrowRight, MessageSquare, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
-// KUNCI UTAMA: Import komponen mandiri info outlet yang baru ke halaman sales
+// Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
+import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -44,8 +45,8 @@ export default function SalesMonitoring({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI STATE BARU: Pengontrol apakah area kanan merender data Sales atau form Info Outlet */}
-  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
+  {/* KUNCI SINKRONISASI WORKSPACE: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  const [activeSubView, setActiveSubView] = useState('sales-table');
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -99,7 +100,7 @@ export default function SalesMonitoring({ onNavigateView }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => setIsViewingInfoOutlet(false) }, // Klik sales balikin ke data feed asli
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => setActiveSubView('sales-table') }, 
             { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
@@ -144,8 +145,8 @@ export default function SalesMonitoring({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || activeSubView !== 'sales-table' ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || activeSubView !== 'sales-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -156,28 +157,39 @@ export default function SalesMonitoring({ onNavigateView }) {
           </div>
 
           {/* Sub-menu Akordion Pop-down Settings */}
-          {isMainSidebarOpen && (
+          {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: isSettingsOpen ? '150px' : '0px',
+              maxHeight: '150px',
               overflow: 'hidden',
               transition: 'all 0.4s ease-in-out',
-              opacity: isSettingsOpen ? 1 : 0,
+              opacity: 1,
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
               paddingLeft: '14px',
-              marginBottom: isSettingsOpen ? '4px' : '0px'
+              marginBottom: '4px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, action: () => { setIsViewingInfoOutlet(true); setIsSettingsOpen(false); } }, // Buka form internal sales tanpa redirect keluar tab
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
+                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
               ].map((sub, i) => {
-                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                const isSubActive = activeSubView === sub.target;
+                
+                {/* FIX HANDLER KLIK SINKRON: Mengaktifkan pemetaan halaman internal dashboard */}
+                const handleSubMenuClick = () => {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                    setActiveSubView(sub.target);
+                    setIsSettingsOpen(false);
+                  } else {
+                    alert(`Buka parameter ${sub.name}`);
+                  }
+                };
+
                 return (
                   <div 
                     key={i}
-                    onClick={sub.action}
+                    onClick={handleSubMenuClick}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
                       borderRadius: '8px', 
@@ -226,7 +238,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -243,6 +255,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* FIX KAWIN PROPS: Menghubungkan Ask Brainy langsung ke modul chat AI secara presisi */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -268,12 +281,18 @@ export default function SalesMonitoring({ onNavigateView }) {
         {/* CONTEN CONTAINER VIEW (SCROLLABLE DYNAMIC CHANGER) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {/* ================= KONDISI A: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
-          {isViewingInfoOutlet ? (
-            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
-          ) : (
-            
-            /* ================= KONDISI B: DATA ASLI MONITORING PENJUALAN UTUH ================= */
+          {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
+          {activeSubView === 'info-outlet' && (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('sales-table'); }} />
+          )}
+
+          {/* ================= KONDISI 2: TAMPILKAN FORM KONFIGURASI AI SECARA INTERNAL ================= */}
+          {activeSubView === 'konfigurasi-ai' && (
+            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('sales-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3: DATA ASLI MONITORING PENJUALAN UTUH ================= */}
+          {activeSubView === 'sales-table' && (
             <>
               {/* TITLE & FILTER BAR */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -292,7 +311,7 @@ export default function SalesMonitoring({ onNavigateView }) {
               </div>
 
               {/* THREE HEAD ROW SUMMARY CARDS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
@@ -357,7 +376,6 @@ export default function SalesMonitoring({ onNavigateView }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}><div style={{ textAlign: 'center' }}><div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'conic-gradient(#10B981 0% 14%, #1E293B 14% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}><div style={{ width: '50px', height: '50px', backgroundColor: '#0B1530', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>14%</div></div><span style={{ fontSize: '10px', color: '#9CA3AF' }}>Anomaly Score</span></div><div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}><span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>● Risk Detection: Active</span><button style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}><span>Investigate Pattern</span> <ArrowRight size={14} /></button></div></div>
               </div>
             </>
-
           )}
 
         </div>

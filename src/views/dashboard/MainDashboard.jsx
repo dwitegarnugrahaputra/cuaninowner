@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, MessageSquare, TrendingUp, TrendingDown, AlertTriangle,
-  Bell, HelpCircle, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, LogOut,
-  User, Shield, Key, ArrowUpRight, Lightbulb, BarChart3, Percent, Clock, MapPin, Phone, Mail, FileText, Save
+  Search, Bell, HelpCircle, TrendingUp, TrendingDown, AlertTriangle,
+  ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, LogOut,
+  MessageSquare, User, Shield, Key, ArrowUpRight
 } from 'lucide-react';
+
+// Import komponen form internal yang sudah kita desentralisasikan
+import InfoOutlet from '../settings/InfoOutlet.jsx';
+import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 
 // Logo cuanin.id versi mini murni CSS
 function CuaninLogoMini() {
@@ -34,27 +38,25 @@ function CuaninLogoMini() {
   );
 }
 
-// Ganti baris deklarasi paling atas MainDashboard lu menjadi seperti ini, Gar:
 export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const { logout } = useAuth();
   const currentView = 'dashboard';
-
+  
   // State kendali interaksi UI internal
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  // KUNCI UTAMA: Sinkronisasi state lokal dengan parameter kiriman dari tab luar
+  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' */}
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
-  
+
+  // Sinkronisasi state jika ada kiriman props forcedSubView dari luar router global
   React.useEffect(() => {
     if (forcedSubView) {
       setActiveSubView(forcedSubView);
     }
   }, [forcedSubView]);
-
-  // ... sisa kode MainDashboard ke bawah (termasuk grafik Financial Deep-Dive baru lu) tetap aman utuh tanpa diubah ...
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -104,8 +106,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           )}
         </div>
 
-        {/* Menu Utama List */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0 ' }}>
+        {/* Menu Utama List - HIGHLIGHT UTAMA TETAP MENGUNCI DI TAB DASHBOARD UTAMA */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => setActiveSubView('main-dashboard') },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
@@ -113,7 +115,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
-            // Dashboard tetap aktif secara visual jika kita berada di sub-view internalnya
             const isActive = menu.target === 'dashboard';
             return (
               <div 
@@ -132,7 +133,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                   backgroundColor: isActive ? '#006847' : 'transparent', 
                   color: isActive ? '#ffffff' : '#93C5FD',
                   transition: 'all 0.3s ease-in-out',
-                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
                 }}
               >
                 {menu.icon} 
@@ -154,8 +154,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || activeSubView === 'info-outlet' ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || activeSubView === 'info-outlet' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || activeSubView !== 'main-dashboard' ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || activeSubView !== 'main-dashboard' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -167,28 +167,39 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           </div>
 
           {/* Container Sub-Menu Settings Pop-down */}
-          {isMainSidebarOpen && (
+          {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: isSettingsOpen ? '150px' : '0px',
+              maxHeight: '150px',
               overflow: 'hidden',
               transition: 'all 0.4s ease-in-out',
-              opacity: isSettingsOpen ? 1 : 0,
+              opacity: 1,
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
               paddingLeft: '14px',
-              marginBottom: isSettingsOpen ? '4px' : '0px'
+              marginBottom: '4px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, action: () => setActiveSubView('info-outlet') },
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
+                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
               ].map((sub, i) => {
-                const isSubActive = activeSubView === 'info-outlet' && sub.name === 'Info Outlet';
+                const isSubActive = activeSubView === sub.target;
+
+                {/* SINKRONISASI HANDLER KLIK: Mengatur render form internal dashboard tanpa mental alert browser */}
+                const handleSubMenuClick = () => {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                    setActiveSubView(sub.target);
+                    setIsSettingsOpen(false);
+                  } else {
+                    alert(`Buka parameter ${sub.name}`);
+                  }
+                };
+
                 return (
                   <div 
                     key={i}
-                    onClick={sub.action}
+                    onClick={handleSubMenuClick}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
                       borderRadius: '8px', 
@@ -224,21 +235,16 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           </div>
 
           {/* Card Profile Merchant */}
-          <div 
-            onClick={() => onNavigateView('profile')} 
-            title={!isMainSidebarOpen ? 'Warung Kopi Jaya (Premium)' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-              gap: '12px', 
-              padding: '12px 16px', 
-              backgroundColor: '#111827', 
-              borderRadius: '12px', 
-              marginTop: '4px',
-              cursor: 'pointer'
-            }}
-          >
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+            gap: '12px', 
+            padding: '12px 16px', 
+            backgroundColor: '#111827', 
+            borderRadius: '12px', 
+            marginTop: '4px'
+          }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
@@ -284,9 +290,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <div style={{
               position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
               borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              zIndex: 100, display: 'flex', flexDirection: 'column', padding: '6px', boxSizing: 'border-box',
-              transition: 'all 0.2s ease-in-out', opacity: isProfileOpen ? 1 : 0,
-              transform: isProfileOpen ? 'translateY(0)' : 'translateY(-10px)', pointerEvents: isProfileOpen ? 'auto' : 'none'
+              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
             }}>
               {[{ name: 'Edit Profile', icon: <User size={14} /> }, { name: 'Account Security', icon: <Shield size={14} /> }, { name: 'API Credentials', icon: <Key size={14} /> }].map((item, idx) => (
                 <div key={idx} onClick={() => alert(item.name)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
@@ -297,10 +301,20 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           </div>
         </div>
 
-        {/* CONTAINER WORKSPACE UTAMA: DINAMIS BERGANTUNG SUB-VIEW */}
+        {/* CONTAINER WORKSPACE UTAMA: SELEKTOR ROUTER DYNAMIC */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box' }}>
           
-          {/* ================= PILIHAN A: DASHBOARD VIEW UTAMA ================= */}
+          {/* ================= KONDISI 1: FORM INTERNAL INFO OUTLET ================= */}
+          {activeSubView === 'info-outlet' && (
+            <InfoOutlet onSaveSuccess={() => { alert('Pengaturan Info Outlet Cabang Berhasil Diperbarui!'); setActiveSubView('main-dashboard'); }} />
+          )}
+
+          {/* ================= KONDISI 2: FORM INTERNAL KONFIGURASI AI ================= */}
+          {activeSubView === 'konfigurasi-ai' && (
+            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('main-dashboard'); }} />
+          )}
+
+          {/* ================= KONDISI 3: RENDERING UTUH WORKSPACE BI DASHBOARD UTAMA ================= */}
           {activeSubView === 'main-dashboard' && (
             <>
               {/* SMART CARDS ROW SUMMARY */}
@@ -338,12 +352,12 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
               </div>
 
-              {/* SALES VS EXPENSES GRAPH */}
+              {/* SALES VS EXPENSES GRAPH & BREAKDOWN PANEL */}
               <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div onClick={() => setIsBreakdownOpen(!isBreakdownOpen)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', padding: '4px', borderRadius: '8px', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                <div onClick={() => setIsBreakdownOpen(!isBreakdownOpen)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      Sales vs Expenses {isBreakdownOpen ? <ChevronUp size={18} color="#6B7280" /> : <ChevronDown size={18} color="#6B7280" />}
+                      Sales vs Expenses {isBreakdownOpen ? <ChevronUp size={18} color="#006847" /> : <ChevronDown size={18} color="#6B7280" />}
                     </h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>Visualisasi fluktuasi mingguan performa operasional</p>
                   </div>
@@ -352,7 +366,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '12px', height: '12px', backgroundColor: '#4F46E5', borderRadius: '50%' }} /> Expenses</span>
                   </div>
                 </div>
-                <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifycontent: 'space-between' }}>
                   <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', overflow: 'visible' }}>
                     <path d="M 0 50 Q 116 20 233 40 T 466 20 T 700 30" fill="none" stroke="#006847" strokeWidth="4" />
                     <path d="M 0 80 Q 116 60 233 75 T 466 55 T 700 65" fill="none" stroke="#4F46E5" strokeWidth="4" />
@@ -361,144 +375,147 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
                   </div>
                 </div>
+
+                {/* BREAKDOWN PANEL DETAIL MINGGUAN */}
+                <div style={{
+                  maxHeight: isBreakdownOpen ? '400px' : '0px',
+                  overflow: 'hidden',
+                  transition: 'all 0.4s ease-in-out',
+                  opacity: isBreakdownOpen ? 1 : 0,
+                  borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none',
+                  paddingTop: isBreakdownOpen ? '16px' : '0px',
+                  boxSizing: 'border-box'
+                }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '12px', textAlign: 'left' }}>📋 RINCIAN OPERASIONAL MINGGUAN</span>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ color: '#9CA3AF', fontWeight: 'bold', borderBottom: '1px solid #F3F4F6' }}>
+                        <th style={{ padding: '10px 8px' }}>HARI</th>
+                        <th style={{ padding: '10px 8px' }}>TOTAL SALES (RP)</th>
+                        <th style={{ padding: '10px 8px' }}>TOTAL EXPENSES (RP)</th>
+                        <th style={{ padding: '10px 8px' }}>STATUS MARGIN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { day: 'Monday', sales: 'Rp 1.450.000', exp: 'Rp 450.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                        { day: 'Tuesday', sales: 'Rp 1.200.000', exp: 'Rp 620.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                        { day: 'Wednesday', sales: 'Rp 1.650.000', exp: 'Rp 510.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                        { day: 'Thursday', sales: 'Rp 1.100.000', exp: 'Rp 950.000', stat: 'WARNING', color: '#FFF7ED', text: '#D97706' },
+                        { day: 'Friday', sales: 'Rp 2.100.000', exp: 'Rp 420.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                        { day: 'Saturday', sales: 'Rp 2.850.000', exp: 'Rp 700.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                        { day: 'Sunday', sales: 'Rp 2.100.000', exp: 'Rp 700.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
+                      ].map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                          <td style={{ padding: '12px 8px', fontWeight: '600' }}>{row.day}</td>
+                          <td style={{ padding: '12px 8px', color: '#006847', fontWeight: 'bold' }}>{row.sales}</td>
+                          <td style={{ padding: '12px 8px', color: '#4F46E5', fontWeight: '600' }}>{row.exp}</td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <span style={{ backgroundColor: row.color, color: row.text, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{row.stat}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
 
               {/* TOP SELLING MENU */}
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                  {[{ name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' }, { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' }, { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }].map((menu, i) => (
+                  {...[{ name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' }, { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' }, { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }].map((menu, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
                       <img src={menu.img} alt={menu.name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
-                      <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>{menu.name}</p><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span></div>
+                      <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{menu.name}</p><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span></div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* FINANCIAL DEEP-DIVE BANNER */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+                {/* Tabel Laba Rugi Audited */}
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>LABA RUGI (AUDITED)</span>
+                    <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px' }}>JULY 2024</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#4B5563' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp 12.450.000</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp 4.350.000</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Labor Costs</span><strong style={{ color: '#DC2626' }}>- Rp 2.500.000</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp 1.480.000</strong></div>
+                    
+                    <div style={{ backgroundColor: '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>Margin: 33.1%</span></div>
+                      <strong style={{ fontSize: '18px', color: '#006847' }}>Rp 4.120.000</strong>
+                    </div>
+
+                    <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px' }}>💡</span>
+                      <p style={{ margin: 0, lineHeight: '1.4' }}><strong>Brainy Insights:</strong> Increasing 'Cafe Latte' margin by 5% could boost monthly net profit by Rp 450.000.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grafik Tren Harga Bahan Baku */}
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '300px', fontSize: '10px', fontWeight: 'bold', color: '#6B7280' }}>
+                      {['● KOPI ARABICA', '● BERAS PREMIUM', '● GULA AREN', '● FRESH MILK', '● DAGING AYAM'].map((item, i) => <span key={i}>{item}</span>)}
+                    </div>
+                  </div>
+                  
+                  <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
+                    <div style={{ position: 'absolute', bottom: '20px', left: '10%', right: '10%', height: '2px', backgroundColor: '#E5E7EB' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
+                    <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', borderTop: '1px solid #F3F4F6', paddingTop: '14px', textAlign: 'center', fontSize: '11px' }}>
+                    {[
+                      { name: 'KOPI', price: 'Rp 185k' }, { name: 'BERAS', price: 'Rp 78k' }, 
+                      { name: 'GULA', price: 'Rp 45k' }, { name: 'MILK', price: 'Rp 22.5k' }, { name: 'AYAM', price: 'Rp 42k' }
+                    ].map((baku, i) => (
+                      <div key={i}>
+                        <span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px' }}>{baku.name}</span>
+                        <strong style={{ color: '#111827', marginTop: '2px', display: 'block' }}>{baku.price}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* TRIPLE BOTTOM METRICS ROW CARDS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>📊 AVERAGE TRANSACTION</span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Rp 48.500</h3>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>+4.2% <span style={{ color: '#9CA3AF', fontWeight: '500' }}>vs last month</span></span>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>🧬 LOYALTY RATE</span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>64%</h3>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>+2.1% <span style={{ color: '#9CA3AF', fontWeight: '500' }}>from new members</span></span>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>⏰ PEAK HOURS</span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>08:00 – 11:00</h3>
+                  <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: '500' }}>Account for <strong>42%</strong> of daily sales</span>
+                </div>
+              </div>
             </>
-          )}
-
-          {/* ================= PILIHAN B: SUB-VIEW INFO OUTLET PAGE (image_d696c5.png) ================= */}
-          {activeSubView === 'info-outlet' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.2s ease-out' }}>
-              
-              {/* Header Title Section */}
-              <div>
-                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Info Outlet</h1>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Kelola profil hukum, alamat fisik, dan parameter operasional gerai aktif lu.</p>
-              </div>
-
-              {/* Main Split Layout Grid Forms */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
-                
-                {/* BLOK KIRI: PROFIL & LOKASI FORM */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  
-                  {/* Card 1: Identitas Legal Usaha */}
-                  <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <FileText size={18} color="#006847" /> Identitas & Legalitas Gerai
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Outlet / Cabang</label>
-                        <input type="text" defaultValue="Warung Kopi Jaya" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor Induk Berusaha (NIB)</label>
-                          <input type="text" defaultValue="1209849201948" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori Bisnis</label>
-                          <select style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', backgroundColor: '#fff' }}>
-                            <option>Food & Beverages (Coffee Shop)</option>
-                            <option>Retail / Kelontong</option>
-                            <option>Jasa Operasional</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Kontak & Lokasi Fisik */}
-                  <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <MapPin size={18} color="#006847" /> Lokasi & Kontak Cabang
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor Telepon Outlet</label>
-                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <Phone size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
-                            <input type="text" defaultValue="08123456789" style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                          </div>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Email Resmi Cabang</label>
-                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <Mail size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
-                            <input type="email" defaultValue="kopijaya.selatan@cuanin.id" style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Fisik Lengkap</label>
-                        <textarea rows="3" defaultValue="Jl. Teuku Umar No.42, Kota Tegal, Jawa Tengah, 52123" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontFamily: 'sans-serif', resize: 'none' }}></textarea>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* BLOK KANAN: PARAMETER OPERASIONAL & PAJAK */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  
-                  {/* Card 3: Waktu Operasional & Pajak */}
-                  <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Clock size={18} color="#006847" /> Aturan Operasional & Pajak
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Buka Toko</label>
-                          <input type="time" defaultValue="08:00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Tutup Toko</label>
-                          <input type="time" defaultValue="23:00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                      </div>
-                      <span style={{ fontSize: '10.5px', color: '#6B7280', display: 'block', marginTop: '-4px' }}>*Waktu operasional di atas dibaca otomatis oleh AI untuk menghitung grafik Peak Hours.</span>
-                      
-                      <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Pajak Restoran / PB1 (%)</label>
-                          <input type="number" defaultValue="10" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Biaya Layanan / Service Charge (Rp)</label>
-                          <input type="number" defaultValue="2000" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Button Aksi Simpan */}
-                  <button 
-                    onClick={() => { alert('Pengaturan Info Outlet Cabang Berhasil Diperbarui!'); setActiveSubView('main-dashboard'); }}
-                    style={{ width: '100%', padding: '14px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0, 104, 71, 0.2)' }}
-                  >
-                    <Save size={16} /> Simpan Perubahan Outlet
-                  </button>
-
-                </div>
-
-              </div>
-
-            </div>
           )}
 
         </div>
