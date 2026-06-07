@@ -7,6 +7,9 @@ import {
   CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
+// KUNCI UTAMA: Import komponen formulir mandiri InfoOutlet ke dalam staff management
+import InfoOutlet from '../settings/InfoOutlet.jsx';
+
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
@@ -43,6 +46,9 @@ export default function StaffManagement({ onNavigateView }) {
   const [selectedRole, setSelectedRole] = useState('Manager');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+
+  {/* KUNCI FITUR UTAMA: State Pengontrol area workspace kanan (Katalog Staf VS Form Info Outlet) */}
+  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
@@ -92,21 +98,21 @@ export default function StaffManagement({ onNavigateView }) {
           )}
         </div>
 
-        {/* Menu Items List */}
+        {/* Menu Utama List - SIDEBAR TETAP STAY LOCK HIGHLIGHT DI MENU STAFF USERS */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
-            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock' },
-            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu' },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
+            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
+            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setIsViewingInfoOutlet(false) } // Klik tab staf balikin area kanan ke tabel database kru asli
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
 
             return (
               <div 
                 key={idx} 
-                onClick={() => onNavigateView(menu.target)} 
+                onClick={menu.action} 
                 title={!isMainSidebarOpen ? menu.name : ''}
                 style={{ 
                   display: 'flex', 
@@ -141,8 +147,8 @@ export default function StaffManagement({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -166,23 +172,38 @@ export default function StaffManagement({ onNavigateView }) {
               marginBottom: isSettingsOpen ? '4px' : '0px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, action: () => alert('Buka Pengaturan Outlet Kopi Jaya') },
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
-              ].map((sub, i) => (
-                <div 
-                  key={i}
-                  onClick={sub.action}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                    borderRadius: '8px', color: '#93C5FD', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ffffff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#93C5FD'; }}
-                >
-                  {sub.icon} <span>{sub.name}</span>
-                </div>
-              ))}
+                { name: 'Info Outlet', icon: <Store size={14} /> }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} /> }, 
+                { name: 'Keamanan', icon: <ShieldCheck size={14} /> }
+              ].map((sub, i) => {
+                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                
+                {/* AKURASI SINKRONISASI STRING: Tombol Info Outlet memicu rendering internal form tanpa alert browser */}
+                const handleSubMenuClick = () => {
+                  if (sub.name === 'Info Outlet') {
+                    setIsViewingInfoOutlet(true);
+                    setIsSettingsOpen(false);
+                  } else {
+                    alert(`Buka parameter ${sub.name}`);
+                  }
+                };
+
+                return (
+                  <div 
+                    key={i}
+                    onClick={handleSubMenuClick}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
+                      borderRadius: '8px', 
+                      color: isSubActive ? '#ffffff' : '#93C5FD', 
+                      backgroundColor: isSubActive ? '#006847' : 'transparent',
+                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    {sub.icon} <span>{sub.name}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -219,7 +240,7 @@ export default function StaffManagement({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
               </div>
             )}
           </div>
@@ -251,111 +272,113 @@ export default function StaffManagement({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW */}
+        {/* CONTAINER CONTENT VIEW (LOGIKA LAYOUT DYNAMIC) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Staff Management</h1>
-              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Manage access and information for your team members efficiently.</p>
-            </div>
-            <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
-              <UserPlus size={16} /> Add New Staff
-            </button>
-          </div>
+          {/* ================= KONDISI A: MERENDER COMPONENT FORM INFO OUTLET SECARA INTERNAL ================= */}
+          {isViewingInfoOutlet ? (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
+          ) : (
+            
+            /* ================= KONDISI B: KONTEN UTUH DATABASE TEAM AWAL ================= */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Staff Management</h1>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Manage access and information for your team members efficiently.</p>
+                </div>
+                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
+                  <UserPlus size={16} /> Add New Staff
+                </button>
+              </div>
 
-          {/* THREE METRICS CARDS ROW */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Total Staff</span>
-                <div style={{ width: '32px', height: '32px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users2 size={16} /></div>
+              {/* THREE METRICS CARDS ROW */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Total Staff</span>
+                    <div style={{ width: '32px', height: '32px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users2 size={16} /></div>
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>12</h2>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>+1 this month</span>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Active Staff</span>
+                    <div style={{ width: '32px', height: '32px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserCheck size={16} /></div>
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>10<span style={{ color: '#9CA3AF', fontSize: '16px', fontWeight: '500' }}>/12</span></h2>
+                  <span style={{ fontSize: '11px', color: '#6B7280', display: 'block', marginTop: '6px' }}>currently online</span>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>On Leave</span>
+                    <div style={{ width: '32px', height: '32px', backgroundColor: '#FFF5F5', color: '#E53E3E', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalendarDays size={16} /></div>
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>2</h2>
+                  <span style={{ fontSize: '11px', color: '#E53E3E', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>Today</span>
+                </div>
               </div>
-              <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>12</h2>
-              <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>+1 this month</span>
-            </div>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Active Staff</span>
-                <div style={{ width: '32px', height: '32px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserCheck size={16} /></div>
-              </div>
-              <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>10<span style={{ color: '#9CA3AF', fontSize: '16px', fontWeight: '500' }}>/12</span></h2>
-              <span style={{ fontSize: '11px', color: '#6B7280', display: 'block', marginTop: '6px' }}>currently online</span>
-            </div>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>On Leave</span>
-                <div style={{ width: '32px', height: '32px', backgroundColor: '#FFF5F5', color: '#E53E3E', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalendarDays size={16} /></div>
-              </div>
-              <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>2</h2>
-              <span style={{ fontSize: '11px', color: '#E53E3E', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>Today</span>
-            </div>
-          </div>
 
-          {/* STAFF TABLE CATALOG */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '320px' }}>
-                <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
-                <input type="text" placeholder="Search team members..." style={{ width: '100%', padding: '8px 12px 8px 34px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '12px', outline: 'none', backgroundColor: '#F9FAFB' }} />
+              {/* STAFF TABLE CATALOG */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '320px' }}>
+                    <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                    <input type="text" placeholder="Search team members..." style={{ width: '100%', padding: '8px 12px 8px 34px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '12px', outline: 'none', backgroundColor: '#F9FAFB' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><Filter size={14}/> Filter</button>
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><ArrowUpDown size={14}/> Sort</button>
+                  </div>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
+                      <th style={{ padding: '14px 24px' }}>Name</th>
+                      <th style={{ padding: '14px 24px' }}>Role</th>
+                      <th style={{ padding: '14px 24px' }}>Email</th>
+                      <th style={{ padding: '14px 24px' }}>Status</th>
+                      <th style={{ padding: '14px 24px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: 'Jordan Smith', join: 'Joined Oct 2023', role: 'MANAGER', roleBg: '#EEF2FF', roleColor: '#4F46E5', email: 'jordan.s@cuanin.id', status: 'Active', isLeave: false, img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100' },
+                      { name: 'Casey Wong', join: 'Joined Jan 2024', role: 'BARISTA', roleBg: '#F3F4F6', roleColor: '#4B5563', email: 'casey.w@cuanin.id', status: 'On Leave', isLeave: true, img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100' }
+                    ].map((staff, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                        <td style={{ padding: '14px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <img src={staff.img} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                            <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>{staff.join}</span></div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 24px' }}><span style={{ backgroundColor: staff.roleBg, color: staff.roleColor, padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{staff.role}</span></td>
+                        <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
+                        <td style={{ padding: '14px 24px' }}><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.isLeave ? '#D97706' : '#059669' }}><div style={{ width: '6px', height: '6px', backgroundColor: staff.isLeave ? '#FBBF24' : '#10B981', borderRadius: '50%' }} />{staff.status}</span></td>
+                        <td style={{ padding: '14px 24px', textAlign: 'right', color: '#9CA3AF' }}><MoreVertical size={16} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><Filter size={14}/> Filter</button>
-                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><ArrowUpDown size={14}/> Sort</button>
-              </div>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
-                  <th style={{ padding: '14px 24px' }}>Name</th>
-                  <th style={{ padding: '14px 24px' }}>Role</th>
-                  <th style={{ padding: '14px 24px' }}>Email</th>
-                  <th style={{ padding: '14px 24px' }}>Status</th>
-                  <th style={{ padding: '14px 24px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'Jordan Smith', join: 'Joined Oct 2023', role: 'MANAGER', roleBg: '#EEF2FF', roleColor: '#4F46E5', email: 'jordan.s@cuanin.id', status: 'Active', isLeave: false, img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100' },
-                  { name: 'Casey Wong', join: 'Joined Jan 2024', role: 'BARISTA', roleBg: '#F3F4F6', roleColor: '#4B5563', email: 'casey.w@cuanin.id', status: 'On Leave', isLeave: true, img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100' }
-                ].map((staff, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                    <td style={{ padding: '14px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <img src={staff.img} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                        <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>{staff.join}</span></div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 24px' }}><span style={{ backgroundColor: staff.roleBg, color: staff.roleColor, padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{staff.role}</span></td>
-                    <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
-                    <td style={{ padding: '14px 24px' }}><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.isLeave ? '#D97706' : '#059669' }}><div style={{ width: '6px', height: '6px', backgroundColor: staff.isLeave ? '#FBBF24' : '#10B981', borderRadius: '50%' }} />{staff.status}</span></td>
-                    <td style={{ padding: '14px 24px', textAlign: 'right', color: '#9CA3AF' }}><MoreVertical size={16} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            </>
+          )}
+
         </div>
       </div>
 
-      {/* =======================================================================
-          ========= MODAL OVERLAY: ACCOUNT PASSWORD CREATION SECTOR =========
-          ======================================================================= */}
+      {/* ================= MODAL OVERLAY: ADD NEW STAFF MEMBER ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          
           <div style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* Header Modal */}
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Tambah Staf Baru</h2>
               <X size={18} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsModalOpen(false)} />
             </div>
 
-            {/* Form Body Fields Container */}
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxSizing: 'border-box' }}>
-              
-              {/* Lingkaran Upload Foto */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', margin: '0 auto 6px auto' }}>
                 <div style={{ width: '80px', height: '80px', border: '1px dashed #D1D5DB', borderRadius: '50%', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '4px' }}>
                   <ImageIcon size={18} color="#9CA3AF" />
@@ -364,13 +387,11 @@ export default function StaffManagement({ onNavigateView }) {
                 <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Format: JPG, PNG (Max 2MB)</span>
               </div>
 
-              {/* Input Nama Lengkap */}
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Lengkap</label>
                 <input type="text" placeholder="Masukkan nama lengkap staf" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
 
-              {/* Selektor Tombol Peran (Role) */}
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '8px' }}>Peran (Role)</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -390,7 +411,6 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* Input Baris Grid: Email & Telepon */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Email</label>
@@ -402,7 +422,6 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* INTEGRATED PASSWORD FOR ACCOUNT CREATION */}
               <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '14px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Buat Password Akun</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -415,17 +434,13 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
                 <span style={{ fontSize: '10.5px', color: '#6B7280', marginTop: '4px', display: 'block' }}>*Password ini bakal digunain kru terkait pas pertama kali masuk aplikasi.</span>
               </div>
-
             </div>
 
-            {/* Footer Modal Action Buttons */}
             <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button onClick={() => setIsModalOpen(false)} style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
               <button onClick={() => { alert('Data Staf & Akun Login Berhasil Dibuat!'); setIsModalOpen(false); }} style={{ padding: '10px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Simpan Data Staf</button>
             </div>
-
           </div>
-
         </div>
       )}
 

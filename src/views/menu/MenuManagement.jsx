@@ -7,6 +7,9 @@ import {
   Image as ImageIcon, Trash, Save, TrendingUp, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
+// KUNCI UTAMA: Import komponen mandiri info outlet ke dalam menu management
+import InfoOutlet from '../settings/InfoOutlet.jsx';
+
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
@@ -38,11 +41,16 @@ export default function MenuManagement({ onNavigateView }) {
   const { logout } = useAuth();
   const currentView = 'menu';
   
-  // State manajemen kontrol popup modal tambah menu dan navigasi sidebar
+  // State Manajemen Kontrol Popup Modal Tambah Menu
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Coffee');
+
+  // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+
+  {/* KUNCI FITUR UTAMA: State Pengontrol area workspace kanan (Katalog Menu VS Form Info Outlet) */}
+  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
@@ -92,21 +100,21 @@ export default function MenuManagement({ onNavigateView }) {
           )}
         </div>
 
-        {/* Menu Items List */}
+        {/* Menu Utama List - SIDEBAR TETAP STAY LOCK HIGHLIGHT DI MENU MANAGEMENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
-            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock' },
-            { name: 'Menu Management', icon: <MenuIcon size={18} />, target: 'menu' },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
+            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
+            { name: 'Menu Management', icon: <MenuIcon size={18} />, target: 'menu', action: () => setIsViewingInfoOutlet(false) }, // Balik dari form ke katalog asli menu
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
 
             return (
               <div 
                 key={idx} 
-                onClick={() => onNavigateView(menu.target)} 
+                onClick={menu.action} 
                 title={!isMainSidebarOpen ? menu.name : ''}
                 style={{ 
                   display: 'flex', 
@@ -141,8 +149,8 @@ export default function MenuManagement({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -166,23 +174,38 @@ export default function MenuManagement({ onNavigateView }) {
               marginBottom: isSettingsOpen ? '4px' : '0px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, action: () => alert('Buka Pengaturan Outlet Kopi Jaya') },
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
-              ].map((sub, i) => (
-                <div 
-                  key={i}
-                  onClick={sub.action}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                    borderRadius: '8px', color: '#93C5FD', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ffffff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#93C5FD'; }}
-                >
-                  {sub.icon} <span>{sub.name}</span>
-                </div>
-              ))}
+                { name: 'Info Outlet', icon: <Store size={14} /> }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} /> }, 
+                { name: 'Keamanan', icon: <ShieldCheck size={14} /> }
+              ].map((sub, i) => {
+                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                
+                // Handler klik tersinkronisasi murni state tanpa alert mengganggu
+                const handleSubMenuClick = () => {
+                  if (sub.name === 'Info Outlet') {
+                    setIsViewingInfoOutlet(true);
+                    setIsSettingsOpen(false);
+                  } else {
+                    alert(`Buka parameter ${sub.name}`);
+                  }
+                };
+
+                return (
+                  <div 
+                    key={i}
+                    onClick={handleSubMenuClick}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
+                      borderRadius: '8px', 
+                      color: isSubActive ? '#ffffff' : '#93C5FD', 
+                      backgroundColor: isSubActive ? '#006847' : 'transparent',
+                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    {sub.icon} <span>{sub.name}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -251,79 +274,89 @@ export default function MenuManagement({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW */}
+        {/* CONTAINER CONTENT VIEW (DENGAN LOGIKA LAYOUT DINAMIS) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Menu Management</h1>
-              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant menu catalog.</p>
-            </div>
-            <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
-              <Plus size={16} /> Add New Item
-            </button>
-          </div>
-
-          {/* THREE HEAD METRICS CARDS ROW */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#E6F4EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📋</div>
-              <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Total Items</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>124</h2></div>
-            </div>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#EEF2FF', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🎲</div>
-              <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Active Categories</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12</h2></div>
-            </div>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#FEE2E2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={22} /></div>
-              <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Out of Stock</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>8</h2></div>
-            </div>
-          </div>
-
-          {/* ACTIVE MENU CATALOG TABLE */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Active Menu</h3>
-              <div style={{ display: 'flex', gap: '10px', color: '#6B7280' }}>
-                <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><SlidersHorizontal size={16} /></div>
-                <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: '#F3F4F6' }}><Grid size={16} /></div>
+          {/* ================= KONDISI A: MERENDER COMPONENT FORM INFO OUTLET SECARA INTERNAL ================= */}
+          {isViewingInfoOutlet ? (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
+          ) : (
+            
+            /* ================= KONDISI B: KONTEN ASLI KATALOG MENU UTUH SEBELUMNYA ================= */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Menu Management</h1>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant menu catalog.</p>
+                </div>
+                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
+                  <Plus size={16} /> Add New Item
+                </button>
               </div>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
-                  <th style={{ padding: '14px 24px' }}>ITEM DETAILS</th>
-                  <th style={{ padding: '14px 24px' }}>CATEGORY</th>
-                  <th style={{ padding: '14px 24px' }}>PRICE</th>
-                  <th style={{ padding: '14px 24px' }}>STATUS</th>
-                  <th style={{ padding: '14px 24px', textAlign: 'right' }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'Nasi Goreng Special', sku: 'MC-001', cat: 'Main Course', price: 'Rp 35.000', stat: 'Available', available: true, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=120' },
-                  { name: 'Es Teh Manis Kristal', sku: 'BV-042', cat: 'Beverages', price: 'Rp 8.000', stat: 'Available', available: true, img: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=120' }
-                ].map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <img src={item.img} alt={item.name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
-                        <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>SKU: {item.sku}</span></div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px' }}>{item.cat}</span></td>
-                    <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>{item.price}</td>
-                    <td style={{ padding: '16px 24px' }}><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: '#059669' }}><div style={{ width: '6px', height: '6px', backgroundColor: '#10B981', borderRadius: '50%' }} />{item.stat}</span></td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right', color: '#9CA3AF' }}><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}><Edit2 size={16} /><Trash2 size={16} /></div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+              {/* THREE HEAD METRICS CARDS ROW */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', backgroundColor: '#E6F4EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📋</div>
+                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Total Items</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>124</h2></div>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', backgroundColor: '#EEF2FF', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🎲</div>
+                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Active Categories</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12</h2></div>
+                </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', backgroundColor: '#FEE2E2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={22} /></div>
+                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Out of Stock</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>8</h2></div>
+                </div>
+              </div>
+
+              {/* ACTIVE MENU CATALOG TABLE */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Active Menu</h3>
+                  <div style={{ display: 'flex', gap: '10px', color: '#6B7280' }}>
+                    <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><SlidersHorizontal size={16} /></div>
+                    <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: '#F3F4F6' }}><Grid size={16} /></div>
+                  </div>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
+                      <th style={{ padding: '14px 24px' }}>ITEM DETAILS</th>
+                      <th style={{ padding: '14px 24px' }}>CATEGORY</th>
+                      <th style={{ padding: '14px 24px' }}>PRICE</th>
+                      <th style={{ padding: '14px 24px' }}>STATUS</th>
+                      <th style={{ padding: '14px 24px', textAlign: 'right' }}>ACTIONS</th>
+                    </tr>
+                  </thead> {/* 👈 FIX DI SINI: Sekarang udah ditutup pakai </thead> yang bener, Gar */}
+                  <tbody>
+                    {[
+                      { name: 'Nasi Goreng Special', sku: 'MC-001', cat: 'Main Course', price: 'Rp 35.000', stat: 'Available', available: true, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=120' },
+                      { name: 'Es Teh Manis Kristal', sku: 'BV-042', cat: 'Beverages', price: 'Rp 8.000', stat: 'Available', available: true, img: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=120' }
+                    ].map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <img src={item.img} alt={item.name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+                            <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>SKU: {item.sku}</span></div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px' }}>{item.cat}</span></td>
+                        <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>{item.price}</td>
+                        <td style={{ padding: '16px 24px' }}><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: '#059669' }}><div style={{ width: '6px', height: '6px', backgroundColor: '#10B981', borderRadius: '50%' }} />{item.stat}</span></td>
+                        <td style={{ padding: '16px 24px', textAlign: 'right', color: '#9CA3AF' }}><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}><Edit2 size={16} style={{ cursor: 'pointer' }} /><Trash2 size={16} style={{ cursor: 'pointer' }} /></div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
 
-      {/* ================= WINDOW POPUP OVERLAY ================= */}
+      {/* ================= WINDOW POPUP OVERLAY ADD NEW ITEM ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadeIn 0.2s ease-out' }}>

@@ -6,6 +6,9 @@ import {
   FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
+// Kita import komponen formulir mandiri InfoOutlet agar bisa dirender internal di sini
+import InfoOutlet from '../settings/InfoOutlet.jsx';
+
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
@@ -28,6 +31,9 @@ export default function StockIntelligence({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+
+  {/* STATE UTAMA: Pengontrol area workspace kanan (Tabel Stok VS Form Info Outlet) */}
+  const [isViewingInfoOutlet, setIsViewingInfoOutlet] = useState(false);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -63,21 +69,21 @@ export default function StockIntelligence({ onNavigateView }) {
           )}
         </div>
 
-        {/* Menu Items List */}
+        {/* Menu Utama List - SIDEBAR TETAP LOCK HIGHLIGHT DI MENU STOCK */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
-            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock' },
-            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu' },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
+            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => setIsViewingInfoOutlet(false) }, 
+            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
 
             return (
               <div 
                 key={idx} 
-                onClick={() => onNavigateView(menu.target)} 
+                onClick={menu.action} 
                 title={!isMainSidebarOpen ? menu.name : ''}
                 style={{ 
                   display: 'flex', 
@@ -112,8 +118,8 @@ export default function StockIntelligence({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || isViewingInfoOutlet ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || isViewingInfoOutlet ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -137,23 +143,38 @@ export default function StockIntelligence({ onNavigateView }) {
               marginBottom: isSettingsOpen ? '4px' : '0px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, action: () => alert('Buka Pengaturan Outlet Kopi Jaya') },
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, action: () => alert('Buka Parameter Brainy POS') },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, action: () => alert('Buka Enkripsi Akses Kasir') }
-              ].map((sub, i) => (
-                <div 
-                  key={i}
-                  onClick={sub.action}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                    borderRadius: '8px', color: '#93C5FD', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#ffffff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#93C5FD'; }}
-                >
-                  {sub.icon} <span>{sub.name}</span>
-                </div>
-              ))}
+                { name: 'Info Outlet', icon: <Store size={14} /> }, 
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} /> }, 
+                { name: 'Keamanan', icon: <ShieldCheck size={14} /> }
+              ].map((sub, i) => {
+                const isSubActive = isViewingInfoOutlet && sub.name === 'Info Outlet';
+                
+                {/* SINKRONISASI STRING FIX PERBAIKAN: Membaca teks "Info Outlet" secara tepat dan akurat */}
+                const handleSubMenuClick = () => {
+                  if (sub.name === 'Info Outlet') {
+                    setIsViewingInfoOutlet(true);
+                    setIsSettingsOpen(false);
+                  } else {
+                    alert(`Buka parameter ${sub.name}`);
+                  }
+                };
+
+                return (
+                  <div 
+                    key={i}
+                    onClick={handleSubMenuClick}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
+                      borderRadius: '8px', 
+                      color: isSubActive ? '#ffffff' : '#93C5FD', 
+                      backgroundColor: isSubActive ? '#006847' : 'transparent',
+                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    {sub.icon} <span>{sub.name}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -209,7 +230,7 @@ export default function StockIntelligence({ onNavigateView }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
-            </button>
+             </button>
             
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
@@ -226,132 +247,140 @@ export default function StockIntelligence({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW (SCROLLABLE) */}
+        {/* CONTAINER CONTENT VIEW (SCROLLABLE DYNAMIC CHANGER) */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px 100px 32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {/* HEADER PAGE TITLE */}
-          <div>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Stock Intelligence Hub</h1>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time inventory insights and automated OCR processing.</p>
-          </div>
-
-          {/* THREE METRICS SUMMARY CARDS ROW */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📦</div>
-                <span style={{ backgroundColor: '#E6F4EA', color: '#006847', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>+5.2%</span>
+          {/* ================= KONDISI A: MERENDER COMPONENT FORM INFO OUTLET SECARA INTERNAL ================= */}
+          {isViewingInfoOutlet ? (
+            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setIsViewingInfoOutlet(false); }} />
+          ) : (
+            
+            /* ================= KONDISI B: DATA ASLI STOCK INTELLIGENCE UTUH LAMA ================= */
+            <>
+              {/* HEADER PAGE TITLE */}
+              <div>
+                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Stock Intelligence Hub</h1>
+                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time inventory insights and automated OCR processing.</p>
               </div>
-              <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Total Inventory Value (Rp)</span>
-              <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 45.500.000</h2>
-            </div>
 
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
-                <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>Action Needed</span>
-              </div>
-              <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Critical Items (Count)</span>
-              <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12 Items</h2>
-            </div>
+              {/* THREE METRICS SUMMARY CARDS ROW */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📦</div>
+                    <span style={{ backgroundColor: '#E6F4EA', color: '#006847', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>+5.2%</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Total Inventory Value (Rp)</span>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 45.500.000</h2>
+                </div>
 
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingCart size={18} color="#4B5563" /></div>
-                <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>-1.5%</span>
-              </div>
-              <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Monthly Supply Spend</span>
-              <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.300.000</h2>
-            </div>
-          </div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
+                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>Action Needed</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Critical Items (Count)</span>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12 Items</h2>
+                </div>
 
-          {/* LOWER TWO COLS MIX LAYOUT */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
-            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Inventory</h3>
-                <div style={{ display: 'flex', gap: '12px', color: '#6B7280' }}>
-                  <SlidersHorizontal size={18} style={{ cursor: 'pointer' }} />
-                  <Download size={18} style={{ cursor: 'pointer' }} />
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingCart size={18} color="#4B5563" /></div>
+                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>-1.5%</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Monthly Supply Spend</span>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.300.000</h2>
                 </div>
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
-                    <th style={{ padding: '12px 8px' }}>NAMA BAHAN</th>
-                    <th style={{ padding: '12px 8px' }}>KATEGORI</th>
-                    <th style={{ padding: '12px 8px' }}>SISA STOK</th>
-                    <th style={{ padding: '12px 8px' }}>SATUAN</th>
-                    <th style={{ padding: '12px 8px' }}>STATUS</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'right' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { nama: 'Houseblend Coffee Beans', kat: 'Coffee', stok: '15.5', unit: 'kg', stat: 'AMAN', color: '#E6F4EA', text: '#006847' },
-                    { nama: 'Full Cream Milk (Dairy Fresh)', kat: 'Dairy', stok: '4.0', unit: 'Litre', stat: 'MENIPIS', color: '#FFF7ED', text: '#D97706', alert: true },
-                    { nama: 'Palm Sugar Liquid', kat: 'Sweetener', stok: '0.5', unit: 'Litre', stat: 'HABIS', color: '#FEE2E2', text: '#DC2626', alert: true },
-                    { nama: 'Oat Milk (Oatside)', kat: 'Dairy', stok: '12.0', unit: 'Litre', stat: 'AMAN', color: '#E6F4EA', text: '#006847' }
-                  ].map((row, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                      <td style={{ padding: '14px 8px', fontWeight: 'bold', maxWidth: '180px' }}>{row.nama}</td>
-                      <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.kat}</td>
-                      <td style={{ padding: '14px 8px', fontWeight: 'bold', color: row.alert ? '#DC2626' : '#111827' }}>{row.stok}</td>
-                      <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.unit}</td>
-                      <td style={{ padding: '14px 8px' }}>
-                        <span style={{ backgroundColor: row.color, color: row.text, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{row.stat}</span>
-                      </td>
-                      <td style={{ padding: '14px 8px', textAlign: 'right', color: '#9CA3AF' }}><Edit2 size={14} style={{ cursor: 'pointer' }} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Recent Supply Log</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                {[
-                  { vendor: 'Dairy Fresh Co.', desc: '24L Full Cream Milk', time: 'Just now • OCR Scan', isOcr: true },
-                  { vendor: 'Bean Masters', desc: '10kg Houseblend', time: '2 hours ago • OCR Scan', isOcr: true },
-                  { vendor: 'Gula Melaka Hub', desc: '5L Liquid Sugar', time: 'Yesterday • Manual Entry', isOcr: false }
-                ].map((log, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <FileText size={16} color="#6B7280" />
-                    </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.vendor}</h4>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>{log.desc}</p>
-                      <span style={{ fontSize: '10px', color: log.isOcr ? '#10B981' : '#9CA3AF', fontWeight: '500', display: 'block', marginTop: '2px' }}>{log.time}</span>
+              {/* LOWER TWO COLS MIX LAYOUT */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Inventory</h3>
+                    <div style={{ display: 'flex', gap: '12px', color: '#6B7280' }}>
+                      <SlidersHorizontal size={18} style={{ cursor: 'pointer' }} />
+                      <Download size={18} style={{ cursor: 'pointer' }} />
                     </div>
                   </div>
-                ))}
+
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
+                        <th style={{ padding: '12px 8px' }}>NAMA BAHAN</th>
+                        <th style={{ padding: '12px 8px' }}>KATEGORI</th>
+                        <th style={{ padding: '12px 8px' }}>SISA STOK</th>
+                        <th style={{ padding: '12px 8px' }}>SATUAN</th>
+                        <th style={{ padding: '12px 8px' }}>STATUS</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'right' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { nama: 'Houseblend Coffee Beans', kat: 'Coffee', stok: '15.5', unit: 'kg', stat: 'AMAN', color: '#E6F4EA', text: '#006847' },
+                        { nama: 'Full Cream Milk (Dairy Fresh)', kat: 'Dairy', stok: '4.0', unit: 'Litre', stat: 'MENIPIS', color: '#FFF7ED', text: '#D97706', alert: true },
+                        { nama: 'Palm Sugar Liquid', kat: 'Sweetener', stok: '0.5', unit: 'Litre', stat: 'HABIS', color: '#FEE2E2', text: '#DC2626', alert: true },
+                        { nama: 'Oat Milk (Oatside)', kat: 'Dairy', stok: '12.0', unit: 'Litre', stat: 'AMAN', color: '#E6F4EA', text: '#006847' }
+                      ].map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                          <td style={{ padding: '14px 8px', fontWeight: 'bold', maxWidth: '180px' }}>{row.nama}</td>
+                          <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.kat}</td>
+                          <td style={{ padding: '14px 8px', fontWeight: 'bold', color: row.alert ? '#DC2626' : '#111827' }}>{row.stok}</td>
+                          <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.unit}</td>
+                          <td style={{ padding: '14px 8px' }}>
+                            <span style={{ backgroundColor: row.color, color: row.text, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{row.stat}</span>
+                          </td>
+                          <td style={{ padding: '14px 8px', textAlign: 'right', color: '#9CA3AF' }}><Edit2 size={14} style={{ cursor: 'pointer' }} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Recent Supply Log</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                    {[
+                      { vendor: 'Dairy Fresh Co.', desc: '24L Full Cream Milk', time: 'Just now • OCR Scan', isOcr: true },
+                      { vendor: 'Bean Masters', desc: '10kg Houseblend', time: '2 hours ago • OCR Scan', isOcr: true },
+                      { vendor: 'Gula Melaka Hub', desc: '5L Liquid Sugar', time: 'Yesterday • Manual Entry', isOcr: false }
+                    ].map((log, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <FileText size={16} color="#6B7280" />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.vendor}</h4>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>{log.desc}</p>
+                          <span style={{ fontSize: '10px', color: log.isOcr ? '#10B981' : '#9CA3AF', fontWeight: '500', display: 'block', marginTop: '2px' }}>{log.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
+                </div>
               </div>
-              <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
-            </div>
-          </div>
+
+              {/* FLOATING POP-UP: BRAINY PROACTIVE INSIGHT NOTE */}
+              <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold', letterSpacing: '0.5px', display: 'block' }}>BRAINY INSIGHT</span>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>Stock for Full Cream Milk is projected to run out in 3 days. Create restock draft?</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                  <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
+                  <button onClick={() => alert('Draf restok otomatis terbuat!')} style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Confirm</button>
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
-
-        {/* FLOATING POP-UP: BRAINY PROACTIVE INSIGHT NOTE */}
-        <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <AlertCircle size={20} />
-            </div>
-            <div>
-              <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold', letterSpacing: '0.5px', display: 'block' }}>BRAINY INSIGHT</span>
-              <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>Stock for Full Cream Milk is projected to run out in 3 days. Create restock draft?</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-            <button style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
-            <button style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Confirm</button>
-          </div>
-        </div>
-
       </div>
     </div>
   );
