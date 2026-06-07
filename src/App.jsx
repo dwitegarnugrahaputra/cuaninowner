@@ -25,12 +25,13 @@ function MainRouter() {
     );
   }
 
-  // --- KENDALI VIEW UTAMA INTERNAL ---
+  // --- ARSITEKTUR ROUTER GLOBAL CUANIN OWNER ---
   if (user) {
     if (currentView === 'dashboard') {
-      return <MainDashboard onNavigateView={setCurrentView} />;
-    } else if (currentView === 'chat') {
-      return <BrainyChat onNavigateView={setCurrentView} />;
+      return <MainDashboard onNavigateView={setCurrentView} forcedSubView="main-dashboard" />;
+    } else if (currentView === 'info-outlet') {
+      {/* SEKTOR AMAN: Kita pinjam file MainDashboard tapi paksa internal view-nya ngebuka form outlet */}
+      return <MainDashboard onNavigateView={setCurrentView} forcedSubView="info-outlet" />;
     } else if (currentView === 'sales') {
       return <SalesMonitoring onNavigateView={setCurrentView} />;
     } else if (currentView === 'stock') {

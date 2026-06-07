@@ -34,17 +34,27 @@ function CuaninLogoMini() {
   );
 }
 
-export default function MainDashboard({ onNavigateView }) {
+// Ganti baris deklarasi paling atas MainDashboard lu menjadi seperti ini, Gar:
+export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const { logout } = useAuth();
-  
+  const currentView = 'dashboard';
+
   // State kendali interaksi UI internal
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI STATE BARU: Menentukan apakah menampilkan Dashboard Utama atau Sub-View Info Outlet */}
-  const [activeSubView, setActiveSubView] = useState('main-dashboard'); // 'main-dashboard' atau 'info-outlet'
+  // KUNCI UTAMA: Sinkronisasi state lokal dengan parameter kiriman dari tab luar
+  const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
+  
+  React.useEffect(() => {
+    if (forcedSubView) {
+      setActiveSubView(forcedSubView);
+    }
+  }, [forcedSubView]);
+
+  // ... sisa kode MainDashboard ke bawah (termasuk grafik Financial Deep-Dive baru lu) tetap aman utuh tanpa diubah ...
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
