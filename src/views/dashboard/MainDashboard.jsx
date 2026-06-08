@@ -4,12 +4,14 @@ import {
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, LogOut,
-  MessageSquare, User, Shield, Key, ArrowUpRight
+  MessageSquare, User, Shield, Key, ArrowUpRight, Globe
 } from 'lucide-react';
 
-// Import komponen form internal yang sudah kita desentralisasikan
+// Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
+import Keamanan from '../settings/Keamanan.jsx';
+import Bahasa from '../settings/Bahasa.jsx';
 
 // Logo cuanin.id versi mini murni CSS
 function CuaninLogoMini() {
@@ -48,7 +50,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' */}
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
   // Sinkronisasi state jika ada kiriman props forcedSubView dari luar router global
@@ -106,7 +108,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           )}
         </div>
 
-        {/* Menu Utama List - HIGHLIGHT UTAMA TETAP MENGUNCI DI TAB DASHBOARD UTAMA */}
+        {/* Menu Utama List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => setActiveSubView('main-dashboard') },
@@ -115,7 +117,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
-            const isActive = menu.target === 'dashboard';
+            const isActive = menu.target === 'dashboard' && activeSubView === 'main-dashboard';
             return (
               <div 
                 key={idx} 
@@ -169,28 +171,21 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           {/* Container Sub-Menu Settings Pop-down */}
           {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: '150px',
-              overflow: 'hidden',
-              transition: 'all 0.4s ease-in-out',
-              opacity: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              paddingLeft: '14px',
-              marginBottom: '4px'
+              maxHeight: '150px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: 1,
+              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px'
             }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
+                { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
 
-                {/* SINKRONISASI HANDLER KLIK: Mengatur render form internal dashboard tanpa mental alert browser */}
+                {/* SINKRONISASI INTEGRASI RUTE: Menghapus penutup otomatis agar popdown tetap terbuka lebar */}
                 const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan' || sub.target === 'bahasa') {
                     setActiveSubView(sub.target);
-                    setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
                   }
@@ -301,7 +296,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           </div>
         </div>
 
-        {/* CONTAINER WORKSPACE UTAMA: SELEKTOR ROUTER DYNAMIC */}
+        {/* CONTAINER WORKSPACE UTAMA */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box' }}>
           
           {/* ================= KONDISI 1: FORM INTERNAL INFO OUTLET ================= */}
@@ -314,7 +309,17 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('main-dashboard'); }} />
           )}
 
-          {/* ================= KONDISI 3: RENDERING UTUH WORKSPACE BI DASHBOARD UTAMA ================= */}
+          {/* ================= KONDISI 3: FORM INTERNAL KEAMANAN SYSTEM ================= */}
+          {activeSubView === 'keamanan' && (
+            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('main-dashboard'); }} />
+          )}
+
+          {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
+          {activeSubView === 'bahasa' && (
+            <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('main-dashboard'); }} />
+          )}
+
+          {/* ================= KONDISI 4: RENDERING WORKSPACE BI DASHBOARD UTAMA ================= */}
           {activeSubView === 'main-dashboard' && (
             <>
               {/* SMART CARDS ROW SUMMARY */}
@@ -366,7 +371,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '12px', height: '12px', backgroundColor: '#4F46E5', borderRadius: '50%' }} /> Expenses</span>
                   </div>
                 </div>
-                <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifycontent: 'space-between' }}>
+                <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', overflow: 'visible' }}>
                     <path d="M 0 50 Q 116 20 233 40 T 466 20 T 700 30" fill="none" stroke="#006847" strokeWidth="4" />
                     <path d="M 0 80 Q 116 60 233 75 T 466 55 T 700 65" fill="none" stroke="#4F46E5" strokeWidth="4" />
@@ -378,13 +383,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
                 {/* BREAKDOWN PANEL DETAIL MINGGUAN */}
                 <div style={{
-                  maxHeight: isBreakdownOpen ? '400px' : '0px',
-                  overflow: 'hidden',
-                  transition: 'all 0.4s ease-in-out',
-                  opacity: isBreakdownOpen ? 1 : 0,
-                  borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none',
-                  paddingTop: isBreakdownOpen ? '16px' : '0px',
-                  boxSizing: 'border-box'
+                  maxHeight: isBreakdownOpen ? '400px' : '0px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: isBreakdownOpen ? 1 : 0,
+                  borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none', paddingTop: isBreakdownOpen ? '16px' : '0px', boxSizing: 'border-box'
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '12px', textAlign: 'left' }}>📋 RINCIAN OPERASIONAL MINGGUAN</span>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -418,14 +418,13 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </tbody>
                   </table>
                 </div>
-
               </div>
 
               {/* TOP SELLING MENU */}
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                  {...[{ name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' }, { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' }, { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }].map((menu, i) => (
+                  {[{ name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' }, { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' }, { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }].map((menu, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
                       <img src={menu.img} alt={menu.name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
                       <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{menu.name}</p><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span></div>
@@ -434,30 +433,26 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
               </div>
 
-              {/* FINANCIAL DEEP-DIVE BANNER */}
+              {/* FINANCIAL DEEP-DIVE */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
-                {/* Tabel Laba Rugi Audited */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>LABA RUGI (AUDITED)</span>
                     <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px' }}>JULY 2024</span>
                   </div>
-
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#4B5563' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp 12.450.000</strong></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp 4.350.000</strong></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Labor Costs</span><strong style={{ color: '#DC2626' }}>- Rp 2.500.000</strong></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp 1.480.000</strong></div>
-                    
                     <div style={{ backgroundColor: '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                       <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>Margin: 33.1%</span></div>
                       <strong style={{ fontSize: '18px', color: '#006847' }}>Rp 4.120.000</strong>
                     </div>
-
                     <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                       <span style={{ fontSize: '16px' }}>💡</span>
                       <p style={{ margin: 0, lineHeight: '1.4' }}><strong>Brainy Insights:</strong> Increasing 'Cafe Latte' margin by 5% could boost monthly net profit by Rp 450.000.</p>
@@ -465,39 +460,28 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                   </div>
                 </div>
 
-                {/* Grafik Tren Harga Bahan Baku */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                    <div>
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span>
-                    </div>
+                    <div><span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span></div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '300px', fontSize: '10px', fontWeight: 'bold', color: '#6B7280' }}>
                       {['● KOPI ARABICA', '● BERAS PREMIUM', '● GULA AREN', '● FRESH MILK', '● DAGING AYAM'].map((item, i) => <span key={i}>{item}</span>)}
                     </div>
                   </div>
-                  
                   <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
                     <div style={{ position: 'absolute', bottom: '20px', left: '10%', right: '10%', height: '2px', backgroundColor: '#E5E7EB' }} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
                     <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
                   </div>
-
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', borderTop: '1px solid #F3F4F6', paddingTop: '14px', textAlign: 'center', fontSize: '11px' }}>
-                    {[
-                      { name: 'KOPI', price: 'Rp 185k' }, { name: 'BERAS', price: 'Rp 78k' }, 
-                      { name: 'GULA', price: 'Rp 45k' }, { name: 'MILK', price: 'Rp 22.5k' }, { name: 'AYAM', price: 'Rp 42k' }
-                    ].map((baku, i) => (
-                      <div key={i}>
-                        <span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px' }}>{baku.name}</span>
-                        <strong style={{ color: '#111827', marginTop: '2px', display: 'block' }}>{baku.price}</strong>
-                      </div>
+                    {[{ name: 'KOPI', price: 'Rp 185k' }, { name: 'BERAS', price: 'Rp 78k' }, { name: 'GULA', price: 'Rp 45k' }, { name: 'MILK', price: 'Rp 22.5k' }, { name: 'AYAM', price: 'Rp 42k' }].map((baku, i) => (
+                      <div key={i}><span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px' }}>{baku.name}</span><strong style={{ color: '#111827', marginTop: '2px', display: 'block' }}>{baku.price}</strong></div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* TRIPLE BOTTOM METRICS ROW CARDS */}
+              {/* TRIPLE BOTTOM METRICS CARDS */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>📊 AVERAGE TRANSACTION</span>

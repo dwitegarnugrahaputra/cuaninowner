@@ -6,9 +6,10 @@ import {
   FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
 } from 'lucide-react';
 
-// Import komponen form internal yang sudah kita desentralisasikan
+// Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
+import Keamanan from '../settings/Keamanan.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -33,7 +34,7 @@ export default function StockIntelligence({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KONTROL LAYOUT WORKSPACE AREA UTAMA: 'stock-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  {/* KUNCI SINKRONISASI WORKSPACE: 'stock-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
   const [activeSubView, setActiveSubView] = useState('stock-table');
 
   return (
@@ -132,8 +133,8 @@ export default function StockIntelligence({ onNavigateView }) {
           {/* Sub-menu Akordion Pop-down Settings */}
           {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: isSettingsOpen ? '150px' : '0px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: isSettingsOpen ? 1 : 0,
-              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: isSettingsOpen ? '4px' : '0px'
+              maxHeight: '150px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: 1,
+              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px'
             }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
@@ -142,10 +143,11 @@ export default function StockIntelligence({ onNavigateView }) {
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
                 
+                {/* SINKRONISASI HANDLER KLIK INTERNAL: Mengubah subview workspace stock tanpa pop-up alert browser */}
                 const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
                     setActiveSubView(sub.target);
-                    setIsSettingsOpen(false);
+                    // setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
                   }
@@ -239,13 +241,17 @@ export default function StockIntelligence({ onNavigateView }) {
         {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px 100px 32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {/* SELEKTOR INTERFACE OPERASIONAL */}
+          {/* SELEKTOR RENDERING WORKSPACE OPERASIONAL */}
           {activeSubView === 'info-outlet' && (
             <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('stock-table'); }} />
           )}
 
           {activeSubView === 'konfigurasi-ai' && (
             <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('stock-table'); }} />
+          )}
+
+          {activeSubView === 'keamanan' && (
+            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('stock-table'); }} />
           )}
 
           {activeSubView === 'stock-table' && (
@@ -315,7 +321,7 @@ export default function StockIntelligence({ onNavigateView }) {
                         { nama: 'Palm Sugar Liquid', kat: 'Sweetener', stok: '0.5', unit: 'Litre', stat: 'HABIS', color: '#FEE2E2', text: '#DC2626', alert: true },
                         { nama: 'Oat Milk (Oatside)', kat: 'Dairy', stok: '12.0', unit: 'Litre', stat: 'AMAN', color: '#E6F4EA', text: '#006847' }
                       ].map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                        <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }} key={idx}>
                           <td style={{ padding: '14px 8px', fontWeight: 'bold', maxWidth: '180px' }}>{row.nama}</td>
                           <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.kat}</td>
                           <td style={{ padding: '14px 8px', fontWeight: 'bold', color: row.alert ? '#DC2626' : '#111827' }}>{row.stok}</td>

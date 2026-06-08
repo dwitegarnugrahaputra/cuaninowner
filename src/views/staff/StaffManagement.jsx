@@ -10,6 +10,7 @@ import {
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
+import Keamanan from '../settings/Keamanan.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -48,7 +49,7 @@ export default function StaffManagement({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI SINKRONISASI WORKSPACE: 'staff-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  {/* KUNCI SINKRONISASI WORKSPACE: 'staff-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
   const [activeSubView, setActiveSubView] = useState('staff-table');
 
   return (
@@ -106,7 +107,7 @@ export default function StaffManagement({ onNavigateView }) {
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
             { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setActiveSubView('staff-table') } // Balik ke data tim asli
+            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setActiveSubView('staff-table') } 
           ].map((menu, idx) => {
             const isActive = currentView === menu.target;
 
@@ -180,9 +181,9 @@ export default function StaffManagement({ onNavigateView }) {
                 const isSubActive = activeSubView === sub.target;
                 
                 const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
                     setActiveSubView(sub.target);
-                    setIsSettingsOpen(false);
+                    // setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
                   }
@@ -240,7 +241,7 @@ export default function StaffManagement({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
+                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -257,7 +258,6 @@ export default function StaffManagement({ onNavigateView }) {
             <input type="text" placeholder="Search team members by name or email..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            {/* FIX KAWIN PROPS: Menghubungkan Ask Brainy langsung ke modul chat AI secara presisi */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -286,7 +286,12 @@ export default function StaffManagement({ onNavigateView }) {
             <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('staff-table'); }} />
           )}
 
-          {/* ================= KONDISI 3: RENDER UTUH KATALOG UTAMA DATABASE TEAM STAF ================= */}
+          {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
+          {activeSubView === 'keamanan' && (
+            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('staff-table'); }} />
+          )}
+
+          {/* ================= KONDISI 4: RENDER UTUH KATALOG UTAMA DATABASE TEAM STAF ================= */}
           {activeSubView === 'staff-table' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -376,7 +381,7 @@ export default function StaffManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= MODAL TAMBAH STAF BARU (TETAP UTUH) ================= */}
+      {/* ================= MODAL TAMBAH STAF BARU ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

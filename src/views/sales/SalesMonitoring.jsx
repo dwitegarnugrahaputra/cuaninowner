@@ -9,6 +9,7 @@ import {
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
+import Keamanan from '../settings/Keamanan.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -45,7 +46,7 @@ export default function SalesMonitoring({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI SINKRONISASI WORKSPACE: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  {/* KUNCI STATE SINKRONISASI WORKSPACE: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
   const [activeSubView, setActiveSubView] = useState('sales-table');
 
   return (
@@ -176,11 +177,11 @@ export default function SalesMonitoring({ onNavigateView }) {
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
                 
-                {/* FIX HANDLER KLIK SINKRON: Mengaktifkan pemetaan halaman internal dashboard */}
+                {/* SINKRONISASI HANDLER KLIK: Mengatur swap view internal halaman Sales tanpa pop-up browser */}
                 const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
                     setActiveSubView(sub.target);
-                    setIsSettingsOpen(false);
+                    // setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
                   }
@@ -238,7 +239,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -255,7 +256,6 @@ export default function SalesMonitoring({ onNavigateView }) {
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            {/* FIX KAWIN PROPS: Menghubungkan Ask Brainy langsung ke modul chat AI secara presisi */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -291,7 +291,12 @@ export default function SalesMonitoring({ onNavigateView }) {
             <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('sales-table'); }} />
           )}
 
-          {/* ================= KONDISI 3: DATA ASLI MONITORING PENJUALAN UTUH ================= */}
+          {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
+          {activeSubView === 'keamanan' && (
+            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('sales-table'); }} />
+          )}
+
+          {/* ================= KONDISI 4: DATA ASLI MONITORING PENJUALAN UTUH ================= */}
           {activeSubView === 'sales-table' && (
             <>
               {/* TITLE & FILTER BAR */}
@@ -349,7 +354,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                     </thead>
                     <tbody>
                       <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}><td style={{ padding: '14px 8px', color: '#6B7280' }}>14:45</td><td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90215</td><td style={{ padding: '14px 8px' }}>Andi S.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 125.000</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span></td></tr>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}><td style={{ padding: '14px 8px', fontWeight: '500' }}>14:42</td><td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td><td style={{ padding: '14px 8px', fontWeight: '500' }}>Dani P.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 450.000</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>VOID</span></td></tr>
+                      <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}><td style={{ padding: '14px 8px', fontWeight: '500' }}>14:42</td><td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td><td style={{ padding: '14px 8px', textDecoration: 'line-through' }}>Dani P.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 450.000</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>VOID</span></td></tr>
                       <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}><td style={{ padding: '14px 8px', color: '#6B7280' }}>14:38</td><td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90211</td><td style={{ padding: '14px 8px' }}>Siti R.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 82.500</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span></td></tr>
                     </tbody>
                   </table>
@@ -360,7 +365,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {[{ rank: 1, name: 'Andi S.', orders: '128 ORDERS', sales: 'Rp 5.2M', color: '#FBBF24', bg: '#FEF3C7' }, { rank: 2, name: 'Siti R.', orders: '94 ORDERS', sales: 'Rp 3.8M', color: '#9CA3AF', bg: '#F3F4F6' }].map((cashier, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '28px', height: '28px', backgroundColor: cashier.bg, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', color: cashier.color }}>{cashier.rank}</div><div><p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{cashier.name}</p><span style={{ fontSize: '10px', color: '#9CA3AF' }}>{cashier.orders}</span></div></div>
                           <span style={{ fontSize: '13px', fontWeight: 'bold', color: cashier.rank === 1 ? '#10B981' : '#111827' }}>{cashier.sales}</span>
                         </div>

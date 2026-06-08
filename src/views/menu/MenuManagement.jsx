@@ -10,6 +10,7 @@ import {
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
+import Keamanan from '../settings/Keamanan.jsx';
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -50,7 +51,7 @@ export default function MenuManagement({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KUNCI SINKRONISASI WORKSPACE: 'menu-table' VS 'info-outlet' VS 'konfigurasi-ai' */}
+  {/* KUNCI SINKRONISASI WORKSPACE: 'menu-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
   const [activeSubView, setActiveSubView] = useState('menu-table');
 
   return (
@@ -182,9 +183,9 @@ export default function MenuManagement({ onNavigateView }) {
                 const isSubActive = activeSubView === sub.target;
                 
                 const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai') {
+                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
                     setActiveSubView(sub.target);
-                    setIsSettingsOpen(false);
+                    // setIsSettingsOpen(false);
                   } else {
                     alert(`Buka parameter ${sub.name}`);
                   }
@@ -242,7 +243,7 @@ export default function MenuManagement({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Merchant #8821</span>
+                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -259,7 +260,6 @@ export default function MenuManagement({ onNavigateView }) {
             <input type="text" placeholder="Search menu items, orders..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            {/* FIX KAWIN PROPS: Menghubungkan Ask Brainy langsung ke modul chat AI secara presisi */}
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -275,7 +275,7 @@ export default function MenuManagement({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW (DENGAN LOGIKA LAYOUT DINAMIS) */}
+        {/* CONTAINER CONTENT VIEW */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
           {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
@@ -288,7 +288,12 @@ export default function MenuManagement({ onNavigateView }) {
             <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('menu-table'); }} />
           )}
 
-          {/* ================= KONDISI 3: KONTEN ASLI KATALOG MENU UTUH SEBELUMNYA ================= */}
+          {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
+          {activeSubView === 'keamanan' && (
+            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('menu-table'); }} />
+          )}
+
+          {/* ================= KONDISI 4: KONTEN ASLI KATALOG MENU UTUH ================= */}
           {activeSubView === 'menu-table' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -335,7 +340,7 @@ export default function MenuManagement({ onNavigateView }) {
                       <th style={{ padding: '14px 24px' }}>STATUS</th>
                       <th style={{ padding: '14px 24px', textAlign: 'right' }}>ACTIONS</th>
                     </tr>
-                  </thead> {/* FIX PASSED: Tag penutup thead sudah lurus presisi */}
+                  </thead>
                   <tbody>
                     {[
                       { name: 'Nasi Goreng Special', sku: 'MC-001', cat: 'Main Course', price: 'Rp 35.000', stat: 'Available', available: true, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=120' },
@@ -450,7 +455,7 @@ export default function MenuManagement({ onNavigateView }) {
                 </div>
 
                 <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Trash2 size={16}/> Profit Analysis</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Layers size={16}/> Profit Analysis</div>
                   <div>
                     <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>ESTIMATED COGS</span>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
@@ -462,7 +467,6 @@ export default function MenuManagement({ onNavigateView }) {
                     <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>PROJECTED MARGIN</span>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
                       <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#34D399' }}>68%</h2>
-                      <Trash2 size={18} color="#34D399" />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', fontSize: '12px' }}>
