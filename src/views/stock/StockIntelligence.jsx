@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { 
-  LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, Bell, HelpCircle, TrendingUp, AlertTriangle, ShoppingCart, 
-  FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
+import {
+  LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings,
+  Search, Bell, HelpCircle, TrendingUp, AlertTriangle, ShoppingCart,
+  FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, 
+  LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, 
+  User, Key, Globe, Shield // 👈 SUNTIKAN KATA INI DI SINI, GAR!
 } from 'lucide-react';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
+
+// 🛠️ FIX IMPOR AMAN: Menambahkan impor Bahasa dan EditProfile agar tidak memicu ReferenceError/Blank Page
+import Bahasa from '../settings/Bahasa.jsx'; 
+import EditProfile from '../dashboard/EditProfile.jsx'; 
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -33,26 +39,29 @@ export default function StockIntelligence({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+  
+  {/* 🛠️ STATE BARU: Pengontrol visibilitas popup menu mengambang dropdown topbar */}
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  {/* KUNCI SINKRONISASI WORKSPACE: 'stock-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
+  {/* 🛠️ SINKRONISASI WORKSPACE ROUTE POINTER UTUH */}
   const [activeSubView, setActiveSubView] = useState('stock-table');
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
-      
+     
       {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
-      <div style={{ 
-        width: isMainSidebarOpen ? '260px' : '80px', 
-        backgroundColor: '#1E3A8A', 
-        color: '#ffffff', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '24px 0', 
+      <div style={{
+        width: isMainSidebarOpen ? '260px' : '80px',
+        backgroundColor: '#1E3A8A',
+        color: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px 0',
         flexShrink: 0,
-        transition: 'width 0.3s ease-in-out', 
+        transition: 'width 0.3s ease-in-out',
         overflow: 'hidden'
       }}>
-        
+       
         {/* Header Branding Sidebar dengan Trigger Collapse */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -76,27 +85,27 @@ export default function StockIntelligence({ onNavigateView }) {
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
             { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => onNavigateView('sales') },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => setActiveSubView('stock-table') }, 
+            { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => setActiveSubView('stock-table') },
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
-            const isActive = currentView === menu.target;
+            const isActive = currentView === menu.target && activeSubView === 'stock-table';
 
             return (
-              <div 
-                key={idx} 
-                onClick={menu.action} 
+              <div
+                key={idx}
+                onClick={menu.action}
                 title={!isMainSidebarOpen ? menu.name : ''}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-                  gap: '12px', 
-                  padding: '12px 16px', 
-                  borderRadius: '10px', 
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   fontWeight: isActive ? 'bold' : '500',
-                  backgroundColor: isActive ? '#006847' : 'transparent', 
+                  backgroundColor: isActive ? '#006847' : 'transparent',
                   color: isActive ? '#ffffff' : '#93C5FD',
                   transition: 'all 0.3s ease-in-out',
                 }}
@@ -109,58 +118,68 @@ export default function StockIntelligence({ onNavigateView }) {
 
         {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          
+         
           {/* Tombol Settings Utama */}
-          <div 
-            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
+          <div
+            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)}
             title={!isMainSidebarOpen ? 'Settings' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
-              padding: '12px 16px', 
-              color: isSettingsOpen || activeSubView !== 'stock-table' ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || activeSubView !== 'stock-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isMainSidebarOpen ? 'space-between' : 'center',
+              padding: '12px 16px',
+              color: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD',
+              backgroundColor: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+            {/* 🛠️ SUNTIKAN ANIMASI ROTASI CHEVRON: Muter halus 180 derajat berbasis state akordion */}
+            {isMainSidebarOpen && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}>
+                <ChevronDown size={14} />
+              </div>
+            )}
           </div>
 
-          {/* Sub-menu Akordion Pop-down Settings */}
-          {isMainSidebarOpen && isSettingsOpen && (
+          {/* 🛠️ SUNTIKAN ANIMASI POPDOWN: Buka-tutup transisi ketinggian smooth material design */}
+          {isMainSidebarOpen && (
             <div style={{
-              maxHeight: '150px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: 1,
-              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px'
+              maxHeight: isSettingsOpen ? '200px' : '0px',
+              opacity: isSettingsOpen ? 1 : 0,
+              paddingTop: isSettingsOpen ? '4px' : '0px',
+              paddingBottom: isSettingsOpen ? '4px' : '0px',
+              overflow: 'hidden',
+              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              paddingLeft: '14px',
+              marginBottom: '4px'
             }}>
               {[
-                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
-                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
+                { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
+                { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
+                { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
-                
-                {/* SINKRONISASI HANDLER KLIK INTERNAL: Mengubah subview workspace stock tanpa pop-up alert browser */}
-                const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
-                    setActiveSubView(sub.target);
-                    // setIsSettingsOpen(false);
-                  } else {
-                    alert(`Buka parameter ${sub.name}`);
-                  }
-                };
-
+               
                 return (
-                  <div 
+                  <div
                     key={i}
-                    onClick={handleSubMenuClick}
+                    onClick={() => setActiveSubView(sub.target)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      color: isSubActive ? '#ffffff' : '#93C5FD', 
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
+                      borderRadius: '8px',
+                      color: isSubActive ? '#ffffff' : '#93C5FD',
                       backgroundColor: isSubActive ? '#006847' : 'transparent',
                       fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
                     }}
@@ -173,15 +192,15 @@ export default function StockIntelligence({ onNavigateView }) {
           )}
 
           {/* Tombol Logout Mandiri */}
-          <div 
+          <div
             onClick={logout}
             title={!isMainSidebarOpen ? 'Logout' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-              gap: '12px', 
-              padding: '12px 16px', 
+              gap: '12px',
+              padding: '12px 16px',
               color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
             }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
@@ -191,15 +210,15 @@ export default function StockIntelligence({ onNavigateView }) {
           </div>
 
           {/* Card Profile Merchant */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-            gap: '12px', 
-            padding: '12px 16px', 
-            backgroundColor: '#111827', 
-            borderRadius: '12px', 
-            marginTop: '4px' 
+            gap: '12px',
+            padding: '12px 16px',
+            backgroundColor: '#111827',
+            borderRadius: '12px',
+            marginTop: '4px'
           }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
             {isMainSidebarOpen && (
@@ -214,9 +233,9 @@ export default function StockIntelligence({ onNavigateView }) {
 
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-        
+       
         {/* TOPBAR HEADER AREA */}
-        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
+        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
             <input type="text" placeholder="Search stock, supplies, or reports..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
@@ -226,33 +245,48 @@ export default function StockIntelligence({ onNavigateView }) {
                <MessageSquare size={16} /> Ask Brainy
              </button>
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
+            
+            {/* 🛠️ INTEGRASI TARGET PROFILE: Trigger klik pembawa identitas OWNER */}
+            <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
-                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Alex Graham {isProfileOpen ? <ChevronUp size={14} color="#6B7280" /> : <ChevronDown size={14} color="#6B7280" />}
+                </p>
+                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
               <div style={{ width: '40px', height: '40px', backgroundColor: '#E5E7EB', borderRadius: '50%', overflow: 'hidden' }}>
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
+
+            {/* 🛠️ INTEGRASI DROPDOWN POPUP FLOATING UTUH */}
+            <div style={{
+              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
+              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
+            }}>
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
+              </div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
+              </div>
+              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
         {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px 100px 32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
-          
-          {/* SELEKTOR RENDERING WORKSPACE OPERASIONAL */}
-          {activeSubView === 'info-outlet' && (
-            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('stock-table'); }} />
-          )}
-
-          {activeSubView === 'konfigurasi-ai' && (
-            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('stock-table'); }} />
-          )}
-
-          {activeSubView === 'keamanan' && (
-            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('stock-table'); }} />
-          )}
+         
+          {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('stock-table')} />}
+          {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('stock-table')} />}
+          {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('stock-table')} />}
+          {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('stock-table')} />}
+          {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('stock-table')} />}
 
           {activeSubView === 'stock-table' && (
             <>
@@ -267,7 +301,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📦</div>
-                    <span style={{ backgroundColor: '#E6F4EA', color: '#006847', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>+5.2%</span>
+                    <span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px' }}>+5.2%</span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Total Inventory Value (Rp)</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 45.500.000</h2>
@@ -276,7 +310,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
-                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>Action Needed</span>
+                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px' }}>Action Needed</span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Critical Items (Count)</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12 Items</h2>
@@ -285,7 +319,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingCart size={18} color="#4B5563" /></div>
-                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '8px' }}>-1.5%</span>
+                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px' }}>-1.5%</span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Monthly Supply Spend</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.300.000</h2>
@@ -348,7 +382,7 @@ export default function StockIntelligence({ onNavigateView }) {
                         <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <FileText size={16} color="#6B7280" />
                         </div>
-                        <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                           <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.vendor}</h4>
                           <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>{log.desc}</p>
                           <span style={{ fontSize: '10px', color: log.isOcr ? '#10B981' : '#9CA3AF', fontWeight: '500', display: 'block', marginTop: '2px' }}>{log.time}</span>
