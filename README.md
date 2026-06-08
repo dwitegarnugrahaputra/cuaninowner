@@ -1,16 +1,71 @@
-# React + Vite
+# cuanin.id - Owner Command Center 🚀
+> **Business Assistance & Smart POS Management Platform**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+cuanin.id adalah platform Point of Sales (POS) modern yang diintegrasikan dengan kecerdasan buatan (AI) untuk membantu digitalisasi, otomatisasi inventori, serta pengawasan keamanan finansial bagi para pelaku usaha (Merchant PREMIUM). Repository **cuaninowner** ini merupakan modul khusus ring pusat kendali (Command Center) yang dirancang eksklusif untuk level hak akses **OWNER**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Main Features (Fitur Utama)
 
-## React Compiler
+Aplikasi dashboard owner ini menggunakan arsitektur desentralisasi berbasis *Workspace Sub-View Changer* internal, sehingga owner dapat mengelola seluruh konfigurasi bisnis secara langsung tanpa interupsi navigasi:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+*   📊 **Sales Monitoring & Real-time Live Feed:** Pantau metrik pendapatan harian, total transaksi, jam sibuk (*peak hours*), serta live feed transaksi kasir (Success vs Void) secara instan.
+*   🧠 **AI Fraud Analytics Engine:** Proteksi otomatis bermesin AI untuk mendeteksi anomali pola transaksi kasir, tindakan *double voids*, dan indikasi kecurangan di lapangan secara real-time.
+*   📦 **Stock Intelligence Hub & OCR Supplies Log:** Manajemen inventori cerdas mendeteksi bahan menipis, spend belanja bulanan, log restok otomatis berbasis pemindaian nota otomatis (OCR Scan), serta rekomendasi *Brainy Proactive Insight*.
+*   👤 **Owner Profile Dropdown Panel:** Panel menu mengambang (*floating menu*) di hulu topbar kanan untuk akses kilat ke modul *Edit Profile* (Informasi Dasar Owner & Update Password), *Account Security*, dan *API Credentials*.
+*   ⚙️ **Decentralized Internal Settings:** Sistem pengaturan modular internal langsung di dalam satu halaman kerja (Info Outlet, Konfigurasi Parameter Brainy AI, Keamanan Sistem, dan Pengaturan Bahasa).
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 💻 Tech Stack (Spesifikasi Teknologi)
+
+*   **Frontend Library:** React.js (Functional Components & Hooks)
+*   **Build Tool & Dev Server:** Vite
+*   **Icons Framework:** Lucide React (Premium smooth vector icons)
+*   **Context & State Management:** React Context API (Auth Context Engine)
+*   **Styling Engine:** Inline JavaScript Styling object murni (Pixel-Perfect Responsive Layout)
+
+---
+
+## ⚙️ Installation & Local Development (Cara Menjalankan)
+
+Ikuti langkah berikut untuk mereplikasi dan menjalankan project ini di komputer lokal lu, Gar:
+
+1.  **Clone Repository:**
+```bash
+    git clone [https://github.com/dwitegarnugrahaputra/cuaninowner.git](https://github.com/dwitegarnugrahaputra/cuaninowner.git)
+    cd cuaninowner
+    ```
+
+2.  **Install Dependencies:**
+```bash
+    npm install
+    ```
+
+3.  **Run Development Server:**
+```bash
+    npm run dev
+    ```
+    Buka browser lu dan akses URL lokal di: `http://localhost:5173`
+
+---
+
+## 📂 Project Directory Structure
+
+```text
+src/
+├── context/
+│   └── AuthContext.jsx       # Pintu keamanan otentikasi sesi global
+├── views/
+│   ├── dashboard/
+│   │   ├── MainDashboard.jsx  # Dashboard utama rangkuman performa bisnis
+│   │   └── EditProfile.jsx    # Form kelola profil owner & ubah kata sandi
+│   ├── sales/
+│   │   └── SalesMonitoring.jsx # Feed transaksi real-time & AI Fraud Analytics
+│   ├── stock/
+│   │   └── StockIntelligence.jsx # Pusat kendali inventori & AI Proactive Insight
+│   └── settings/
+│       ├── InfoOutlet.jsx    # Form desentralisasi data fisik merchant
+│       ├── KonfigurasiAI.jsx # Setelan parameter respons AI Brainy POS
+│       ├── Keamanan.jsx      # Panel regulasi kebijakan sekuritas
+│       └── Bahasa.jsx        # Pengaturan lokalisasi bahasa sistem
