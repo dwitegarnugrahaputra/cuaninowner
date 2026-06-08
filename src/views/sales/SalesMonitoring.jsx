@@ -3,13 +3,15 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Calendar, Download, TrendingUp, TrendingDown,
-  AlertTriangle, Shield, ArrowRight, MessageSquare, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
+  AlertTriangle, Shield, ArrowRight, MessageSquare, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe
 } from 'lucide-react';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
+import Bahasa from '../settings/Bahasa.jsx';
+import EditProfile from '../dashboard/EditProfile.jsx'; 
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -45,8 +47,11 @@ export default function SalesMonitoring({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+  
+  {/* State pengontrol buka-tutup dropdown mengambang profil topbar */}
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  {/* KUNCI STATE SINKRONISASI WORKSPACE: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
+  {/* WORKSPACE ENGINE POINTER: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState('sales-table');
 
   return (
@@ -106,7 +111,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
-            const isActive = currentView === menu.target;
+            const isActive = currentView === menu.target && activeSubView === 'sales-table';
 
             return (
               <div 
@@ -146,21 +151,30 @@ export default function SalesMonitoring({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || activeSubView !== 'sales-table' ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || activeSubView !== 'sales-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+            {isMainSidebarOpen && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}>
+                <ChevronDown size={14} />
+              </div>
+            )}
           </div>
 
           {/* Sub-menu Akordion Pop-down Settings */}
           {isMainSidebarOpen && isSettingsOpen && (
             <div style={{
-              maxHeight: '150px',
+              maxHeight: '200px',
               overflow: 'hidden',
               transition: 'all 0.4s ease-in-out',
               opacity: 1,
@@ -173,24 +187,15 @@ export default function SalesMonitoring({ onNavigateView }) {
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
+                { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
                 
-                {/* SINKRONISASI HANDLER KLIK: Mengatur swap view internal halaman Sales tanpa pop-up browser */}
-                const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
-                    setActiveSubView(sub.target);
-                    // setIsSettingsOpen(false);
-                  } else {
-                    alert(`Buka parameter ${sub.name}`);
-                  }
-                };
-
                 return (
                   <div 
                     key={i}
-                    onClick={handleSubMenuClick}
+                    onClick={() => setActiveSubView(sub.target)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
                       borderRadius: '8px', 
@@ -239,7 +244,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
+                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -250,7 +255,7 @@ export default function SalesMonitoring({ onNavigateView }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* TOPBAR HEADER AREA */}
-        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
+        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
@@ -265,16 +270,37 @@ export default function SalesMonitoring({ onNavigateView }) {
             </div>
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             
-            {/* Profil Data Identitas Alex Graham */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
+            {/* Profil Data Identitas OWNER */}
+            <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
-                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Alex Graham {isProfileOpen ? <ChevronUp size={14} color="#6B7280" /> : <ChevronDown size={14} color="#6B7280" />}
+                </p>
+                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
               <div style={{ width: '40px', height: '40px', backgroundColor: '#E5E7EB', borderRadius: '50%', overflow: 'hidden' }}>
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
+
+            {/* FLOATING DROPDOWN PROFIL POPUP */}
+            <div style={{
+              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
+              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
+            }}>
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
+              </div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
+              </div>
+              {/* FIX RESTORED: Mengembalikan baris API Credentials yang hilang ke dropdown topbar secara presisi */}
+              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -294,6 +320,16 @@ export default function SalesMonitoring({ onNavigateView }) {
           {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
           {activeSubView === 'keamanan' && (
             <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('sales-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
+          {activeSubView === 'bahasa' && (
+            <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('sales-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3.8: FORM INTERNAL EDIT PROFILE PENGGUNA ================= */}
+          {activeSubView === 'edit-profile' && (
+            <EditProfile onSaveSuccess={() => setActiveSubView('sales-table')} />
           )}
 
           {/* ================= KONDISI 4: DATA ASLI MONITORING PENJUALAN UTUH ================= */}
@@ -338,7 +374,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                     <div style={{ width: '36px', height: '36px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={20} color="#fff" /></div>
                     <span style={{ backgroundColor: '#ffffff', color: '#991B1B', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px', letterSpacing: '0.5px' }}>CRITICAL</span>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#FCA5A5', fontWeight: '500' }}>Void Alerts</span>
+                  <span style={{ fontSize: '12px', color: '#FFCACA', fontWeight: '500' }}>Void Alerts</span>
                   <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: 'bold' }}>4 Alerts</h2>
                   <span style={{ fontSize: '11px', color: '#FCA5A5', display: 'block', marginTop: '6px' }}>Action required for Cashier #2</span>
                 </div>
@@ -348,24 +384,50 @@ export default function SalesMonitoring({ onNavigateView }) {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}><h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}><div style={{ width: '6px', height: '6px', backgroundColor: '#10B981', borderRadius: '50%' }} /> LIVE UPDATING</span></div>
+                  
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}><th style={{ padding: '12px 8px' }}>TIME</th><th style={{ padding: '12px 8px' }}>TX ID</th><th style={{ padding: '12px 8px' }}>CASHIER</th><th style={{ padding: '12px 8px' }}>TOTAL (RP)</th><th style={{ padding: '12px 8px', textAlign: 'right' }}>STATUS</th></tr>
+                      <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
+                        <th style={{ padding: '12px 8px' }}>TIME</th>
+                        <th style={{ padding: '12px 8px' }}>TX ID</th>
+                        <th style={{ padding: '12px 8px' }}>CASHIER</th>
+                        <th style={{ padding: '12px 8px' }}>TOTAL (RP)</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center' }}>STATUS</th>
+                      </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}><td style={{ padding: '14px 8px', color: '#6B7280' }}>14:45</td><td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90215</td><td style={{ padding: '14px 8px' }}>Andi S.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 125.000</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span></td></tr>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}><td style={{ padding: '14px 8px', fontWeight: '500' }}>14:42</td><td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td><td style={{ padding: '14px 8px', textDecoration: 'line-through' }}>Dani P.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 450.000</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>VOID</span></td></tr>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}><td style={{ padding: '14px 8px', color: '#6B7280' }}>14:38</td><td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90211</td><td style={{ padding: '14px 8px' }}>Siti R.</td><td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 82.500</td><td style={{ padding: '14px 8px', textAlign: 'right' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold' }}>SUCCESS</span></td></tr>
+                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:45</td>
+                        <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90215</td>
+                        <td style={{ padding: '14px 8px' }}>Andi S.</td>
+                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 125.000</td>
+                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>SUCCESS</span></td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}>
+                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:42</td>
+                        <td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td>
+                        <td style={{ padding: '14px 8px' }}>Dani P.</td>
+                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 450.000</td>
+                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>VOID</span></td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:38</td>
+                        <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90211</td>
+                        <td style={{ padding: '14px 8px' }}>Siti R.</td>
+                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 82.500</td>
+                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>SUCCESS</span></td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
 
+                {/* CASHIER PERFORMANCE BOARD */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {[{ rank: 1, name: 'Andi S.', orders: '128 ORDERS', sales: 'Rp 5.2M', color: '#FBBF24', bg: '#FEF3C7' }, { rank: 2, name: 'Siti R.', orders: '94 ORDERS', sales: 'Rp 3.8M', color: '#9CA3AF', bg: '#F3F4F6' }].map((cashier, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '28px', height: '28px', backgroundColor: cashier.bg, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', color: cashier.color }}>{cashier.rank}</div><div><p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{cashier.name}</p><span style={{ fontSize: '10px', color: '#9CA3AF' }}>{cashier.orders}</span></div></div>
                           <span style={{ fontSize: '13px', fontWeight: 'bold', color: cashier.rank === 1 ? '#10B981' : '#111827' }}>{cashier.sales}</span>
                         </div>

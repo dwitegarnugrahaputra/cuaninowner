@@ -7,11 +7,14 @@ import {
   MessageSquare, User, Shield, Key, ArrowUpRight, Globe
 } from 'lucide-react';
 
-// Import komponen form internal settings yang sudah kita desentralisasikan
+// Import komponen form internal settings
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
 import Bahasa from '../settings/Bahasa.jsx';
+
+// FIX PATH INTEGRASI: Import EditProfile dari rumpun folder dashboard/topbar yang benar
+import EditProfile from './EditProfile.jsx';
 
 // Logo cuanin.id versi mini murni CSS
 function CuaninLogoMini() {
@@ -50,7 +53,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
 
-  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' */}
+  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
   // Sinkronisasi state jika ada kiriman props forcedSubView dari luar router global
@@ -156,8 +159,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || activeSubView !== 'main-dashboard' ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || activeSubView !== 'main-dashboard' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
@@ -165,14 +168,32 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               <Settings size={18} /> 
               {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+            {isMainSidebarOpen && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}>
+                <ChevronDown size={14} />
+              </div>
+            )}
           </div>
 
           {/* Container Sub-Menu Settings Pop-down */}
-          {isMainSidebarOpen && isSettingsOpen && (
+          {isMainSidebarOpen && (
             <div style={{
-              maxHeight: '150px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: 1,
-              display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px'
+              maxHeight: isSettingsOpen ? '200px' : '0px',
+              opacity: isSettingsOpen ? 1 : 0,
+              paddingTop: isSettingsOpen ? '4px' : '0px',
+              paddingBottom: isSettingsOpen ? '4px' : '0px',
+              overflow: 'hidden',
+              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              paddingLeft: '14px',
+              marginBottom: '4px'
             }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
@@ -182,12 +203,9 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
 
-                {/* SINKRONISASI INTEGRASI RUTE: Menghapus penutup otomatis agar popdown tetap terbuka lebar */}
                 const handleSubMenuClick = () => {
                   if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan' || sub.target === 'bahasa') {
                     setActiveSubView(sub.target);
-                  } else {
-                    alert(`Buka parameter ${sub.name}`);
                   }
                 };
 
@@ -287,11 +305,16 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
               zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
             }}>
-              {[{ name: 'Edit Profile', icon: <User size={14} /> }, { name: 'Account Security', icon: <Shield size={14} /> }, { name: 'API Credentials', icon: <Key size={14} /> }].map((item, idx) => (
-                <div key={idx} onClick={() => alert(item.name)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                  {item.icon} <span style={{ fontWeight: '500' }}>{item.name}</span>
-                </div>
-              ))}
+              {/* INTERGRASI TOP BAR: Mengaktifkan state sub-view edit-profile tanpa merusak visual sidebar bawah */}
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
+              </div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
+              </div>
+              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
+              </div>
             </div>
           </div>
         </div>
@@ -317,6 +340,11 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
           {activeSubView === 'bahasa' && (
             <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('main-dashboard'); }} />
+          )}
+
+          {/* ================= KONDISI 3.8: FORM INTERNAL EDIT PROFILE PENGGUNA ================= */}
+          {activeSubView === 'edit-profile' && (
+            <EditProfile onSaveSuccess={() => setActiveSubView('main-dashboard')} />
           )}
 
           {/* ================= KONDISI 4: RENDERING WORKSPACE BI DASHBOARD UTAMA ================= */}

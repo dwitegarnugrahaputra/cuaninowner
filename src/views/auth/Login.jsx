@@ -31,7 +31,8 @@ function CuaninLogo() {
   );
 }
 
-export default function Login({ onNavigate }) {
+// FIX: Menangkap props onLoginSuccess dari parent App.jsx agar state routing bisa jalan
+export default function Login({ onNavigate, onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +44,14 @@ export default function Login({ onNavigate }) {
     setErrorMsg('');
     try {
       await login(email, password);
+      
+      {/* SINKRONISASI CAKRAM KREDENSIAL: 
+          Jika fungsi login sukses tanpa throw error, eksekusi callback di bawah ini 
+          untuk membuka kunci otentikasi state di router pusat.
+      */}
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Email atau password salah!');
     }

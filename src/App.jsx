@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import MainDashboard from './views/dashboard/MainDashboard.jsx';
 import BrainyChat from './views/ai-chat/BrainyChat.jsx';
@@ -10,9 +10,21 @@ import Login from './views/auth/Login.jsx';
 import Register from './views/auth/Register.jsx';
 
 function MainRouter() {
-  const { user, loading } = useAuth();
+  const { user, loading, loginUser } = useAuth(); // Asumsi ada loginUser / setAuth dari context lu
+  
+  {/* KUNCI UTAMA FORCE LOGIN PAGE: 
+    Kita set initial state screen ke 'login' dan pastikan isAuthenticated diset false di awal 
+    setiap kali npm run dev dijalankan (aplikasi cold start).
+  */}
   const [screen, setScreen] = useState('login'); 
-  const [currentView, setCurrentView] = useState('dashboard'); // State rute global
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard'); 
+
+  // Efek pengaman: Pastikan setiap kali browser di-reload/cold start, state dikunci ke login
+  useEffect(() => {
+    setIsAuthenticated(false);
+    setScreen('login');
+  }, []);
 
   if (loading) {
     return (
@@ -25,8 +37,15 @@ function MainRouter() {
     );
   }
 
-  // --- KENDALI ROUTER VIEW UTAMA GLOBAL ---
-  if (user) {
+  // Handler jembatan ketika owner sukses klik "Masuk" di halaman login
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setCurrentView('dashboard');
+  };
+
+  // --- RENDERING ROUTER CONDITIONAL ---
+  // Jika sudah sukses melewati form login, baru boleh masuk ke core views cuanin.id
+  if (user && isAuthenticated) {
     if (currentView === 'dashboard') {
       return <MainDashboard onNavigateView={setCurrentView} forcedSubView="main-dashboard" />;
     } else if (currentView === 'info-outlet') {
@@ -40,13 +59,13 @@ function MainRouter() {
     } else if (currentView === 'staff') {
       return <StaffManagement onNavigateView={setCurrentView} />;
     } else if (currentView === 'chat') {
-      {/* 👈 KUNCI UTAMA: Ketika currentView diset 'chat', kita render file BrainyChat lu yang asli */}
       return <BrainyChat onNavigateView={setCurrentView} />;
     }
   }
 
+  // Jika belum login/otentikasi false, paksa ngerender halaman Auth
   return screen === 'login' ? (
-    <Login onNavigate={setScreen} />
+    <Login onNavigate={setScreen} onLoginSuccess={handleLoginSuccess} />
   ) : (
     <Register onNavigate={setScreen} />
   );
