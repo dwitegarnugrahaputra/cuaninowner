@@ -4,13 +4,15 @@ import {
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, Settings, 
   Search, Bell, HelpCircle, Plus, Layers, AlertTriangle, Grid, SlidersHorizontal,
   Edit2, Trash2, ChevronLeft, ChevronRight, MessageSquare, X, Info, FileSpreadsheet,
-  ImageIcon, Trash, Save, TrendingUp, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck
+  ImageIcon, Trash, Save, TrendingUp, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe, Shield
 } from 'lucide-react';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
+import Bahasa from '../settings/Bahasa.jsx'; 
+import EditProfile from '../dashboard/EditProfile.jsx'; 
 
 // Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
@@ -50,8 +52,11 @@ export default function MenuManagement({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
+  
+  {/* State pengontrol buka-tutup dropdown mengambang profil topbar */}
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  {/* KUNCI SINKRONISASI WORKSPACE: 'menu-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' */}
+  {/* KUNCI SINKRONISASI WORKSPACE LENGKAP: 'menu-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState('menu-table');
 
   return (
@@ -111,7 +116,7 @@ export default function MenuManagement({ onNavigateView }) {
             { name: 'Menu Management', icon: <MenuIcon size={18} />, target: 'menu', action: () => setActiveSubView('menu-table') }, 
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
-            const isActive = currentView === menu.target;
+            const isActive = currentView === menu.target && activeSubView === 'menu-table';
 
             return (
               <div 
@@ -151,24 +156,35 @@ export default function MenuManagement({ onNavigateView }) {
               alignItems: 'center', 
               justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
-              color: isSettingsOpen || activeSubView !== 'menu-table' ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || activeSubView !== 'menu-table' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
+              backgroundColor: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+            {isMainSidebarOpen && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}>
+                <ChevronDown size={14} />
+              </div>
+            )}
           </div>
 
-          {/* Sub-menu Akordion Pop-down Settings */}
-          {isMainSidebarOpen && isSettingsOpen && (
+          {/* Sub-menu Akordion Pop-down Settings dengan Animasi Ekspansi Tinggi */}
+          {isMainSidebarOpen && (
             <div style={{
-              maxHeight: '150px',
+              maxHeight: isSettingsOpen ? '200px' : '0px',
+              opacity: isSettingsOpen ? 1 : 0,
+              paddingTop: isSettingsOpen ? '4px' : '0px',
+              paddingBottom: isSettingsOpen ? '4px' : '0px',
               overflow: 'hidden',
-              transition: 'all 0.4s ease-in-out',
-              opacity: 1,
+              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
@@ -178,23 +194,15 @@ export default function MenuManagement({ onNavigateView }) {
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
-                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' }
+                { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
+                { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
                 
-                const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan') {
-                    setActiveSubView(sub.target);
-                    // setIsSettingsOpen(false);
-                  } else {
-                    alert(`Buka parameter ${sub.name}`);
-                  }
-                };
-
                 return (
                   <div 
                     key={i}
-                    onClick={handleSubMenuClick}
+                    onClick={() => setActiveSubView(sub.target)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
                       borderRadius: '8px', 
@@ -243,7 +251,7 @@ export default function MenuManagement({ onNavigateView }) {
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>PREMIUM</span>
+                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
               </div>
             )}
           </div>
@@ -254,7 +262,7 @@ export default function MenuManagement({ onNavigateView }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* TOPBAR HEADER AREA */}
-        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
+        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
             <input type="text" placeholder="Search menu items, orders..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
@@ -265,17 +273,39 @@ export default function MenuManagement({ onNavigateView }) {
             </button>
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
+            
+            {/* Profil Data Identitas OWNER Terintegrasi Click Event */}
+            <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
-                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Alex Graham {isProfileOpen ? <ChevronUp size={14} color="#6B7280" /> : <ChevronDown size={14} color="#6B7280" />}
+                </p>
+                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
               <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
+
+            {/* FLOATING DROPDOWN PROFIL POPUP */}
+            <div style={{
+              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
+              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
+            }}>
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
+              </div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
+              </div>
+              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
+                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW */}
+        {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
           {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
@@ -291,6 +321,16 @@ export default function MenuManagement({ onNavigateView }) {
           {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
           {activeSubView === 'keamanan' && (
             <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('menu-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
+          {activeSubView === 'bahasa' && (
+            <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('menu-table'); }} />
+          )}
+
+          {/* ================= KONDISI 3.8: FORM INTERNAL EDIT PROFILE PENGGUNA ================= */}
+          {activeSubView === 'edit-profile' && (
+            <EditProfile onSaveSuccess={() => setActiveSubView('menu-table')} />
           )}
 
           {/* ================= KONDISI 4: KONTEN ASLI KATALOG MENU UTUH ================= */}
