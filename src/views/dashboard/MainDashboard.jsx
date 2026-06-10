@@ -54,7 +54,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
-  // State Dropdown Kunci Tren Bahan Baku - SINKRON 100% DENGAN STRING METADATA PYTHON LU
+  // State Dropdown Kunci Tren Bahan Baku - DISINKRONKAN PAKAI 'c' MENGIKUTI HASIL COLAB LU
   const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
 
   {/* 🗄️ STATE PENAMPUNG AWAL MURNI KOSONGAN (Rp 0) SESUAI REALITAS DATABASE AKTIF */}
@@ -92,6 +92,14 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   // State khusus penampung list tren bahan baku dari Python Colab
   const [materialsData, setMaterialsData] = useState({});
 
+  // ⚡ STATE KUNCI BARU: Memaksa sinkronisasi kurva reaktif setelah GitHub Actions update data Supabase
+  const [activeCurve, setActiveCurve] = useState({
+    labelColor: '#006847',
+    svgPath: 'M 30 110 Q 180 110 340 110 T 650 110',
+    weeks: ['Rp 0', 'Rp 0', 'Rp 0', 'Rp 0'],
+    bottomMetrics: { name: '-', price: 'Rp 0' }
+  });
+
   // Sinkronisasi state jika ada kiriman props forcedSubView dari luar
   useEffect(() => {
     if (forcedSubView) {
@@ -112,13 +120,13 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
         if (!trendsError && trendsData && trendsData.length > 0) {
           const mappedTrends = {};
           trendsData.forEach(item => {
-            // DEFENSIVE ATTACK: Amankan key string data bapanas/yahoo finance dari spasi gaib
-            mappedTrends[item.material_name.trim()] = {
+            const normalizedKey = item.material_name.trim();
+            mappedTrends[normalizedKey] = {
               labelColor: item.hex_color || '#006847',
               svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
               weeks: [item.week_1 || 'Rp 0', item.week_2 || 'Rp 0', item.week_3 || 'Rp 0', item.week_4 || 'Rp 0'],
               bottomMetrics: { 
-                name: item.short_code || item.material_name.substring(0, 3).toUpperCase(), 
+                name: item.short_code || normalizedKey.substring(0, 3).toUpperCase(), 
                 price: item.current_price_label || item.week_4 || 'Rp 0' 
               }
             };
@@ -126,9 +134,14 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           
           setMaterialsData(mappedTrends);
 
-          const availableKeys = Object.keys(mappedTrends);
-          if (availableKeys.length > 0 && !mappedTrends[selectedMaterial.trim()]) {
-            setSelectedMaterial(availableKeys[0]);
+          // ⚡ AKTIVASI TRIGGER: Paksa state activeCurve mengambil data terupdate dari Supabase
+          const currentKey = selectedMaterial.trim();
+          if (mappedTrends[currentKey]) {
+            setActiveCurve(mappedTrends[currentKey]);
+          } else if (trendsData[0]) {
+            const firstKey = trendsData[0].material_name.trim();
+            setSelectedMaterial(firstKey);
+            setActiveCurve(mappedTrends[firstKey]);
           }
         }
       } catch (err) {
@@ -139,15 +152,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
 
     fetchCommodityTrendsOnly();
-  }, [activeSubView, selectedMaterial]);
-
-  // Pointer Pembaca Data Bahan Baku Reaktif Berbasis Hasil Sinkronisasi Colab
-  const activeMaterialData = materialsData[selectedMaterial.trim()] || {
-    labelColor: '#006847',
-    svgPath: 'M 30 110 Q 180 110 340 110 T 650 110',
-    weeks: ['Rp 0', 'Rp 0', 'Rp 0', 'Rp 0'],
-    bottomMetrics: { name: '-', price: 'Rp 0' }
-  };
+  }, [activeSubView, selectedMaterial]); // Kunci selectedMaterial di sini biar pemicu re-render aktif pas dropdown diputar
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -291,7 +296,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           
           {isLoading && activeSubView === 'main-dashboard' && (
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(243, 244, 246, 0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
-              🔄 Menghubungkan ke Supabase...
+              🔄 Membaca Data Hasil Google Colab...
             </div>
           )}
 
@@ -459,7 +464,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                         onChange={(e) => setSelectedMaterial(e.target.value)}
                         style={{ padding: '6px 28px 6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', color: '#374151', backgroundColor: '#FAFAFA', outline: 'none', cursor: 'pointer', appearance: 'none' }}
                       >
-                        {/* ITERASI DROPDOWN YANG MENGIKUTI KEY DATA COLAB LU SECARA SINKRON */}
+                        {/* ITERASI DROPDOWN SELEKSI YANG 100% DINAMIS BERDASARKAN OBJEK HASIL SCRAPING NYATA */}
                         {Object.keys(materialsData).length > 0 ? (
                           Object.keys(materialsData).map((matName) => (
                             <option key={matName} value={matName}>{matName}</option>
@@ -478,19 +483,19 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* Menggambar liukan dinamis berbasis data kurva dari Supabase */}
+                  {/* ⚡ LOGIKA SINKRONISASI UTAMA: MENIMPA CANVAS SVG MEMAKAI STATE SELEKSI REAKTIF `activeCurve` */}
                   <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
                     <svg viewBox="0 0 650 160" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
-                      <path d={activeMaterialData.svgPath} fill="none" stroke={activeMaterialData.labelColor} strokeWidth="4" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
+                      <path d={activeCurve.svgPath} fill="none" stroke={activeCurve.labelColor} strokeWidth="4" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
                     </svg>
-                    <div style={{ position: 'absolute', top: '-15px', right: '0px', fontSize: '10px', fontWeight: 'bold', color: activeMaterialData.labelColor }}>
+                    <div style={{ position: 'absolute', top: '-15px', right: '0px', fontSize: '10px', fontWeight: 'bold', color: activeCurve.labelColor }}>
                       ● {selectedMaterial.toUpperCase()}
                     </div>
                   </div>
 
-                  {/* Label harga per-week dinamis */}
+                  {/* Label harga per-week dinamis membaca dari state activeCurve */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
-                    {activeMaterialData.weeks.map((priceLabel, wIdx) => (
+                    {activeCurve.weeks.map((priceLabel, wIdx) => (
                       <div key={wIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span>Week {wIdx + 1}</span>
                         <span style={{ color: '#4B5563', fontSize: '10px' }}>{priceLabel}</span>
@@ -501,10 +506,10 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                   <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
                     <div style={{ textAlign: 'center', padding: '0 20px' }}>
                       <span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px', letterSpacing: '0.5px' }}>
-                        KOMODITAS TERPILIH: {activeMaterialData.bottomMetrics.name}
+                        KOMODITAS TERPILIH: {activeCurve.bottomMetrics.name}
                       </span>
-                      <span style={{ color: activeMaterialData.labelColor, marginTop: '4px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>
-                        {activeMaterialData.bottomMetrics.price} <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 'normal' }}>/ Satuan Log</span>
+                      <span style={{ color: activeCurve.labelColor, marginTop: '4px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>
+                        {activeCurve.bottomMetrics.price} <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 'normal' }}>/ Satuan Log</span>
                       </span>
                     </div>
                   </div>

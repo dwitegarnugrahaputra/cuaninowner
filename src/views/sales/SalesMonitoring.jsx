@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Calendar, Download, TrendingUp, TrendingDown,
   AlertTriangle, Shield, ArrowRight, MessageSquare, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe
 } from 'lucide-react';
+
+// Impor koneksi client Supabase murni 
+import { supabase } from '../../config/supabaseClient';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
@@ -54,6 +57,54 @@ export default function SalesMonitoring({ onNavigateView }) {
   {/* WORKSPACE ENGINE POINTER: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState('sales-table');
 
+  // ================= STATE INTEGRASI DATABASE SUPABASE =================
+  const [transactions, setTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    todayRevenue: 0,
+    totalTransactions: 0,
+    voidAlerts: 0
+  });
+
+  // Fetch data jualan dari Supabase secara reaktif
+  useEffect(() => {
+    async function fetchSalesData() {
+      if (activeSubView !== 'sales-table') return;
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('sales_transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          setTransactions(data);
+          
+          // Kalkulasi matematika agregasi data untuk mengisi Smart Cards secara otomatis
+          const revenue = data
+            .filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS')
+            .reduce((sum, tx) => sum + Number(tx.total_amount), 0);
+
+          const voids = data.filter(tx => tx.status === 'VOID' || tx.status === 'Critical').length;
+
+          setSummary({
+            todayRevenue: revenue,
+            totalTransactions: data.length,
+            voidAlerts: voids
+          });
+        }
+      } catch (err) {
+        console.error('⚠️ Gagal memuat data live sales dari Supabase:', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchSalesData();
+  }, [activeSubView]);
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
@@ -74,7 +125,7 @@ export default function SalesMonitoring({ onNavigateView }) {
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+          justify: isMainSidebarOpen ? 'space-between' : 'center', 
           padding: '0 20px', 
           marginBottom: '32px',
           height: '40px'
@@ -121,7 +172,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+                  justify: isMainSidebarOpen ? 'flex-start' : 'center',
                   gap: '12px', 
                   padding: '12px 16px', 
                   borderRadius: '10px', 
@@ -149,7 +200,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
+              justify: isMainSidebarOpen ? 'space-between' : 'center', 
               padding: '12px 16px', 
               color: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
               backgroundColor: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
@@ -218,7 +269,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+              justify: isMainSidebarOpen ? 'flex-start' : 'center',
               gap: '12px', 
               padding: '12px 16px', 
               color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
@@ -233,7 +284,7 @@ export default function SalesMonitoring({ onNavigateView }) {
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+            justify: isMainSidebarOpen ? 'flex-start' : 'center',
             gap: '12px', 
             padding: '12px 16px', 
             backgroundColor: '#111827', 
@@ -295,7 +346,6 @@ export default function SalesMonitoring({ onNavigateView }) {
               <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
                 <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
               </div>
-              {/* FIX RESTORED: Mengembalikan baris API Credentials yang hilang ke dropdown topbar secara presisi */}
               <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
                 <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
               </div>
@@ -305,8 +355,15 @@ export default function SalesMonitoring({ onNavigateView }) {
         </div>
 
         {/* CONTEN CONTAINER VIEW (SCROLLABLE DYNAMIC CHANGER) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', position: 'relative' }}>
           
+          {/* SINKRONISASI REAKTIF LOADING LAYOVER BOX */}
+          {isLoading && activeSubView === 'sales-table' && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(248, 249, 250, 0.7)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
+              🔄 Memuat Transaksi Penjualan dari Supabase...
+            </div>
+          )}
+
           {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
           {activeSubView === 'info-outlet' && (
             <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('sales-table'); }} />
@@ -332,7 +389,7 @@ export default function SalesMonitoring({ onNavigateView }) {
             <EditProfile onSaveSuccess={() => setActiveSubView('sales-table')} />
           )}
 
-          {/* ================= KONDISI 4: DATA ASLI MONITORING PENJUALAN UTUH ================= */}
+          {/* ================= KONDISI 4: DATA LIVE MONITORING PENJUALAN UTUH ================= */}
           {activeSubView === 'sales-table' && (
             <>
               {/* TITLE & FILTER BAR */}
@@ -343,7 +400,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '13px', color: '#4B5563', fontWeight: 'bold' }}>
-                    <Calendar size={16} /> <span>Today, Oct 24</span>
+                    <Calendar size={16} /> <span>Live Feed Stream</span>
                   </div>
                   <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                     <Download size={16} /> Export CSV
@@ -351,72 +408,94 @@ export default function SalesMonitoring({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* THREE HEAD ROW SUMMARY CARDS */}
+              {/* THREE HEAD ROW SUMMARY CARDS (AGREGASI LIVE DATABASE) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
-                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> 12.5%</div>
+                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> Live</div>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Today's Revenue</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>Rp 14.250.000</h2>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Live Aggregate Revenue</span>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {summary.todayRevenue.toLocaleString('id-ID')}
+                  </h2>
                 </div>
 
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '18px' }}>🧾</div>
-                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Total Transactions</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>342 TXs</h2>
-                  <span style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>⏰ Peak Hour: 12:00 - 13:00</span>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Total Live Volume</span>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>
+                    {summary.totalTransactions} TXs
+                  </h2>
+                  <span style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>⏰ Synchronized Stream</span>
                 </div>
 
-                <div style={{ backgroundColor: '#991B1B', padding: '24px', borderRadius: '16px', color: '#ffffff', position: 'relative' }}>
+                <div style={{ backgroundColor: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', padding: '24px', borderRadius: '16px', color: '#ffffff', position: 'relative', transition: 'background-color 0.3s ease' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={20} color="#fff" /></div>
-                    <span style={{ backgroundColor: '#ffffff', color: '#991B1B', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px', letterSpacing: '0.5px' }}>CRITICAL</span>
+                    <span style={{ backgroundColor: '#ffffff', color: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px', letterSpacing: '0.5px' }}>
+                      {summary.voidAlerts > 0 ? 'CRITICAL' : 'SECURE'}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#FFCACA', fontWeight: '500' }}>Void Alerts</span>
-                  <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: 'bold' }}>4 Alerts</h2>
-                  <span style={{ fontSize: '11px', color: '#FCA5A5', display: 'block', marginTop: '6px' }}>Action required for Cashier #2</span>
+                  <span style={{ fontSize: '12px', color: '#FFCACA', fontWeight: '500' }}>Void / Alert Records</span>
+                  <h2 style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: 'bold' }}>{summary.voidAlerts} Alerts</h2>
+                  <span style={{ fontSize: '11px', color: '#FCA5A5', display: 'block', marginTop: '6px' }}>
+                    {summary.voidAlerts > 0 ? 'Action required for Cashier logs' : 'No pattern anomalies detected'}
+                  </span>
                 </div>
               </div>
 
-              {/* LOWER SECTION LAYOUT MIX */}
+              {/* LOWER SECTION LAYOUT MIX (LIVE TRANSACTION FEED FROM TABLE_TRANSACTIONS) */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}><h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}><div style={{ width: '6px', height: '6px', backgroundColor: '#10B981', borderRadius: '50%' }} /> LIVE UPDATING</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>
+                      <div style={{ width: '6px', height: '6px', backgroundColor: '#10B981', borderRadius: '50%' }} /> DATABASE CONNECTED
+                    </span>
+                  </div>
                   
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
-                        <th style={{ padding: '12px 8px' }}>TIME</th>
-                        <th style={{ padding: '12px 8px' }}>TX ID</th>
-                        <th style={{ padding: '12px 8px' }}>CASHIER</th>
-                        <th style={{ padding: '12px 8px' }}>TOTAL (RP)</th>
+                        <th style={{ padding: '12px 8px' }}>TIME / DATE</th>
+                        <th style={{ padding: '12px 8px' }}>INVOICE ID</th>
+                        <th style={{ padding: '12px 8px' }}>CUSTOMER NAME</th>
+                        <th style={{ padding: '12px 8px' }}>TOTAL AMOUNT</th>
                         <th style={{ padding: '12px 8px', textAlign: 'center' }}>STATUS</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:45</td>
-                        <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90215</td>
-                        <td style={{ padding: '14px 8px' }}>Andi S.</td>
-                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 125.000</td>
-                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>SUCCESS</span></td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: '#FEF2F2', color: '#991B1B' }}>
-                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:42</td>
-                        <td style={{ padding: '14px 8px', fontWeight: 'bold', textDecoration: 'line-through' }}>TX-90212</td>
-                        <td style={{ padding: '14px 8px' }}>Dani P.</td>
-                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 450.000</td>
-                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#DC2626', color: '#ffffff', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>VOID</span></td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                        <td style={{ padding: '14px 8px', color: '#6B7280' }}>14:38</td>
-                        <td style={{ padding: '14px 8px', fontWeight: '500' }}>TX-90211</td>
-                        <td style={{ padding: '14px 8px' }}>Siti R.</td>
-                        <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp 82.500</td>
-                        <td style={{ padding: '14px 8px', textAlign: 'center' }}><span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>SUCCESS</span></td>
-                      </tr>
+                      {transactions.length > 0 ? (
+                        transactions.map((tx) => {
+                          const isVoid = tx.status === 'VOID' || tx.status === 'Critical';
+                          const formattedTime = new Date(tx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                          
+                          return (
+                            <tr key={tx.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: isVoid ? '#FEF2F2' : 'transparent', color: isVoid ? '#991B1B' : '#111827' }}>
+                              <td style={{ padding: '14px 8px', color: '#6B7280' }}>{formattedTime}</td>
+                              <td style={{ padding: '14px 8px', fontWeight: '500' }}>{tx.invoice_number}</td>
+                              <td style={{ padding: '14px 8px' }}>{tx.customer_name || 'General Customer'}</td>
+                              <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp {Number(tx.total_amount).toLocaleString('id-ID')}</td>
+                              <td style={{ padding: '14px 8px', textAlign: 'center' }}>
+                                <span style={{ 
+                                  backgroundColor: isVoid ? '#DC2626' : '#E6F4EA', 
+                                  color: isVoid ? '#ffffff' : '#006847', 
+                                  padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' 
+                                }}>
+                                  {tx.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontWeight: '500' }}>
+                            Belum ada riwayat transaksi penjualan di Supabase.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -427,7 +506,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {[{ rank: 1, name: 'Andi S.', orders: '128 ORDERS', sales: 'Rp 5.2M', color: '#FBBF24', bg: '#FEF3C7' }, { rank: 2, name: 'Siti R.', orders: '94 ORDERS', sales: 'Rp 3.8M', color: '#9CA3AF', bg: '#F3F4F6' }].map((cashier, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div style={{ width: '28px', height: '28px', backgroundColor: cashier.bg, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', color: cashier.color }}>{cashier.rank}</div><div><p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{cashier.name}</p><span style={{ fontSize: '10px', color: '#9CA3AF' }}>{cashier.orders}</span></div></div>
                           <span style={{ fontSize: '13px', fontWeight: 'bold', color: cashier.rank === 1 ? '#10B981' : '#111827' }}>{cashier.sales}</span>
                         </div>
@@ -437,11 +516,34 @@ export default function SalesMonitoring({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* LOWER BANNER: AI FRAUD ANALYTICS ENGINE */}
-              <div style={{ backgroundColor: '#0B1530', borderRadius: '20px', padding: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ffffff' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}><div style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}><Shield size={12} /> FRAUD ANALYTICS ENGINE</div><h2 style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold' }}>Secure your business with AI</h2><p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF', maxWidth: '520px' }}>Brainy is actively monitoring your transaction patterns for anomalies, double voids, and cashier fraud tendencies in real-time.</p></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}><div style={{ textAlign: 'center' }}><div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'conic-gradient(#10B981 0% 14%, #1E293B 14% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}><div style={{ width: '50px', height: '50px', backgroundColor: '#0B1530', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>14%</div></div><span style={{ fontSize: '10px', color: '#9CA3AF' }}>Anomaly Score</span></div><div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}><span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>● Risk Detection: Active</span><button style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}><span>Investigate Pattern</span> <ArrowRight size={14} /></button></div></div>
-              </div>
+              {/* ⚡ LOGIKA CONDITIONAL RENDERING CONDITIONAL: HANYA MUNCUL JIKA ADA FRAUD/VOID NYATA DI DATABASE */}
+              {summary.voidAlerts > 0 && (
+                <div style={{ backgroundColor: '#0B1530', borderRadius: '20px', padding: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ffffff', marginTop: '4px', animation: 'fadeIn 0.4s ease' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Shield size={12} /> FRAUD ANALYTICS ALERT
+                    </div>
+                    <h2 style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold' }}>Anomalous Pattern Detected!</h2>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#9CA3AF', maxWidth: '520px' }}>
+                      Brainy POS berhasil mengidentifikasi {summary.voidAlerts} aktivitas janggal pada riwayat penutupan kasir. Segera lakukan peninjauan log data.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'conic-gradient(#DC2626 0% 65%, #1E293B 65% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}>
+                        <div style={{ width: '50px', height: '50px', backgroundColor: '#0B1530', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#EF4444' }}>65%</div>
+                      </div>
+                      <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Risk Score</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: 'bold' }}>● Status: High Danger</span>
+                      <button style={{ backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <span>Investigate Pattern</span> <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

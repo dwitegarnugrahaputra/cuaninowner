@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings,
   Search, Bell, HelpCircle, TrendingUp, AlertTriangle, ShoppingCart,
   FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, 
   LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, 
-  User, Key, Globe, Shield // 👈 SUNTIKAN KATA INI DI SINI, GAR!
+  User, Key, Globe, Shield
 } from 'lucide-react';
+
+// Impor koneksi client Supabase murni 
+import { supabase } from '../../config/supabaseClient';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
-
-// 🛠️ FIX IMPOR AMAN: Menambahkan impor Bahasa dan EditProfile agar tidak memicu ReferenceError/Blank Page
 import Bahasa from '../settings/Bahasa.jsx'; 
 import EditProfile from '../dashboard/EditProfile.jsx'; 
 
@@ -40,15 +41,76 @@ export default function StockIntelligence({ onNavigateView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   
-  {/* 🛠️ STATE BARU: Pengontrol visibilitas popup menu mengambang dropdown topbar */}
+  {/* State pengontrol visibilitas popup menu mengambang dropdown topbar */}
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  {/* 🛠️ SINKRONISASI WORKSPACE ROUTE POINTER UTUH */}
+  {/* SINKRONISASI WORKSPACE ROUTE POINTER UTUH */}
   const [activeSubView, setActiveSubView] = useState('stock-table');
+
+  // ================= STATE INTEGRASI DATABASE INVENTORY =================
+  const [materials, setMaterials] = useState([]);
+  const [supplyLogs, setSupplyLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stockSummary, setStockSummary] = useState({
+    totalValue: 0,
+    criticalCount: 0,
+    monthlySpend: 12300000 
+  });
+
+  // Fetch data live stock dan logs dari Supabase secara paralel
+  useEffect(() => {
+    async function fetchInventoryData() {
+      if (activeSubView !== 'stock-table') return;
+      setIsLoading(true);
+      try {
+        // 🚀 PIPELINE 1: Ambil data Master Bahan Baku
+        const { data: matData, error: matError } = await supabase
+          .from('raw_materials')
+          .select('*')
+          .order('material_name', { ascending: true });
+
+        if (matError) throw matError;
+
+        // 🚀 PIPELINE 2: Ambil riwayat log supply penambahan barang masuk
+        const { data: logData, error: logError } = await supabase
+          .from('supply_logs')
+          .select('*, raw_materials(material_name)')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (logError) throw logError;
+
+        if (matData) {
+          setMaterials(matData);
+
+          // 📐 MATEMATIKA AGREGASI: Hitung Total Nilai Aset Inventori & Jumlah Item Kritis
+          const calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
+          const calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
+
+          setStockSummary(prev => ({
+            ...prev,
+            totalValue: calculatedValue,
+            criticalCount: calculatedCritical
+          }));
+        }
+
+        if (logData) {
+          setSupplyLogs(logData);
+        }
+
+      } catch (err) {
+        console.error('⚠️ Gagal menyinkronkan data Stock Intelligence ke Supabase:', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchInventoryData();
+  }, [activeSubView]);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
-     
+      
       {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
       <div style={{
         width: isMainSidebarOpen ? '260px' : '80px',
@@ -61,7 +123,7 @@ export default function StockIntelligence({ onNavigateView }) {
         transition: 'width 0.3s ease-in-out',
         overflow: 'hidden'
       }}>
-       
+        
         {/* Header Branding Sidebar dengan Trigger Collapse */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -99,7 +161,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+                  justify: isMainSidebarOpen ? 'flex-start' : 'center',
                   gap: '12px',
                   padding: '12px 16px',
                   borderRadius: '10px',
@@ -118,7 +180,7 @@ export default function StockIntelligence({ onNavigateView }) {
 
         {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-         
+          
           {/* Tombol Settings Utama */}
           <div
             onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)}
@@ -126,7 +188,7 @@ export default function StockIntelligence({ onNavigateView }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center',
+              justify: isMainSidebarOpen ? 'space-between' : 'center',
               padding: '12px 16px',
               color: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD',
               backgroundColor: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
@@ -136,7 +198,6 @@ export default function StockIntelligence({ onNavigateView }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {/* 🛠️ SUNTIKAN ANIMASI ROTASI CHEVRON: Muter halus 180 derajat berbasis state akordion */}
             {isMainSidebarOpen && (
               <div style={{
                 display: 'flex',
@@ -149,7 +210,6 @@ export default function StockIntelligence({ onNavigateView }) {
             )}
           </div>
 
-          {/* 🛠️ SUNTIKAN ANIMASI POPDOWN: Buka-tutup transisi ketinggian smooth material design */}
           {isMainSidebarOpen && (
             <div style={{
               maxHeight: isSettingsOpen ? '200px' : '0px',
@@ -171,7 +231,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => {
                 const isSubActive = activeSubView === sub.target;
-               
+                
                 return (
                   <div
                     key={i}
@@ -198,7 +258,7 @@ export default function StockIntelligence({ onNavigateView }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+              justify: isMainSidebarOpen ? 'flex-start' : 'center',
               gap: '12px',
               padding: '12px 16px',
               color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
@@ -213,7 +273,7 @@ export default function StockIntelligence({ onNavigateView }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
+            justify: isMainSidebarOpen ? 'flex-start' : 'center',
             gap: '12px',
             padding: '12px 16px',
             backgroundColor: '#111827',
@@ -233,7 +293,7 @@ export default function StockIntelligence({ onNavigateView }) {
 
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-       
+        
         {/* TOPBAR HEADER AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
@@ -246,7 +306,7 @@ export default function StockIntelligence({ onNavigateView }) {
              </button>
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             
-            {/* 🛠️ INTEGRASI TARGET PROFILE: Trigger klik pembawa identitas OWNER */}
+            {/* INTEGRASI TARGET PROFILE: Trigger klik pembawa identitas OWNER */}
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -259,7 +319,7 @@ export default function StockIntelligence({ onNavigateView }) {
               </div>
             </div>
 
-            {/* 🛠️ INTEGRASI DROPDOWN POPUP FLOATING UTUH */}
+            {/* INTEGRASI DROPDOWN POPUP FLOATING UTUH */}
             <div style={{
               position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
               borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
@@ -281,7 +341,14 @@ export default function StockIntelligence({ onNavigateView }) {
 
         {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px 100px 32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
-         
+          
+          {/* LAYOVER LOADING SINKRONISASI SUPABASE BAR */}
+          {isLoading && activeSubView === 'stock-table' && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(248, 249, 250, 0.7)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
+              🔄 Menghubungkan ke Inventory Engine Supabase...
+            </div>
+          )}
+
           {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('stock-table')} />}
           {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('stock-table')} />}
           {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('stock-table')} />}
@@ -301,28 +368,36 @@ export default function StockIntelligence({ onNavigateView }) {
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📦</div>
-                    <span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px' }}>+5.2%</span>
+                    <span style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>Live</span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Total Inventory Value (Rp)</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 45.500.000</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {stockSummary.totalValue.toLocaleString('id-ID')}
+                  </h2>
                 </div>
 
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
-                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px' }}>Action Needed</span>
+                    <span style={{ backgroundColor: stockSummary.criticalCount > 0 ? '#FEE2E2' : '#E6F4EA', color: stockSummary.criticalCount > 0 ? '#DC2626' : '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>
+                      {stockSummary.criticalCount > 0 ? 'Action Needed' : 'Secure'}
+                    </span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Critical Items (Count)</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>12 Items</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: stockSummary.criticalCount > 0 ? '#DC2626' : '#111827' }}>
+                    {stockSummary.criticalCount} Items
+                  </h2>
                 </div>
 
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingCart size={18} color="#4B5563" /></div>
-                    <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px' }}>-1.5%</span>
+                    <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>Budget</span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Monthly Supply Spend</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.300.000</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {stockSummary.monthlySpend.toLocaleString('id-ID')}
+                  </h2>
                 </div>
               </div>
 
@@ -344,28 +419,67 @@ export default function StockIntelligence({ onNavigateView }) {
                         <th style={{ padding: '12px 8px' }}>KATEGORI</th>
                         <th style={{ padding: '12px 8px' }}>SISA STOK</th>
                         <th style={{ padding: '12px 8px' }}>SATUAN</th>
+                        <th style={{ padding: '12px 8px' }}>HARGA/SATUAN</th>
+                        <th style={{ padding: '12px 8px' }}>TOTAL HARGA</th>
                         <th style={{ padding: '12px 8px' }}>STATUS</th>
                         <th style={{ padding: '12px 8px', textAlign: 'right' }}></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { nama: 'Houseblend Coffee Beans', kat: 'Coffee', stok: '15.5', unit: 'kg', stat: 'AMAN', color: '#E6F4EA', text: '#006847' },
-                        { nama: 'Full Cream Milk (Dairy Fresh)', kat: 'Dairy', stok: '4.0', unit: 'Litre', stat: 'MENIPIS', color: '#FFF7ED', text: '#D97706', alert: true },
-                        { nama: 'Palm Sugar Liquid', kat: 'Sweetener', stok: '0.5', unit: 'Litre', stat: 'HABIS', color: '#FEE2E2', text: '#DC2626', alert: true },
-                        { nama: 'Oat Milk (Oatside)', kat: 'Dairy', stok: '12.0', unit: 'Litre', stat: 'AMAN', color: '#E6F4EA', text: '#006847' }
-                      ].map((row, idx) => (
-                        <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }} key={idx}>
-                          <td style={{ padding: '14px 8px', fontWeight: 'bold', maxWidth: '180px' }}>{row.nama}</td>
-                          <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.kat}</td>
-                          <td style={{ padding: '14px 8px', fontWeight: 'bold', color: row.alert ? '#DC2626' : '#111827' }}>{row.stok}</td>
-                          <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.unit}</td>
-                          <td style={{ padding: '14px 8px' }}>
-                            <span style={{ backgroundColor: row.color, color: row.text, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{row.stat}</span>
+                      {materials.length > 0 ? (
+                        materials.map((row) => {
+                          const isCritical = Number(row.current_stock) <= Number(row.minimum_threshold);
+                          const isOut = Number(row.current_stock) <= 0;
+                          
+                          // Kalkulasi total harga nilai barang per baris secara reaktif
+                          const totalItemPrice = Number(row.current_stock) * Number(row.unit_price);
+
+                          let statusLabel = 'AMAN';
+                          let badgeBg = '#E6F4EA';
+                          let badgeText = '#006847';
+
+                          if (isOut) {
+                            statusLabel = 'HABIS';
+                            badgeBg = '#FEE2E2';
+                            badgeText = '#DC2626';
+                          } else if (isCritical) {
+                            statusLabel = 'MENIPIS';
+                            badgeBg = '#FFF7ED';
+                            badgeText = '#D97706';
+                          }
+
+                          return (
+                            <tr style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }} key={row.id}>
+                              <td style={{ padding: '14px 8px', fontWeight: 'bold', maxWidth: '180px' }}>{row.material_name}</td>
+                              <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.category}</td>
+                              <td style={{ padding: '14px 8px', fontWeight: 'bold', color: isCritical ? '#DC2626' : '#111827' }}>
+                                {Number(row.current_stock).toLocaleString('id-ID')}
+                              </td>
+                              <td style={{ padding: '14px 8px', color: '#6B7280' }}>{row.unit}</td>
+                              <td style={{ padding: '14px 8px', fontWeight: '600', color: '#4B5563' }}>
+                                Rp {Number(row.unit_price).toLocaleString('id-ID')}
+                              </td>
+
+                              <td style={{ padding: '14px 8px', fontWeight: 'bold', color: '#006847' }}>
+                                Rp {totalItemPrice.toLocaleString('id-ID')}
+                              </td>
+
+                              <td style={{ padding: '14px 8px' }}>
+                                <span style={{ backgroundColor: badgeBg, color: badgeText, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 8px', textAlign: 'right', color: '#9CA3AF' }}><Edit2 size={14} style={{ cursor: 'pointer' }} /></td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontWeight: '500' }}>
+                            Data Master Bahan Baku Kosong di Supabase.
                           </td>
-                          <td style={{ padding: '14px 8px', textAlign: 'right', color: '#9CA3AF' }}><Edit2 size={14} style={{ cursor: 'pointer' }} /></td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -373,41 +487,89 @@ export default function StockIntelligence({ onNavigateView }) {
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Recent Supply Log</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                    {[
-                      { vendor: 'Dairy Fresh Co.', desc: '24L Full Cream Milk', time: 'Just now • OCR Scan', isOcr: true },
-                      { vendor: 'Bean Masters', desc: '10kg Houseblend', time: '2 hours ago • OCR Scan', isOcr: true },
-                      { vendor: 'Gula Melaka Hub', desc: '5L Liquid Sugar', time: 'Yesterday • Manual Entry', isOcr: false }
-                    ].map((log, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <FileText size={16} color="#6B7280" />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.vendor}</h4>
-                          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>{log.desc}</p>
-                          <span style={{ fontSize: '10px', color: log.isOcr ? '#10B981' : '#9CA3AF', fontWeight: '500', display: 'block', marginTop: '2px' }}>{log.time}</span>
-                        </div>
+                    {supplyLogs.length > 0 ? (
+                      supplyLogs.map((log) => {
+                        const isOcr = log.source_type === 'OCR Scan';
+                        const timeString = new Date(log.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
+                        
+                        return (
+                          <div key={log.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                            <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FileText size={16} color="#6B7280" />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', justify: 'space-between' }}>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.supplier_name}</h4>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
+                                +{log.quantity_added} {(log.raw_materials && log.raw_materials.material_name) || 'Bahan'}
+                              </p>
+                              <span style={{ fontSize: '10px', color: isOcr ? '#10B981' : '#9CA3AF', fontWeight: '500', display: 'block', marginTop: '2px' }}>
+                                {timeString} • {log.source_type}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div style={{ padding: '12px 0', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
+                        Belum ada pasokan log masuk.
                       </div>
-                    ))}
+                    )}
                   </div>
                   <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
                 </div>
               </div>
 
-              {/* FLOATING POP-UP: BRAINY PROACTIVE INSIGHT NOTE */}
-              <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
+              {/* ================= ⚡ UPDATE ENGINE: AUTOMATED WHATSAPP RESTOCK MESSAGE DISPATCHER ================= */}
+              <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justify: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                     <AlertCircle size={20} />
                   </div>
                   <div>
                     <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold', letterSpacing: '0.5px', display: 'block' }}>BRAINY INSIGHT</span>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>Stock for Full Cream Milk is projected to run out in 3 days. Create restock draft?</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>
+                      {stockSummary.criticalCount > 0 
+                        ? `Ada ${stockSummary.criticalCount} bahan baku menipis di bawah batas minimum. Buat draf restok otomatis?` 
+                        : "Kondisi seluruh stok gudang aman terkendali berdasarkan parameter AI."}
+                    </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                   <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
-                  <button onClick={() => alert('Draf restok otomatis terbuat!')} style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Confirm</button>
+                  
+                  <button 
+                    onClick={() => {
+                      // 1. Filter bahan baku yang masuk status kritis secara dinamis dari database state
+                      const criticalItems = materials.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold));
+                      
+                      if (criticalItems.length === 0) {
+                        alert('Seluruh kondisi stok aman terkendali, Gar! Tidak ada pesan restok yang perlu dikirim ke WhatsApp.');
+                        return;
+                      }
+
+                      // 2. Konstruksi teks draf order otomatis menggunakan Markdown tebal (*) dan ganti baris (%0A) khas API WA
+                      let message = `*⚠️ PEMBERITAHUAN RESTOK OTOMATIS - cuanin.id* %0A%0A`;
+                      message += `Halo Admin Stok, Brainy AI mendeteksi bahwa bahan baku berikut sudah menyentuh batas minimum dan harus segera di-restok: %0A%0A`;
+                      
+                      criticalItems.forEach((item, idx) => {
+                        message += `${idx + 1}. *${item.material_name}* %0A`;
+                        message += `   - Sisa Stok: ${Number(item.current_stock).toLocaleString('id-ID')} ${item.unit} %0A`;
+                        message += `   - Batas Minimum: ${item.minimum_threshold} ${item.unit} %0A%0A`;
+                      });
+
+                      message += `Mohon segera buat Purchase Order (PO) ke pihak supplier resmi. Terima kasih!`;
+
+                      // 3. Masukkan nomor WhatsApp tujuan admin stok gudang lu (Ganti ke nomor riil admin lu nanti)
+                      // Harus format kode negara tanpa spasi, strip, atau awalan tanda tambah (+), misal: 62812345678
+                      const adminWhatsAppNumber = "628512345678"; 
+
+                      // 4. Trigger pemanggilan window open scheme wa.me
+                      window.open(`https://wa.me/${adminWhatsAppNumber}?text=${message}`, '_blank');
+                    }} 
+                    style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Confirm
+                  </button>
                 </div>
               </div>
             </>
