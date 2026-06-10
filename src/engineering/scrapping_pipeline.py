@@ -9,8 +9,8 @@ Original file is located at
 ### Data Collection: API Yahoo Finance ###
 """
 
-!pip install yfinance pymongo dnspython
-!pip install supabase requests matplotlib seaborn pandas numpy
+# !pip install yfinance pymongo dnspython
+# !pip install supabase requests matplotlib seaborn pandas numpy
 
 # =====================================================================
 # CELL 1: DATA COLLECTION (HYBRID DATA INGESTION PHASE)
