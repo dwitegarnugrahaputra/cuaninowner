@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
@@ -7,16 +7,16 @@ import {
   MessageSquare, User, Shield, Key, ArrowUpRight, Globe
 } from 'lucide-react';
 
+// Impor koneksi client Supabase yang ngebaca file .env lu
+import { supabase } from '../../config/supabaseClient';
+
 // Import komponen form internal settings
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
 import Bahasa from '../settings/Bahasa.jsx';
-
-// FIX PATH INTEGRASI: Import EditProfile dari rumpun folder dashboard/topbar yang benar
 import EditProfile from './EditProfile.jsx';
 
-// Logo cuanin.id versi mini murni CSS
 function CuaninLogoMini() {
   return (
     <div style={{
@@ -52,16 +52,100 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
-
-  {/* KONTROL LAYOUT WORKSPACE UTAMA: 'main-dashboard' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
-  // Sinkronisasi state jika ada kiriman props forcedSubView dari luar router global
-  React.useEffect(() => {
+  // State Dropdown Kunci Tren Bahan Baku
+  const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
+
+  {/* 🗄️ STATE PENAMPUNG AWAL MURNI KOSONGAN (Rp 0) SESUAI REALITAS DATABASE AKTIF */}
+  const [isLoading, setIsLoading] = useState(true);
+  const [financials, setFinancials] = useState({
+    totalSales: 0,
+    netProfit: 0,
+    totalTransactions: 0,
+    salesTrend: '0%',
+    profitTrend: '0%',
+    weeklySalesPath: 'M 0 50 Q 116 50 233 50 T 466 50 T 700 50',
+    weeklyExpensesPath: 'M 0 80 Q 116 80 233 80 T 466 80 T 700 80',
+    tableRows: [],
+    
+    // Field Laba Rugi Deep-Dive
+    monthLabel: 'JULY 2024',
+    grossRevenue: 0,
+    cogs: 0,
+    laborCosts: 0,
+    operatingExpenses: 0,
+    netProfitMarginLabel: 'Margin: 0%',
+    brainyInsightText: "Brainy Insights: Menunggu data analisis jualan masuk...",
+    
+    // Field Tiga Kartu Metrik Paling Bawah
+    avgTransaction: 0,
+    avgTransactionTrend: '0%',
+    loyaltyRate: 0,
+    loyaltyRateTrend: '0%',
+    peakHoursLabel: '00:00 – 00:00',
+    peakHoursPercentage: '0%'
+  });
+  const [criticalStockCount, setCriticalStockCount] = useState(0);
+  const [topMenus, setTopMenus] = useState([]);
+  
+  // State khusus penampung list tren bahan baku dari Python Colab
+  const [materialsData, setMaterialsData] = useState({});
+
+  // Sinkronisasi state jika ada kiriman props forcedSubView dari luar
+  useEffect(() => {
     if (forcedSubView) {
       setActiveSubView(forcedSubView);
     }
   }, [forcedSubView]);
+
+  {/* 🚀 TRACK SINKRONISASI REAKTIF: MEMBACA LIVE PIPELINE HASIL SCRAPING DARI SUPABASE */}
+  useEffect(() => {
+    async function fetchCommodityTrendsOnly() {
+      if (activeSubView !== 'main-dashboard') return;
+      setIsLoading(true);
+      try {
+        const { data: trendsData, error: trendsError } = await supabase
+          .from('raw_material_trends')
+          .select('*');
+
+        if (!trendsError && trendsData && trendsData.length > 0) {
+          const mappedTrends = {};
+          trendsData.forEach(item => {
+            // Kita normalisasi key nama material agar mapping data object lebih kuat dan presisi
+            mappedTrends[item.material_name.trim()] = {
+              labelColor: item.hex_color || '#006847',
+              svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
+              weeks: [item.week_1 || 'Rp 0', item.week_2 || 'Rp 0', item.week_3 || 'Rp 0', item.week_4 || 'Rp 0'],
+              bottomMetrics: { name: item.short_code || '-', price: item.current_price_label || 'Rp 0' }
+            };
+          });
+          
+          setMaterialsData(mappedTrends);
+
+          // Jika bahan baku terpilih saat ini belum ada di data yang baru ditarik, set ke data pertama
+          const availableKeys = Object.keys(mappedTrends);
+          if (availableKeys.length > 0 && !mappedTrends[selectedMaterial]) {
+            setSelectedMaterial(availableKeys[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error memuat data tren bahan baku dari Supabase:', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchCommodityTrendsOnly();
+  }, [activeSubView, selectedMaterial]); // selectedMaterial dimasukkan agar kurva ter-hydrate ulang secara reaktif setiap kali boks ganti nilai!
+
+  // Pointer Pembaca Data Bahan Baku Reaktif Berbasis Hasil Sinkronisasi Colab
+  const activeMaterialData = materialsData[selectedMaterial.trim()] || {
+    labelColor: '#006847',
+    svgPath: 'M 30 110 Q 180 110 340 110 T 650 110',
+    weeks: ['Rp 0', 'Rp 0', 'Rp 0', 'Rp 0'],
+    bottomMetrics: { name: '-', price: 'Rp 0' }
+  };
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -80,18 +164,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
       }}>
         
         {/* Header Branding Sidebar */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
-          padding: '0 20px', 
-          marginBottom: '32px',
-          height: '40px'
-        }}>
-          <div 
-            onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)}
-            style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
+          <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <CuaninLogoMini />
             {isMainSidebarOpen && (
               <div style={{ transition: 'opacity 0.2s', opacity: 1 }}>
@@ -100,12 +174,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               </div>
             )}
           </div>
-
           {isMainSidebarOpen && (
-            <div 
-              onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }}
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}
-            >
+            <div onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }} style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}>
               <Menu size={16} color="#93C5FD" />
             </div>
           )}
@@ -122,26 +192,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           ].map((menu, idx) => {
             const isActive = menu.target === 'dashboard' && activeSubView === 'main-dashboard';
             return (
-              <div 
-                key={idx} 
-                onClick={menu.action} 
-                title={!isMainSidebarOpen ? menu.name : ''}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-                  gap: '12px', 
-                  padding: '12px 16px', 
-                  borderRadius: '10px', 
-                  cursor: 'pointer',
-                  fontWeight: isActive ? 'bold' : '500',
-                  backgroundColor: isActive ? '#006847' : 'transparent', 
-                  color: isActive ? '#ffffff' : '#93C5FD',
-                  transition: 'all 0.3s ease-in-out',
-                }}
-              >
-                {menu.icon} 
-                {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
+              <div key={idx} onClick={menu.action} title={!isMainSidebarOpen ? menu.name : ''} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: isActive ? 'bold' : '500', backgroundColor: isActive ? '#006847' : 'transparent', color: isActive ? '#ffffff' : '#93C5FD', transition: 'all 0.3s ease-in-out' }}>
+                {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
@@ -149,115 +201,37 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
         {/* FOOTER SIDEBAR AREA */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          
-          {/* Tombol Utama Settings */}
-          <div 
-            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
-            title={!isMainSidebarOpen ? 'Settings' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
-              padding: '12px 16px', 
-              color: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
-            }}
-          >
+          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Settings size={18} /> 
-              {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
+              <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
             {isMainSidebarOpen && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <ChevronDown size={14} />
               </div>
             )}
           </div>
 
-          {/* Container Sub-Menu Settings Pop-down */}
           {isMainSidebarOpen && (
-            <div style={{
-              maxHeight: isSettingsOpen ? '200px' : '0px',
-              opacity: isSettingsOpen ? 1 : 0,
-              paddingTop: isSettingsOpen ? '4px' : '0px',
-              paddingBottom: isSettingsOpen ? '4px' : '0px',
-              overflow: 'hidden',
-              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              paddingLeft: '14px',
-              marginBottom: '4px'
-            }}>
+            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, paddingTop: isSettingsOpen ? '4px' : '0px', paddingBottom: isSettingsOpen ? '4px' : '0px', overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
                 { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
                 { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
-              ].map((sub, i) => {
-                const isSubActive = activeSubView === sub.target;
-
-                const handleSubMenuClick = () => {
-                  if (sub.target === 'info-outlet' || sub.target === 'konfigurasi-ai' || sub.target === 'keamanan' || sub.target === 'bahasa') {
-                    setActiveSubView(sub.target);
-                  }
-                };
-
-                return (
-                  <div 
-                    key={i}
-                    onClick={handleSubMenuClick}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      color: isSubActive ? '#ffffff' : '#93C5FD', 
-                      backgroundColor: isSubActive ? '#006847' : 'transparent',
-                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    {sub.icon} <span>{sub.name}</span>
-                  </div>
-                );
-              })}
+              ].map((sub, i) => (
+                <div key={i} onClick={() => setActiveSubView(sub.target)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', color: activeSubView === sub.target ? '#ffffff' : '#93C5FD', backgroundColor: activeSubView === sub.target ? '#006847' : 'transparent', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  {sub.icon} <span>{sub.name}</span>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Tombol Logout */}
-          <div 
-            onClick={logout}
-            title={!isMainSidebarOpen ? 'Logout' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-              gap: '12px', 
-              padding: '12px 16px', 
-              color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}
-          >
-            <LogOut size={18} /> 
-            {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}>
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
           </div>
 
-          {/* Card Profile Merchant */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-            gap: '12px', 
-            padding: '12px 16px', 
-            backgroundColor: '#111827', 
-            borderRadius: '12px', 
-            marginTop: '4px'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
@@ -267,7 +241,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             )}
           </div>
         </div>
-
       </div>
 
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
@@ -280,7 +253,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <input type="text" placeholder="Search analytics, financial reports, or menu items..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <MessageSquare size={16} /> Ask Brainy
             </button>
@@ -300,54 +273,34 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             </div>
 
             {/* FLOATING DROPDOWN PROFIL */}
-            <div style={{
-              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
-              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
-            }}>
-              {/* INTERGRASI TOP BAR: Mengaktifkan state sub-view edit-profile tanpa merusak visual sidebar bawah */}
+            <div style={{ position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box' }}>
               <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
                 <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
               </div>
               <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
                 <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
               </div>
-              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
-              </div>
             </div>
           </div>
         </div>
 
         {/* CONTAINER WORKSPACE UTAMA */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box', position: 'relative' }}>
           
-          {/* ================= KONDISI 1: FORM INTERNAL INFO OUTLET ================= */}
-          {activeSubView === 'info-outlet' && (
-            <InfoOutlet onSaveSuccess={() => { alert('Pengaturan Info Outlet Cabang Berhasil Diperbarui!'); setActiveSubView('main-dashboard'); }} />
+          {isLoading && activeSubView === 'main-dashboard' && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(243, 244, 246, 0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
+              🔄 Membaca Data Hasil Google Colab...
+            </div>
           )}
 
-          {/* ================= KONDISI 2: FORM INTERNAL KONFIGURASI AI ================= */}
-          {activeSubView === 'konfigurasi-ai' && (
-            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('main-dashboard'); }} />
-          )}
+          {/* FORM SETTINGS REDIRECTORS */}
+          {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
+          {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
+          {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
+          {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
+          {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
 
-          {/* ================= KONDISI 3: FORM INTERNAL KEAMANAN SYSTEM ================= */}
-          {activeSubView === 'keamanan' && (
-            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('main-dashboard'); }} />
-          )}
-
-          {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
-          {activeSubView === 'bahasa' && (
-            <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('main-dashboard'); }} />
-          )}
-
-          {/* ================= KONDISI 3.8: FORM INTERNAL EDIT PROFILE PENGGUNA ================= */}
-          {activeSubView === 'edit-profile' && (
-            <EditProfile onSaveSuccess={() => setActiveSubView('main-dashboard')} />
-          )}
-
-          {/* ================= KONDISI 4: RENDERING WORKSPACE BI DASHBOARD UTAMA ================= */}
+          {/* VIEW UTAMA BI DASHBOARD */}
           {activeSubView === 'main-dashboard' && (
             <>
               {/* SMART CARDS ROW SUMMARY */}
@@ -355,33 +308,43 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CuaninLogoMini /></div>
-                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> 12.5%</div>
+                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> {financials.salesTrend}</div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>TOTAL PENJUALAN</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 12.450.000</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {financials.totalSales.toLocaleString('id-ID')}
+                  </h2>
                 </div>
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
-                    <div style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingDown size={12}/> 4.2%</div>
+                    <div style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingDown size={12}/> {financials.profitTrend}</div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>PROFIT BERSIH</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp 3.120.000</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {financials.netProfit.toLocaleString('id-ID')}
+                  </h2>
                 </div>
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📝</div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>JUMLAH TRANSAKSI</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>1.248</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
+                    {financials.totalTransactions.toLocaleString('id-ID')}
+                  </h2>
                 </div>
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={20} /></div>
-                    <div style={{ backgroundColor: '#DC2626', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>KRITIS</div>
+                    <div style={{ backgroundColor: criticalStockCount > 0 ? '#DC2626' : '#059669', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                      {criticalStockCount > 0 ? 'KRITIS' : 'AMAN'}
+                    </div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>STOK KRITIS</span>
-                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>12 Items</h2>
+                  <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: criticalStockCount > 0 ? '#DC2626' : '#111827' }}>
+                    {criticalStockCount} Items
+                  </h2>
                 </div>
               </div>
 
@@ -401,8 +364,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
                 <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', overflow: 'visible' }}>
-                    <path d="M 0 50 Q 116 20 233 40 T 466 20 T 700 30" fill="none" stroke="#006847" strokeWidth="4" />
-                    <path d="M 0 80 Q 116 60 233 75 T 466 55 T 700 65" fill="none" stroke="#4F46E5" strokeWidth="4" />
+                    <path d={financials.weeklySalesPath} fill="none" stroke="#006847" strokeWidth="4" style={{ transition: 'd 0.5s ease-in-out' }} />
+                    <path d={financials.weeklyExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="4" style={{ transition: 'd 0.5s ease-in-out' }} />
                   </svg>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
                     {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
@@ -410,36 +373,27 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
 
                 {/* BREAKDOWN PANEL DETAIL MINGGUAN */}
-                <div style={{
-                  maxHeight: isBreakdownOpen ? '400px' : '0px', overflow: 'hidden', transition: 'all 0.4s ease-in-out', opacity: isBreakdownOpen ? 1 : 0,
-                  borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none', paddingTop: isBreakdownOpen ? '16px' : '0px', boxSizing: 'border-box'
-                }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '12px', textAlign: 'left' }}>📋 RINCIAN OPERASIONAL MINGGUAN</span>
+                <div style={{ maxHeight: isBreakdownOpen ? '400px' : '0px', overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease', opacity: isBreakdownOpen ? 1 : 0, borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none', paddingTop: isBreakdownOpen ? '16px' : '0px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '12px' }}>📋 RINCIAN OPERASIONAL MINGGUAN (DATABASE)</span>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ color: '#9CA3AF', fontWeight: 'bold', borderBottom: '1px solid #F3F4F6' }}>
                         <th style={{ padding: '10px 8px' }}>HARI</th>
-                        <th style={{ padding: '10px 8px' }}>TOTAL SALES (RP)</th>
-                        <th style={{ padding: '10px 8px' }}>TOTAL EXPENSES (RP)</th>
+                        <th style={{ padding: '10px 8px' }}>TOTAL SALES</th>
+                        <th style={{ padding: '10px 8px' }}>TOTAL EXPENSES</th>
                         <th style={{ padding: '10px 8px' }}>STATUS MARGIN</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { day: 'Monday', sales: 'Rp 1.450.000', exp: 'Rp 450.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                        { day: 'Tuesday', sales: 'Rp 1.200.000', exp: 'Rp 620.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                        { day: 'Wednesday', sales: 'Rp 1.650.000', exp: 'Rp 510.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                        { day: 'Thursday', sales: 'Rp 1.100.000', exp: 'Rp 950.000', stat: 'WARNING', color: '#FFF7ED', text: '#D97706' },
-                        { day: 'Friday', sales: 'Rp 2.100.000', exp: 'Rp 420.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                        { day: 'Saturday', sales: 'Rp 2.850.000', exp: 'Rp 700.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                        { day: 'Sunday', sales: 'Rp 2.100.000', exp: 'Rp 700.000', stat: 'SURPLUS', color: '#E6F4EA', text: '#006847' },
-                      ].map((row, idx) => (
+                      {financials.tableRows.map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                           <td style={{ padding: '12px 8px', fontWeight: '600' }}>{row.day}</td>
-                          <td style={{ padding: '12px 8px', color: '#006847', fontWeight: 'bold' }}>{row.sales}</td>
-                          <td style={{ padding: '12px 8px', color: '#4F46E5', fontWeight: '600' }}>{row.exp}</td>
+                          <td style={{ padding: '12px 8px', color: '#006847', fontWeight: 'bold' }}>Rp {row.sales.toLocaleString('id-ID')}</td>
+                          <td style={{ padding: '12px 8px', color: '#4F46E5', fontWeight: '600' }}>Rp {row.expenses.toLocaleString('id-ID')}</td>
                           <td style={{ padding: '12px 8px' }}>
-                            <span style={{ backgroundColor: row.color, color: row.text, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{row.stat}</span>
+                            <span style={{ backgroundColor: row.sales >= row.expenses ? '#E6F4EA' : '#FEE2E2', color: row.sales >= row.expenses ? '#006847' : '#DC2626', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>
+                              {row.sales >= row.expenses ? 'SURPLUS' : 'DEFISIT'}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -448,63 +402,109 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
               </div>
 
-              {/* TOP SELLING MENU */}
+              {/* TOP SELLING MENU REALTIME */}
               <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3)</h3>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3 Live)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                  {[{ name: 'Kopi Susu Gula Aren', sold: '420 SOLD', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=150' }, { name: 'Cafe Latte', sold: '315 SOLD', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=150' }, { name: 'Avocado Toast', sold: '210 SOLD', img: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?q=80&w=150' }].map((menu, i) => (
+                  {topMenus.map((menu, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
-                      <img src={menu.img} alt={menu.name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
-                      <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{menu.name}</p><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold}</span></div>
+                      <img src={menu.image_url} alt={menu.menu_name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{menu.menu_name}</p>
+                        <span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold_count} SOLD</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* FINANCIAL DEEP-DIVE */}
+              {/* FINANCIAL DEEP-DIVE SECTION */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+                {/* BLOK LABA RUGI DARI DATABASE */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>LABA RUGI (AUDITED)</span>
-                    <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px' }}>JULY 2024</span>
+                    <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px' }}>{financials.monthLabel}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#4B5563' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp 12.450.000</strong></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp 4.350.000</strong></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Labor Costs</span><strong style={{ color: '#DC2626' }}>- Rp 2.500.000</strong></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp 1.480.000</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp {financials.grossRevenue.toLocaleString('id-ID')}</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp {financials.cogs.toLocaleString('id-ID')}</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Labor Costs</span><strong style={{ color: '#DC2626' }}>- Rp {financials.laborCosts.toLocaleString('id-ID')}</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp {financials.operatingExpenses.toLocaleString('id-ID')}</strong></div>
                     <div style={{ backgroundColor: '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                      <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>Margin: 33.1%</span></div>
-                      <strong style={{ fontSize: '18px', color: '#006847' }}>Rp 4.120.000</strong>
+                      <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>{financials.netProfitMarginLabel}</span></div>
+                      <strong style={{ fontSize: '18px', color: '#006847' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</strong>
                     </div>
                     <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                       <span style={{ fontSize: '16px' }}>💡</span>
-                      <p style={{ margin: 0, lineHeight: '1.4' }}><strong>Brainy Insights:</strong> Increasing 'Cafe Latte' margin by 5% could boost monthly net profit by Rp 450.000.</p>
+                      <p style={{ margin: 0, lineHeight: '1.4' }}>{financials.brainyInsightText}</p>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                {/* 🛠️ BOKS TREN HARGA BAHAN BAKU (SINKRON DATA PIPELINE PYTHON COLAB LU) */}
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div><span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span></div>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '300px', fontSize: '10px', fontWeight: 'bold', color: '#6B7280' }}>
-                      {['● KOPI ARABICA', '● BERAS PREMIUM', '● GULA AREN', '● FRESH MILK', '● DAGING AYAM'].map((item, i) => <span key={i}>{item}</span>)}
+                    
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <select 
+                        value={selectedMaterial} 
+                        onChange={(e) => setSelectedMaterial(e.target.value)}
+                        style={{ padding: '6px 28px 6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', color: '#374151', backgroundColor: '#FAFAFA', outline: 'none', cursor: 'pointer', appearance: 'none' }}
+                      >
+                        {/* ITERASI DROPDOWN YANG 100% DINAMIS MENGIKUTI CORE DATABASE HASIL COLAB LU */}
+                        {Object.keys(materialsData).length > 0 ? (
+                          Object.keys(materialsData).map((matName) => (
+                            <option key={matName} value={matName}>{matName}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="Kopi Arabica">Kopi Arabica</option>
+                            <option value="Beras Premium">Beras Premium</option>
+                            <option value="Daging Ayam">Daging Ayam</option>
+                            <option value="Gula Aren">Gula Aren</option>
+                            <option value="Fresh Milk">Fresh Milk</option>
+                          </>
+                        )}
+                      </select>
+                      <ChevronDown size={14} color="#6B7280" style={{ position: 'absolute', right: '8px', pointerEvents: 'none' }} />
                     </div>
                   </div>
+
+                  {/* Menggambar liukan dinamis berbasis data kurva dari Supabase */}
                   <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
-                    <div style={{ position: 'absolute', bottom: '20px', left: '10%', right: '10%', height: '2px', backgroundColor: '#E5E7EB' }} />
+                    <svg viewBox="0 0 650 160" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
+                      <path d={activeMaterialData.svgPath} fill="none" stroke={activeMaterialData.labelColor} strokeWidth="4" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
+                    </svg>
+                    <div style={{ position: 'absolute', top: '-15px', right: '0px', fontSize: '10px', fontWeight: 'bold', color: activeMaterialData.labelColor }}>
+                      ● {selectedMaterial.toUpperCase()}
+                    </div>
                   </div>
+
+                  {/* Label harga per-week dinamis */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
-                    <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', borderTop: '1px solid #F3F4F6', paddingTop: '14px', textAlign: 'center', fontSize: '11px' }}>
-                    {[{ name: 'KOPI', price: 'Rp 185k' }, { name: 'BERAS', price: 'Rp 78k' }, { name: 'GULA', price: 'Rp 45k' }, { name: 'MILK', price: 'Rp 22.5k' }, { name: 'AYAM', price: 'Rp 42k' }].map((baku, i) => (
-                      <div key={i}><span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px' }}>{baku.name}</span><strong style={{ color: '#111827', marginTop: '2px', display: 'block' }}>{baku.price}</strong></div>
+                    {activeMaterialData.weeks.map((priceLabel, wIdx) => (
+                      <div key={wIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span>Week {wIdx + 1}</span>
+                        <span style={{ color: '#4B5563', fontSize: '10px' }}>{priceLabel}</span>
+                      </div>
                     ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
+                    <div style={{ textAlign: 'center', padding: '0 20px' }}>
+                      <span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px', letterSpacing: '0.5px' }}>
+                        KOMODITAS TERPILIH: {activeMaterialData.bottomMetrics.name}
+                      </span>
+                      <span style={{ color: activeMaterialData.labelColor, marginTop: '4px', display: 'block', fontSize: '14px', fontWeight: 'bold' }}>
+                        {activeMaterialData.bottomMetrics.price} <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 'normal' }}>/ Satuan Log</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -513,18 +513,30 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>📊 AVERAGE TRANSACTION</span>
-                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Rp 48.500</h3>
-                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>+4.2% <span style={{ color: '#9CA3AF', fontWeight: '500' }}>vs last month</span></span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>
+                    Rp {financials.avgTransaction.toLocaleString('id-ID')}
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>
+                    {financials.avgTransactionTrend} <span style={{ color: '#9CA3AF', fontWeight: '500' }}>vs last month</span>
+                  </span>
                 </div>
                 <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>🧬 LOYALTY RATE</span>
-                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>64%</h3>
-                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>+2.1% <span style={{ color: '#9CA3AF', fontWeight: '500' }}>from new members</span></span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>
+                    {financials.loyaltyRate}%
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>
+                    {financials.loyaltyRateTrend} <span style={{ color: '#9CA3AF', fontWeight: '500' }}>from new members</span>
+                  </span>
                 </div>
                 <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>⏰ PEAK HOURS</span>
-                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>08:00 – 11:00</h3>
-                  <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: '500' }}>Account for <strong>42%</strong> of daily sales</span>
+                  <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>
+                    {financials.peakHoursLabel}
+                  </h3>
+                  <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: '500' }}>
+                    Account for <strong>{financials.peakHoursPercentage}</strong> of daily sales
+                  </span>
                 </div>
               </div>
             </>

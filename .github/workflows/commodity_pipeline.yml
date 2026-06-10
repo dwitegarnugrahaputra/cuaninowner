@@ -1,0 +1,36 @@
+name: CUANin.id Commodity Data Ingestion Pipeline
+
+on:
+  schedule:
+    # Robot otomatis berjalan setiap hari jam 00:00 UTC (Jam 7 Pagi WIB)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Kolom ini biar lu bisa klik tombol "Run" manual dari web GitHub
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Repositori Proyek
+      uses: actions/checkout@v4
+
+    - name: 🐍 Inisialisasi Environment Python
+      uses: actions/setup-python@v5
+      with:
+        python_version: '3.10'
+        cache: 'pip'
+
+    - name: 📦 Instalasi Dependensi Big Data Pipeline
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas numpy yfinance pymongo supabase matplotlib seaborn
+
+    - name: 🚀 Eksekusi Script Pipeline Komoditas Strategis
+      env:
+        # Menyambungkan token aman environment lu ke sistem runtime cloud GitHub
+        MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: |
+        # Robot menjalankan file script python hasil konversi notebook lu
+        python src/engineering/scrapping_pipeline.py

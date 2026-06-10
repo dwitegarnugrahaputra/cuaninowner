@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, Plus, MessageSquare, Paperclip, Send,
   Calendar, Download, AlertCircle, Truck, DollarSign, BarChart3, ChevronRight,
-  Clock, Rocket, ArrowUpRight, ArrowDownRight
+  Clock, Rocket, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 
 function CuaninLogoMini() {
@@ -40,6 +40,60 @@ export default function BrainyChat({ onNavigateView }) {
   const [chatInput, setChatInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  {/* KAMUS DATA INTEGRATED RECIPE DI TAB INSIGHTS (REAKTIF BERBASIS STATE) */}
+  const menuDatabase = {
+    'Caffe Latte': {
+      title: 'Ingredient Cost Distribution (Caffe Latte)',
+      cogs: '100%',
+      status: "Brainy's Analysis",
+      isAlert: true,
+      alertMessage: "I've detected a significant anomaly in your procurement costs. Your latest delivery from Dairy Fresh Co. reflects a 15.5% increase in the unit price of full-cream milk (Rp 18,500 → Rp 21,350 per liter). This has caused an immediate impact on your \"Coffee Selection\" category. Specifically, the margin for your best-selling Caffe Latte has dropped from 68% to 53%. If left unaddressed, this trend will result in a projected profit loss of Rp 4,200,000 by the end of next month.",
+      gradient: 'conic-gradient(#006847 0% 35%, #059669 35% 60%, #34D399 60% 80%, #A7F3D0 80% 100%)',
+      distribution: [
+        { label: 'Milk Cost', pct: '35.0% (Rp 21,350/L)', color: '#006847' },
+        { label: 'Coffee Beans', pct: '25.0% (Premium Blend)', color: '#059669' },
+        { label: 'Packaging & Other', pct: '20.0% (Cups, Sugar)', color: '#34D399' },
+        { label: 'Target Margin', pct: '20.0% (Calculated)', color: '#A7F3D0' }
+      ]
+    },
+    'Nasi Goreng Special': {
+      title: 'Ingredient Cost Distribution (Nasi Goreng Special)',
+      cogs: '100%',
+      status: 'Brainy AI Optimal Report',
+      isAlert: false,
+      alertMessage: "Katalog menu makanan utama terpantau sangat stabil, Gar. Struktur modal beras premium dan minyak goreng curah di area pasar grosir Tegal masih aman di kisaran Rp 11.200 per porsi. Target margin aman terkendali di angka 72%. Tidak diperlukan penyesuaian harga jual menu dalam 30 hari ke depan.",
+      gradient: 'conic-gradient(#1E3A8A 0% 31.2%, #3B82F6 31.2% 50.8%, #60A5FA 50.8% 100%)',
+      distribution: [
+        { label: 'Beras Premium', pct: '31.2% (Grosir Supplier)', color: '#1E3A8A' },
+        { label: 'Telor & Ayam Suwir', pct: '19.6% (Fresh Market)', color: '#3B82F6' },
+        { label: 'Bumbu & Minyak', pct: '49.2% (Calculated Cost)', color: '#60A5FA' }
+      ]
+    },
+    'Es Teh Manis Kristal': {
+      title: 'Ingredient Cost Distribution (Es Teh Manis Kristal)',
+      cogs: '100%',
+      status: 'Brainy High Margin Alert',
+      isAlert: false,
+      alertMessage: "Menu 'Es Teh Manis Kristal' mencatatkan efisiensi resep paling prima bulan ini dengan COGS hanya Rp 1.800. Margin keuntungan bersih menembus batas psikologis 85%. Rekomendasi AI: Pertahankan bundling paket kombo makanan+minuman untuk mendongkrak perputaran stok daun teh di gudang.",
+      gradient: 'conic-gradient(#8B5CF6 0% 33.3%, #a78bfa 33.3% 77.7%, #ddd6fe 77.7% 100%)',
+      distribution: [
+        { label: 'Daun Teh Premium', pct: '33.3% (Sari Wangi)', color: '#8B5CF6' },
+        { label: 'Gula Cair Cairan', pct: '44.4% (Palm Sugar Hub)', color: '#a78bfa' },
+        { label: 'Es Batu Kristal', pct: '22.3% (Ice Factory)', color: '#ddd6fe' }
+      ]
+    }
+  };
+
+  {/* STATE DROPDOWN ENGINE SELECTOR DAN KALENDER DINAMIS */}
+  const [selectedMenu, setSelectedMenu] = useState('Caffe Latte');
+  const [startDate, setStartDate] = useState('2023-10-01');
+  const [endDate, setEndDate] = useState('2023-10-30');
+  
+  {/* 🛠️ SUNTIKAN STATE BARU: PENGENDALI DROP-DOWN EXPLANATION GRAFIK FORECAST */}
+  const [isForecastDescOpen, setIsForecastDescOpen] = useState(false);
+  
+  const activeMenuData = menuDatabase[selectedMenu];
+
   const handleSendChat = (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -47,10 +101,9 @@ export default function BrainyChat({ onNavigateView }) {
     setChatInput('');
   };
 
-  {/* KUNCI LOGIKA BARU: Fungsi New Conversation Otomatis Balik ke Tab Ask Brainy */}
   const handleNewConversation = () => {
     setActiveTab('ask-brainy');
-    setIsSidebarOpen(true); // Buka kembali sidebar-nya biar kelihatan percakapan barunya
+    setIsSidebarOpen(true);
   };
 
   return (
@@ -122,7 +175,6 @@ export default function BrainyChat({ onNavigateView }) {
         opacity: isSidebarOpen ? 1 : 0,
         overflow: 'hidden'
       }}>
-        {/* Event Handler Baru Ditanam di Tombol Ini */}
         <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginBottom: '24px', flexShrink: 0 }}>
           <Plus size={16} /> New Conversation
         </button>
@@ -141,11 +193,9 @@ export default function BrainyChat({ onNavigateView }) {
       {/* ================= 3. WORKSPACE UTAMA KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F8F9FA', overflow: 'hidden' }}>
         
-        {/* TOPBAR SUB-NAVIGATION - KONSISTEN DI SEMUA TAB */}
+        {/* TOPBAR SUB-NAVIGATION */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: '24px', alignItems: 'center', height: '100%' }}>
-            
-            {/* AMAN: Tombol Hamburger Tetap Ada di Tab Ask Brainy, Insights, Maupun Forecast */}
             <div 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
               style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6', color: '#4B5563', marginRight: '-8px', transition: 'background 0.2s' }}
@@ -175,7 +225,7 @@ export default function BrainyChat({ onNavigateView }) {
           </div>
         </div>
 
-        {/* CONTEN TABS ENGINE ROUTER BOX */}
+        {/* CONTENT TABS ENGINE ROUTER BOX */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           {/* TAB 1: ASK BRAINY VIEW */}
@@ -207,8 +257,11 @@ export default function BrainyChat({ onNavigateView }) {
                   <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time analysis and strategic recommendations for your business.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '13px', color: '#4B5563', fontWeight: '500' }}>
-                    <Calendar size={16} /> <span>Oct 1 - Oct 30, 2023</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', color: '#4B5563', fontWeight: 'bold' }}>
+                    <Calendar size={14} color="#4B5563" />
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ border: 'none', outline: 'none', color: '#374151', fontWeight: 'bold', fontFamily: 'sans-serif', fontSize: '12px', backgroundColor: 'transparent', cursor: 'pointer' }} />
+                    <span style={{ color: '#9CA3AF' }}>to</span>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ border: 'none', outline: 'none', color: '#374151', fontWeight: 'bold', fontFamily: 'sans-serif', fontSize: '12px', backgroundColor: 'transparent', cursor: 'pointer' }} />
                   </div>
                   <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                     <Download size={16} /> Export Report
@@ -217,23 +270,29 @@ export default function BrainyChat({ onNavigateView }) {
               </div>
 
               <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Ingredient Cost Distribution (Caffe Latte)</h3>
-                <p style={{ margin: '4px 0 20px 0', fontSize: '13px', color: '#6B7280' }}>Comparing ingredient procurement costs against category profitability</p>
-                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>{activeMenuData.title}</h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>Comparing ingredient procurement costs against category profitability</p>
+                  </div>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <select value={selectedMenu} onChange={(e) => setSelectedMenu(e.target.value)} style={{ padding: '8px 32px 8px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: '#374151', backgroundColor: '#F9FAFB', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
+                      {Object.keys(menuDatabase).map((menuName) => (
+                        <option key={menuName} value={menuName}>{menuName}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} color="#6B7280" style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
+                  </div>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '80px', padding: '20px 0' }}>
-                  <div style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '50%', background: 'conic-gradient(#006847 0% 35%, #059669 35% 60%, #34D399 60% 80%, #A7F3D0 80% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '50%', background: activeMenuData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' }}>
                     <div style={{ width: '110px', height: '110px', backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold' }}>Total Cost</span>
-                      <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>100%</h2>
+                      <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>{activeMenuData.cogs}</h2>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { label: 'Milk Cost', pct: '35.0% (Rp 21,350/L)', color: '#006847' },
-                      { label: 'Coffee Beans', pct: '25.0% (Premium Blend)', color: '#059669' },
-                      { label: 'Packaging & Other', pct: '20.0% (Cups, Sugar)', color: '#34D399' },
-                      { label: 'Target Margin', pct: '20.0% (Calculated)', color: '#A7F3D0' }
-                    ].map((item, idx) => (
+                    {activeMenuData.distribution.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <div style={{ width: '12px', height: '12px', backgroundColor: item.color, borderRadius: '3px', marginTop: '3px', flexShrink: 0 }} />
                         <div>
@@ -246,14 +305,13 @@ export default function BrainyChat({ onNavigateView }) {
                 </div>
               </div>
 
-              <div style={{ backgroundColor: '#E6F4EA', borderRadius: '16px', border: '1px solid #A7F3D0', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+              <div style={{ backgroundColor: activeMenuData.isAlert ? '#FEF2F2' : '#E6F4EA', borderRadius: '16px', border: activeMenuData.isAlert ? '1px solid #FCA5A5' : '1px solid #A7F3D0', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start', transition: 'all 0.3s' }}>
+                <div style={{ width: '36px', height: '36px', backgroundColor: activeMenuData.isAlert ? '#DC2626' : '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
                   <AlertCircle size={20} />
                 </div>
                 <div style={{ fontFamily: 'sans-serif', color: '#111827', fontSize: '14px', lineHeight: '1.6' }}>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>Brainy's Analysis</h3>
-                  <p style={{ margin: '0 0 12px 0' }}>I've detected a significant anomaly in your procurement costs. Your latest delivery from <strong>Dairy Fresh Co.</strong> reflects a <span style={{ color: '#DC2626', fontWeight: 'bold' }}>15.5% increase</span> in the unit price of full-cream milk (Rp 18,500 → Rp 21,350 per liter).</p>
-                  <p style={{ margin: 0 }}>This has caused an immediate impact on your <em>"Coffee Selection"</em> category. Specifically, the margin for your best-selling <strong>Caffe Latte</strong> has dropped from 68% to 53%. If left unaddressed, this trend will result in a projected profit loss of <strong>Rp 4,200,000</strong> by the end of next month.</p>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>{activeMenuData.status}</h3>
+                  <p style={{ margin: 0 }}>{activeMenuData.alertMessage}</p>
                 </div>
               </div>
 
@@ -276,7 +334,7 @@ export default function BrainyChat({ onNavigateView }) {
             </div>
           )}
 
-          {/* TAB 3: FORECAST VIEW UTUH */}
+          {/* TAB 3: FORECAST VIEW UTUH (SUDAH DIUPGRADE SINKRON DESIGN TERBARU LU) */}
           {activeTab === 'forecast' && (
             <div style={{ flex: 1, overflowY: 'auto', padding: '32px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
@@ -284,19 +342,38 @@ export default function BrainyChat({ onNavigateView }) {
                 <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>AI-powered revenue projections and strategic growth insights for your business.</p>
               </div>
 
+              {/* BOKS UTAMA GRAFIK REVENUE FORECAST + INTEGRATED DROPDOWN DESCRIPTION ACCORDION */}
               <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Revenue Forecast</h3>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>Projected revenue trend for the next 90 days</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Revenue Forecast</h3>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>Projected revenue trend for the next 90 days</p>
+                    </div>
+                    
+                    {/* 🛠️ DROPDOWN ICON TRIGGER: Klik ini untuk menampilkan/menyembunyikan penjelasan di bawah grafik */}
+                    <div 
+                      onClick={() => setIsForecastDescOpen(!isForecastDescOpen)}
+                      style={{ 
+                        cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                        backgroundColor: isForecastDescOpen ? '#E6F4EA' : '#F3F4F6', 
+                        color: isForecastDescOpen ? '#006847' : '#4B5563',
+                        transition: 'all 0.2s ease', marginLeft: '6px'
+                      }}
+                      title="Klik untuk melihat detail analisis narasi AI"
+                    >
+                      {isForecastDescOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
                   </div>
+                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', fontWeight: '500' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4B5563' }}><div style={{ width: '10px', height: '10px', backgroundColor: '#006847', borderRadius: '50%' }} /> Current Trend</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4B5563' }}><div style={{ width: '12px', height: '0px', borderTop: '2px dashed #10B981' }} /> Projected Growth</span>
                   </div>
                 </div>
 
-                <div style={{ position: 'relative', height: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingTop: '20px' }}>
+                {/* VISUAL CHART BARS VECTOR SECTION */}
+                <div style={{ position: 'relative', height: '220px', display: 'flex', flexDirection: 'column', justifySelf: 'flex-end', justifyContent: 'flex-end', paddingTop: '20px' }}>
                   <div style={{ display: 'flex', width: '60%', justifyContent: 'space-between', alignItems: 'flex-end', height: '100%', paddingRight: '20px', boxSizing: 'border-box' }}>
                     {[
                       { h: '70px', m: 'Current (Oct)' }, { h: '95px', m: '' }, { h: '110px', m: '' },
@@ -315,8 +392,29 @@ export default function BrainyChat({ onNavigateView }) {
                     <span>Current (Oct)</span> <span>November</span> <span>December</span> <span>January 2024</span>
                   </div>
                 </div>
+
+                {/* 🛠️ PENJELASAN INTEGRATED ACCORDION PANEL (MASIH SATU KOTAK DENGAN GRAFIK) */}
+                <div style={{
+                  maxHeight: isForecastDescOpen ? '200px' : '0px',
+                  opacity: isForecastDescOpen ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+                  borderTop: isForecastDescOpen ? '1px dashed #E5E7EB' : 'none',
+                  paddingTop: isForecastDescOpen ? '16px' : '0px',
+                  marginTop: isForecastDescOpen ? '8px' : '0px'
+                }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', backgroundColor: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #F3F4F6' }}>
+                    <Info size={16} color="#006847" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ color: '#374151', fontSize: '13px', lineHeight: '1.6' }}>
+                      <strong style={{ color: '#006847', display: 'block', marginBottom: '4px', fontSize: '14px' }}>Brainy's Forecast Insight Engine</strong>
+                      Berdasarkan visualisasi tren performa outlet di atas, pendapatan bersih Warung Kopi Jaya diproyeksikan mengalami **pertumbuhan konsisten hingga 24%** di kuartal akhir tahun ini, Gar. Lonjakan grafik putus-putus (*Projected Growth*) pada bulan Desember dipicu oleh estimasi tingginya frekuensi kunjungan konsumen lokal serta efisiensi strategi bundling menu kombo cerdas bentukan sistem POS lu.
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
+              {/* TWO BOTTOM DOCK TILES CARDS */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                   <div>
