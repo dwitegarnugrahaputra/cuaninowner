@@ -54,7 +54,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
-  // State Dropdown Kunci Tren Bahan Baku
+  // State Dropdown Kunci Tren Bahan Baku - SINKRON 100% DENGAN STRING METADATA PYTHON LU
   const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
 
   {/* 🗄️ STATE PENAMPUNG AWAL MURNI KOSONGAN (Rp 0) SESUAI REALITAS DATABASE AKTIF */}
@@ -99,7 +99,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
   }, [forcedSubView]);
 
-  {/* 🚀 TRACK SINKRONISASI REAKTIF: MEMBACA LIVE PIPELINE HASIL SCRAPING DARI SUPABASE */}
+  {/* 🚀 ENGINE SINKRONISASI NYATA TERISOLASI KHUSUS DATA TREN BAHAN BAKU PYTHON COLAB LU */}
   useEffect(() => {
     async function fetchCommodityTrendsOnly() {
       if (activeSubView !== 'main-dashboard') return;
@@ -112,20 +112,22 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
         if (!trendsError && trendsData && trendsData.length > 0) {
           const mappedTrends = {};
           trendsData.forEach(item => {
-            // Kita normalisasi key nama material agar mapping data object lebih kuat dan presisi
+            // DEFENSIVE ATTACK: Amankan key string data bapanas/yahoo finance dari spasi gaib
             mappedTrends[item.material_name.trim()] = {
               labelColor: item.hex_color || '#006847',
               svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
               weeks: [item.week_1 || 'Rp 0', item.week_2 || 'Rp 0', item.week_3 || 'Rp 0', item.week_4 || 'Rp 0'],
-              bottomMetrics: { name: item.short_code || '-', price: item.current_price_label || 'Rp 0' }
+              bottomMetrics: { 
+                name: item.short_code || item.material_name.substring(0, 3).toUpperCase(), 
+                price: item.current_price_label || item.week_4 || 'Rp 0' 
+              }
             };
           });
           
           setMaterialsData(mappedTrends);
 
-          // Jika bahan baku terpilih saat ini belum ada di data yang baru ditarik, set ke data pertama
           const availableKeys = Object.keys(mappedTrends);
-          if (availableKeys.length > 0 && !mappedTrends[selectedMaterial]) {
+          if (availableKeys.length > 0 && !mappedTrends[selectedMaterial.trim()]) {
             setSelectedMaterial(availableKeys[0]);
           }
         }
@@ -137,7 +139,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
 
     fetchCommodityTrendsOnly();
-  }, [activeSubView, selectedMaterial]); // selectedMaterial dimasukkan agar kurva ter-hydrate ulang secara reaktif setiap kali boks ganti nilai!
+  }, [activeSubView, selectedMaterial]);
 
   // Pointer Pembaca Data Bahan Baku Reaktif Berbasis Hasil Sinkronisasi Colab
   const activeMaterialData = materialsData[selectedMaterial.trim()] || {
@@ -289,7 +291,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           
           {isLoading && activeSubView === 'main-dashboard' && (
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(243, 244, 246, 0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
-              🔄 Membaca Data Hasil Google Colab...
+              🔄 Menghubungkan ke Supabase...
             </div>
           )}
 
@@ -457,7 +459,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                         onChange={(e) => setSelectedMaterial(e.target.value)}
                         style={{ padding: '6px 28px 6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', color: '#374151', backgroundColor: '#FAFAFA', outline: 'none', cursor: 'pointer', appearance: 'none' }}
                       >
-                        {/* ITERASI DROPDOWN YANG 100% DINAMIS MENGIKUTI CORE DATABASE HASIL COLAB LU */}
+                        {/* ITERASI DROPDOWN YANG MENGIKUTI KEY DATA COLAB LU SECARA SINKRON */}
                         {Object.keys(materialsData).length > 0 ? (
                           Object.keys(materialsData).map((matName) => (
                             <option key={matName} value={matName}>{matName}</option>
