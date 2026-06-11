@@ -64,7 +64,6 @@ export default function MenuManagement({ onNavigateView }) {
 
   // ================= STATE INTEGRASI DATABASE MENU (CRUD AREA) =================
   const [menus, setMenus] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]); // Bahan baku gudang
   const [isLoading, setIsLoading] = useState(true);
   const [menuSummary, setMenuSummary] = useState({
     totalItems: 0,
@@ -79,76 +78,36 @@ export default function MenuManagement({ onNavigateView }) {
     image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop'
   });
 
-  // State resep dinamis untuk ADD NEW ITEM modal
-  const [recipeRows, setRecipeRows] = useState([
-    { inventory_id: '', usage_quantity: '' }
-  ]);
-
   // State Kontrol Data Menu yang Sedang Diedit (Update)
   const [editingMenu, setEditingMenu] = useState(null);
-  const [editRecipeRows, setEditRecipeRows] = useState([]); // Resep dinamis modal edit
 
-  // 🚀 PIPELINE 1: FETCH DATA MENU & INVENTORY (READ) FROM SUPABASE
+  // 🚀 PIPELINE 1: FETCH DATA MENU (READ) FROM SUPABASE
   const fetchMenuCatalog = async () => {
     if (activeSubView !== 'menu-table') return;
     setIsLoading(true);
     try {
-      // Fetch Katalog Menu
-      const { data: menuData, error: menuError } = await supabase
+      const { data, error } = await supabase
         .from('menus')
         .select('*')
         .order('category', { ascending: true })
         .order('menu_name', { ascending: true });
 
-      if (menuError) throw menuError;
+      if (error) throw error;
 
-      // Fetch Bahan Baku untuk Dropdown Resep
-      const { data: invData, error: invError } = await supabase
-        .from('inventory')
-        .select('id, name, unit, stock');
+      if (data) {
+        setMenus(data);
 
-      if (invError) throw invError;
-
-      // DATA DUMMY FALLBACK
-      if (!invData || invData.length === 0) {
-        const localDummyInventory = [
-          { id: '1', name: 'Espresso Beans Houseblend', unit: 'gram', stock: 5000 },
-          { id: '2', name: 'Fresh Milk Diamond', unit: 'ml', stock: 10000 },
-          { id: '3', name: 'Liquid Aren Sugar', unit: 'ml', stock: 3000 },
-          { id: '4', name: 'Caramel Syrup', unit: 'ml', stock: 2000 },
-          { id: '5', name: 'Croissant Dough', unit: 'pcs', stock: 50 },
-          { id: '6', name: 'Matcha Powder Premium', unit: 'gram', stock: 1500 }
-        ];
-        setInventoryItems(localDummyInventory);
-      } else {
-        setInventoryItems(invData);
-      }
-
-      if (menuData) {
-        setMenus(menuData);
-
-        const uniqueCategories = new Set(menuData.map(item => item.category)).size;
-        
-        // Kebal data NULL: Menganggap data kosong/NULL sebagai Available, hanya menghitung yang eksplisit false
-        const outOfStockItems = menuData.filter(item => item.is_available === false).length;
+        const uniqueCategories = new Set(data.map(item => item.category)).size;
+        const outOfStockItems = data.filter(item => item.is_available === false).length;
 
         setMenuSummary({
-          totalItems: menuData.length,
+          totalItems: data.length,
           totalCategories: uniqueCategories,
           outOfStockCount: outOfStockItems
         });
       }
     } catch (err) {
-      console.error('⚠️ Gagal memuat katalog menu dari Supabase, mengaktifkan data dummy:', err.message);
-      const localDummyInventory = [
-        { id: '1', name: 'Espresso Beans Houseblend', unit: 'gram', stock: 5000 },
-        { id: '2', name: 'Fresh Milk Diamond', unit: 'ml', stock: 10000 },
-        { id: '3', name: 'Liquid Aren Sugar', unit: 'ml', stock: 3000 },
-        { id: '4', name: 'Caramel Syrup', unit: 'ml', stock: 2000 },
-        { id: '5', name: 'Croissant Dough', unit: 'pcs', stock: 50 },
-        { id: '6', name: 'Matcha Powder Premium', unit: 'gram', stock: 1500 }
-      ];
-      setInventoryItems(localDummyInventory);
+      console.error('⚠️ Gagal memuat katalog menu dari Supabase:', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -158,69 +117,7 @@ export default function MenuManagement({ onNavigateView }) {
     fetchMenuCatalog();
   }, [activeSubView]);
 
-  // --- LOGIC HANDLING RECIPIES ROW (ADD MODAL) ---
-  const handleAddRecipeRow = () => {
-    setRecipeRows([...recipeRows, { inventory_id: '', usage_quantity: '' }]);
-  };
-
-  const handleRemoveRecipeRow = (index) => {
-    if (recipeRows.length === 1) {
-      setRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
-    } else {
-      setRecipeRows(recipeRows.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleRecipeRowChange = (index, field, value) => {
-    const updated = [...recipeRows];
-    updated[index][field] = value;
-    setRecipeRows(updated);
-  };
-
-  // --- LOGIC HANDLING RECIPIES ROW (EDIT MODAL) ---
-  const handleAddEditRecipeRow = () => {
-    setEditRecipeRows([...editRecipeRows, { inventory_id: '', usage_quantity: '' }]);
-  };
-
-  const handleRemoveEditRecipeRow = (index) => {
-    if (editRecipeRows.length === 1) {
-      setEditRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
-    } else {
-      setEditRecipeRows(editRecipeRows.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleEditRecipeRowChange = (index, field, value) => {
-    const updated = [...editRecipeRows];
-    updated[index][field] = value;
-    setEditRecipeRows(updated);
-  };
-
-  // Safe Parsing saat mulai memicu Edit Modal
-  const startEditing = (item) => {
-    setEditingMenu({ ...item });
-    
-    if (item.recipe) {
-      try {
-        let parsed = typeof item.recipe === 'string' ? JSON.parse(item.recipe) : item.recipe;
-        if (Array.isArray(parsed)) {
-          setEditRecipeRows(parsed.map(r => ({
-            inventory_id: r.inventory_id ? r.inventory_id.toString() : '',
-            usage_quantity: r.usage_quantity || ''
-          })));
-        } else {
-          setEditRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
-        }
-      } catch (e) {
-        console.error("Gagal parsing data resep, diset baris kosong:", e);
-        setEditRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
-      }
-    } else {
-      setEditRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
-    }
-  };
-
-  // 🚀 PIPELINE 2: ACTION TAMBAH MENU BARU (CREATE) - FORCED DATA INJECTION
+  // 🚀 PIPELINE 2: ACTION TAMBAH MENU BARU (CREATE)
   const handleCreateMenu = async (e) => {
     e.preventDefault();
     if (!newMenu.menu_name.trim() || !newMenu.price || Number(newMenu.price) <= 0) {
@@ -228,35 +125,23 @@ export default function MenuManagement({ onNavigateView }) {
       return;
     }
 
-    const validRecipes = recipeRows.filter(row => row.inventory_id && row.usage_quantity);
-
     try {
-      // Dipaksa ngirim is_available: true murni biar ga null di DB lo
       const { error } = await supabase
         .from('menus')
         .insert([{
           menu_name: newMenu.menu_name,
           category: selectedCategory,
-          price: parseFloat(newMenu.price),    
+          price: Number(newMenu.price),
           image_url: newMenu.image_url,
-          is_available: true,                  
-          recipe: JSON.stringify(validRecipes) 
+          is_available: true
         }]);
 
       if (error) throw error;
 
-      alert('Menu berhasil disimpan ke database cloud!');
-      
-      // Reset State form input
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop' });
-      setRecipeRows([{ inventory_id: '', usage_quantity: '' }]);
       setIsModalOpen(false);
-
-      // Tarik ulang katalog data dari cloud Supabase
-      await fetchMenuCatalog();
-      
+      fetchMenuCatalog();
     } catch (err) {
-      console.error('⚠️ Detil Error Project:', err);
       alert('Gagal menyimpan menu baru: ' + err.message);
     }
   };
@@ -269,17 +154,14 @@ export default function MenuManagement({ onNavigateView }) {
       return;
     }
 
-    const validRecipes = editRecipeRows.filter(row => row.inventory_id && row.usage_quantity);
-
     try {
       const { error } = await supabase
         .from('menus')
         .update({
           menu_name: editingMenu.menu_name,
           category: editingMenu.category,
-          price: parseFloat(editingMenu.price),
-          image_url: editingMenu.image_url,
-          recipe: JSON.stringify(validRecipes)
+          price: Number(editingMenu.price),
+          image_url: editingMenu.image_url
         })
         .eq('id', editingMenu.id);
 
@@ -605,7 +487,7 @@ export default function MenuManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* TABLE AREA */}
+              {/* ⚡ LOGIKA CONDITIONAL RENDERING CONDITIONAL: JIKA DATA MENUS TERISI VS KOSONG */}
               {menus.length > 0 ? (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
                   <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -626,50 +508,47 @@ export default function MenuManagement({ onNavigateView }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {menus.map((item) => {
-                        // FIX SINKRONISASI UI: Membaca aman jika data is_available bernilai null/kosong akibat bypass lama, fallback otomatis ke true!
-                        const isAvailable = item.is_available !== false;
-                        return (
-                          <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: isAvailable ? 'transparent' : '#FAF8F8' }}>
-                            <td style={{ padding: '16px 24px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <img src={item.image_url} alt={item.menu_name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
-                                <div>
-                                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p>
-                                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {item.id.toString().substring(0, 8).toUpperCase()}</span>
-                                </div>
+                      {menus.map((item) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: item.is_available ? 'transparent' : '#FAF8F8' }}>
+                          <td style={{ padding: '16px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <img src={item.image_url} alt={item.menu_name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+                              <div>
+                                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p>
+                                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {item.id.substring(0, 8).toUpperCase()}</span>
                               </div>
-                            </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
-                                {item.category}
-                              </span>
-                            </td>
-                            <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>
-                              Rp {Number(item.price).toLocaleString('id-ID')}
-                            </td>
-                            <td style={{ padding: '16px 24px' }}>
-                              <span 
-                                onClick={() => handleToggleAvailability(item.id, isAvailable)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: isAvailable ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: isAvailable ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}
-                              >
-                                <div style={{ width: '6px', height: '6px', backgroundColor: isAvailable ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
-                                {isAvailable ? 'Available' : 'Out of Stock'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                                <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => startEditing(item)} />
-                                <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteMenu(item.id)} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                            </div>
+                          </td>
+                          <td style={{ padding: '16px 24px' }}>
+                            <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
+                              {item.category}
+                            </span>
+                          </td>
+                          <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>
+                            Rp {Number(item.price).toLocaleString('id-ID')}
+                          </td>
+                          <td style={{ padding: '16px 24px' }}>
+                            <span 
+                              onClick={() => handleToggleAvailability(item.id, item.is_available)}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}
+                            >
+                              <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
+                              {item.is_available ? 'Available' : 'Out of Stock'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#9CA3AF' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+                              <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingMenu(item)} />
+                              <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteMenu(item.id)} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
+                /* 🎨 UX BARU: TAMPILAN ZERO-STATE PREMIUM PAS DATA KOSONG */
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                   <div style={{ width: '64px', height: '64px', backgroundColor: '#F3F4F6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#006847' }}>☕</div>
                   <div>
@@ -696,7 +575,7 @@ export default function MenuManagement({ onNavigateView }) {
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111827' }}>
                 <div style={{ width: '24px', height: '24px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Tambah Menu Baru</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Tambah Menu Baru ke Supabase</h2>
               </div>
               <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsModalOpen(false)} />
             </div>
@@ -757,50 +636,18 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
-                {/* SINKRONISASI PEMETAAN RESEP RAW MATERIAL DINAMIS (ADD NEW ITEM) */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Dinamis</h4>
-                    <span 
-                      onClick={handleAddRecipeRow}
-                      style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
-                    >
-                      <Plus size={14}/> Tambah Bahan
-                    </span>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep</h4>
+                    <span style={{ color: '#9CA3AF', fontSize: '11px', fontStyle: 'italic' }}>Module resep terintegrasi di V2</span>
                   </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {recipeRows.map((row, index) => (
-                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 40px', gap: '12px', alignItems: 'center' }}>
-                        <select
-                          value={row.inventory_id}
-                          onChange={(e) => handleRecipeRowChange(index, 'inventory_id', e.target.value)}
-                          style={{ width: '100%', padding: '10px', fontSize: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#ffffff' }}
-                        >
-                          <option value="">-- Pilih Bahan Gudang --</option>
-                          {inventoryItems.map(item => (
-                            <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>
-                          ))}
-                        </select>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <input 
-                            type="number" step="any" placeholder="Qty"
-                            value={row.usage_quantity}
-                            onChange={(e) => handleRecipeRowChange(index, 'usage_quantity', e.target.value)}
-                            style={{ width: '100%', padding: '10px', fontSize: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', outline: 'none' }}
-                          />
-                          <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                            {inventoryItems.find(i => i.id.toString() === row.inventory_id.toString())?.unit || ''}
-                          </span>
-                        </div>
-                        <button 
-                          type="button" onClick={() => handleRemoveRecipeRow(index)}
-                          style={{ padding: '8px', border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', justifySelf: 'center' }}
-                        >
-                          <Trash size={14} />
-                        </button>
-                      </div>
-                    ))}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px', opacity: 0.7 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
+                      <span>Bahan Baku</span><span>Qty</span><span>Cost (Rp)</span><span></span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
+                      <span>Espresso Blend (Auto-Read)</span><span>30ml</span><span style={{ fontWeight: 'bold' }}>Rp 4.500</span><span></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -866,7 +713,7 @@ export default function MenuManagement({ onNavigateView }) {
                       <input 
                         type="text" 
                         required
-                        value={editingMenu.menu_name || ''}
+                        value={editingMenu.menu_name}
                         onChange={(e) => setEditingMenu({...editingMenu, menu_name: e.target.value})}
                         style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
                       />
@@ -880,7 +727,7 @@ export default function MenuManagement({ onNavigateView }) {
                           <input 
                             type="text" 
                             required
-                            value={editingMenu.price || ''}
+                            value={editingMenu.price}
                             onChange={(e) => {
                               const cleanNumber = e.target.value.replace(/[^0-9]/g, '');
                               setEditingMenu({...editingMenu, price: cleanNumber});
@@ -893,7 +740,7 @@ export default function MenuManagement({ onNavigateView }) {
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
                         <select 
-                          value={editingMenu.category || 'Coffee'}
+                          value={editingMenu.category}
                           onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})}
                           style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
                         >
@@ -907,50 +754,42 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
-                {/* SINKRONISASI PEMETAAN RESEP RAW MATERIAL DINAMIS (EDIT ITEM MODAL) */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Dinamis</h4>
-                    <span 
-                      onClick={handleAddEditRecipeRow}
-                      style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
-                    >
-                      <Plus size={14}/> Tambah Bahan
-                    </span>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
+                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }} onClick={() => alert('Fitur link database bahan baku baru aktif di modul inventori, Gar!')}><Plus size={14}/> Tambah Bahan</span>
                   </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {editRecipeRows.map((row, index) => (
-                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 40px', gap: '12px', alignItems: 'center' }}>
-                        <select
-                          value={row.inventory_id}
-                          onChange={(e) => handleEditRecipeRowChange(index, 'inventory_id', e.target.value)}
-                          style={{ width: '100%', padding: '10px', fontSize: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#ffffff' }}
-                        >
-                          <option value="">-- Pilih Bahan Gudang --</option>
-                          {inventoryItems.map(item => (
-                            <option key={item.id} value={item.id.toString()}>{item.name} ({item.unit})</option>
-                          ))}
-                        </select>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <input 
-                            type="number" step="any" placeholder="Qty"
-                            value={row.usage_quantity}
-                            onChange={(e) => handleEditRecipeRowChange(index, 'usage_quantity', e.target.value)}
-                            style={{ width: '100%', padding: '10px', fontSize: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', outline: 'none' }}
-                          />
-                          <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                            {inventoryItems.find(i => i.id.toString() === row.inventory_id.toString())?.unit || ''}
-                          </span>
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
+                      <span>Bahan Terikat</span>
+                      <span>Takaran</span>
+                      <span>Cost Modal</span>
+                      <span></span>
+                    </div>
+                    {editingMenu.category === 'Coffee' ? (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6' }}>
+                          <span style={{ fontWeight: '600', color: '#374151' }}>Houseblend Coffee Beans (kg)</span>
+                          <span style={{ textAlign: 'center', color: '#6B7280' }}>18 gram</span>
+                          <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 2.160</span>
+                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
                         </div>
-                        <button 
-                          type="button" onClick={() => handleRemoveEditRecipeRow(index)}
-                          style={{ padding: '8px', border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', justifySelf: 'center' }}
-                        >
-                          <Trash size={14} />
-                        </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
+                          <span style={{ fontWeight: '600', color: '#374151' }}>Full Cream Milk (Litre)</span>
+                          <span style={{ textAlign: 'center', color: '#6B7280' }}>120 ml</span>
+                          <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 2.220</span>
+                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '600', color: '#374151' }}>Default Recipe Raw Materials</span>
+                        <span style={{ textAlign: 'center', color: '#6B7280' }}>1 unit</span>
+                        <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 4.500</span>
+                        <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -960,7 +799,7 @@ export default function MenuManagement({ onNavigateView }) {
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Gambar Produk</label>
                   <input 
                     type="text" 
-                    value={editingMenu.image_url || ''}
+                    value={editingMenu.image_url}
                     onChange={(e) => setEditingMenu({...editingMenu, image_url: e.target.value})}
                     style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} 
                   />
@@ -991,13 +830,13 @@ export default function MenuManagement({ onNavigateView }) {
                     <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
                       <span style={{ color: '#9CA3AF', display: 'block', fontSize: '10px' }}>NET PROFIT (RP)</span>
                       <strong style={{ display: 'block', marginTop: '2px', color: '#34D399' }}>
-                        Rp {(Number(editingMenu.price || 0) - (editingMenu.category === 'Coffee' ? 4380 : 4500)).toLocaleString('id-ID')}
+                        Rp {(Number(editingMenu.price) - (editingMenu.category === 'Coffee' ? 4380 : 4500)).toLocaleString('id-ID')}
                       </strong>
                     </div>
                     <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
                       <span style={{ color: '#9CA3AF', display: 'block', fontSize: '10px' }}>PRICE STATUS</span>
                       <strong style={{ display: 'block', marginTop: '2px', color: '#FBBF24' }}>
-                        {Number(editingMenu.price || 0) > 20000 ? 'High Tier' : 'Healthy Price'}
+                        {Number(editingMenu.price) > 20000 ? 'High Tier' : 'Healthy Price'}
                       </strong>
                     </div>
                   </div>
