@@ -17,7 +17,6 @@ import Keamanan from '../settings/Keamanan.jsx';
 import Bahasa from '../settings/Bahasa.jsx'; 
 import EditProfile from '../dashboard/EditProfile.jsx'; 
 
-// Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
     <div style={{
@@ -55,33 +54,49 @@ export default function MenuManagement({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
-  
-  {/* State pengontrol buka-tutup dropdown mengambang profil topbar */}
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  {/* KUNCI SINKRONISASI WORKSPACE LENGKAP: 'menu-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState('menu-table');
 
   // ================= STATE INTEGRASI DATABASE MENU (CRUD AREA) =================
   const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [menuSummary, setMenuSummary] = useState({
-    totalItems: 0,
-    totalCategories: 0,
-    outOfStockCount: 0
-  });
+  const [menuSummary, setMenuSummary] = useState({ totalItems: 0, totalCategories: 0, outOfStockCount: 0 });
 
-  // State Kontrol Input Form Tambah Menu Baru (Create)
+  // State Kontrol Form Tambah Menu Baru (Create)
   const [newMenu, setNewMenu] = useState({
     menu_name: '',
     price: '',
     image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop'
   });
 
+  // State reaktif baris penampung draf resep untuk penambahan menu baru
+  const [newMenuRecipe, setNewMenuRecipe] = useState([]);
+
   // State Kontrol Data Menu yang Sedang Diedit (Update)
   const [editingMenu, setEditingMenu] = useState(null);
 
-  // 🚀 PIPELINE 1: FETCH DATA MENU (READ) FROM SUPABASE
+  // State penampung list bahan mentah dari database
+  const [stockIngredients, setStockIngredients] = useState([]);
+
+  // State penampung resep interaktif modal edit
+  const [recipeRows, setRecipeRows] = useState([]);
+
+  // 🚀 PIPELINE 1: FETCH LIST INVENTORY DARI TABEL 'raw_materials' SUPABASE
+  const fetchStockIngredients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .select('id, material_name, unit, unit_price')
+        .order('material_name', { ascending: true });
+      
+      if (error) throw error;
+      if (data) setStockIngredients(data);
+    } catch (err) {
+      console.error('⚠️ Gagal mengambil list bahan mentah gudang:', err.message);
+    }
+  };
+
+  // 🚀 PIPELINE 2: FETCH KATALOG PRODUK DARI TABEL 'menus' SUPABASE
   const fetchMenuCatalog = async () => {
     if (activeSubView !== 'menu-table') return;
     setIsLoading(true);
@@ -96,18 +111,12 @@ export default function MenuManagement({ onNavigateView }) {
 
       if (data) {
         setMenus(data);
-
         const uniqueCategories = new Set(data.map(item => item.category)).size;
         const outOfStockItems = data.filter(item => item.is_available === false).length;
-
-        setMenuSummary({
-          totalItems: data.length,
-          totalCategories: uniqueCategories,
-          outOfStockCount: outOfStockItems
-        });
+        setMenuSummary({ totalItems: data.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
       }
     } catch (err) {
-      console.error('⚠️ Gagal memuat katalog menu dari Supabase:', err.message);
+      console.error('⚠️ Gagal memuat katalog menu:', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -115,16 +124,44 @@ export default function MenuManagement({ onNavigateView }) {
 
   useEffect(() => {
     fetchMenuCatalog();
+    fetchStockIngredients(); 
   }, [activeSubView]);
 
-  // 🚀 PIPELINE 2: ACTION TAMBAH MENU BARU (CREATE)
+  // Efek otomatis: Set draft resep statis fallback pas modal edit dibuka
+  useEffect(() => {
+    if (editingMenu) {
+      const nameLower = editingMenu.menu_name.toLowerCase();
+      if (nameLower.includes('americano') || nameLower.includes('black coffee')) {
+        setRecipeRows([
+          { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
+          { ingredientId: '', ingredientName: 'Water / Ice', qty: 150, unit: 'ml', cost: 0 }
+        ]);
+      } else if (editingMenu.category === 'Coffee') {
+        setRecipeRows([
+          { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
+          { ingredientId: '', ingredientName: 'Full Cream Milk', qty: 120, unit: 'ml', cost: 2220 }
+        ]);
+      } else {
+        setRecipeRows([
+          { ingredientId: '', ingredientName: 'Default Raw Materials', qty: 1, unit: 'unit', cost: 4500 }
+        ]);
+      }
+    } else {
+      setRecipeRows([]);
+    }
+  }, [editingMenu]);
+
+  // Kalkulator COGS reaktif instan
+  const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+  const currentTotalCogs = recipeRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+
+  // 🚀 PIPELINE 3: CREATE ACTION (SIMPAN PRODUK)
   const handleCreateMenu = async (e) => {
     e.preventDefault();
     if (!newMenu.menu_name.trim() || !newMenu.price || Number(newMenu.price) <= 0) {
       alert('Nama menu dan harga jual wajib diisi secara valid, Gar!');
       return;
     }
-
     try {
       const { error } = await supabase
         .from('menus')
@@ -133,12 +170,13 @@ export default function MenuManagement({ onNavigateView }) {
           category: selectedCategory,
           price: Number(newMenu.price),
           image_url: newMenu.image_url,
-          is_available: true
+          is_available: true,
+          recipe: newMenuRecipe 
         }]);
 
       if (error) throw error;
-
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop' });
+      setNewMenuRecipe([]);
       setIsModalOpen(false);
       fetchMenuCatalog();
     } catch (err) {
@@ -146,14 +184,13 @@ export default function MenuManagement({ onNavigateView }) {
     }
   };
 
-  // 🚀 PIPELINE 3: ACTION SIMPAN EDIT MENU (UPDATE KESELURUHAN)
+  // 🚀 PIPELINE 4: UPDATE ACTION (PERBARUI PRODUK)
   const handleUpdateMenu = async (e) => {
     e.preventDefault();
     if (!editingMenu.menu_name.trim() || !editingMenu.price || Number(editingMenu.price) <= 0) {
       alert('Nama menu dan harga tidak boleh kosong, Gar!');
       return;
     }
-
     try {
       const { error } = await supabase
         .from('menus')
@@ -161,12 +198,12 @@ export default function MenuManagement({ onNavigateView }) {
           menu_name: editingMenu.menu_name,
           category: editingMenu.category,
           price: Number(editingMenu.price),
-          image_url: editingMenu.image_url
+          image_url: editingMenu.image_url,
+          recipe: recipeRows
         })
         .eq('id', editingMenu.id);
 
       if (error) throw error;
-
       setEditingMenu(null); 
       fetchMenuCatalog();   
     } catch (err) {
@@ -174,22 +211,21 @@ export default function MenuManagement({ onNavigateView }) {
     }
   };
 
-  // 🚀 PIPELINE 4: TOGGLE AVAILABILITY STATUS (QUICK UPDATE)
+  // 🚀 PIPELINE 5: TOGGLE AVAILABILITY STATUS
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
       const { error } = await supabase
         .from('menus')
         .update({ is_available: !currentStatus })
         .eq('id', id);
-
       if (error) throw error;
       fetchMenuCatalog();
     } catch (err) {
-      console.error('⚠️ Gagal memperbarui status ketersediaan menu:', err.message);
+      console.error('⚠️ Gagal memperbarui status ketersediaan:', err.message);
     }
   };
 
-  // 🚀 PIPELINE 5: ACTION HAPUS MENU (DELETE)
+  // 🚀 PIPELINE 6: DELETE ACTION
   const handleDeleteMenu = async (id) => {
     if (!window.confirm('Apakah lu yakin pengen menghapus menu ini secara permanen dari database, Gar?')) return;
     try {
@@ -197,7 +233,6 @@ export default function MenuManagement({ onNavigateView }) {
         .from('menus')
         .delete()
         .eq('id', id);
-
       if (error) throw error;
       fetchMenuCatalog();
     } catch (err) {
@@ -205,35 +240,137 @@ export default function MenuManagement({ onNavigateView }) {
     }
   };
 
+  // ================= 🛠️ CONVERSION RECIPE ALGORITHMS AREA (UNTUK TAMBAH BARANG) =================
+  const handleAddNewMenuRecipeRow = () => {
+    if (stockIngredients.length === 0) {
+      alert('Stok barang mentah kosong di database, Gar! Daftarkan dulu di tab Stock.');
+      return;
+    }
+    const firstMat = stockIngredients[0];
+    
+    // 💡 ATURAN REAKSI: Deteksi unit master untuk diubah ke takaran barista operasional cafe
+    let displayUnit = firstMat.unit;
+    let initialQty = 10;
+    let unitCost = Number(firstMat.unit_price || 0);
+
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter') {
+      displayUnit = 'ml';
+      initialQty = 30; // default 30ml
+      unitCost = Number(firstMat.unit_price || 0) / 1000; // konversi harga per ml
+    } else if (firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = 'gram';
+      initialQty = 15; // default 15 gram kopi
+      unitCost = Number(firstMat.unit_price || 0) / 1000; // konversi harga per gram
+    }
+
+    setNewMenuRecipe([
+      ...newMenuRecipe,
+      { 
+        ingredientId: firstMat.id, 
+        ingredientName: firstMat.material_name, 
+        qty: initialQty, 
+        unit: displayUnit, 
+        cost: Math.round(initialQty * unitCost) 
+      }
+    ]);
+  };
+
+  const handleUpdateNewMenuRecipeRow = (index, key, value) => {
+    const updatedRows = [...newMenuRecipe];
+    updatedRows[index][key] = value;
+
+    if (key === 'ingredientId' || key === 'qty') {
+      const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
+      const matchedMaterial = stockIngredients.find(m => m.id === targetId);
+      
+      if (matchedMaterial) {
+        let displayUnit = matchedMaterial.unit;
+        let unitCost = Number(matchedMaterial.unit_price || 0);
+
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter') {
+          displayUnit = 'ml';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        } else if (matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = 'gram';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        }
+
+        updatedRows[index].ingredientId = matchedMaterial.id;
+        updatedRows[index].ingredientName = matchedMaterial.material_name;
+        updatedRows[index].unit = displayUnit;
+        
+        const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
+        updatedRows[index].cost = Math.round(currentQty * unitCost);
+      }
+    }
+    setNewMenuRecipe(updatedRows);
+  };
+
+  // ================= 🛠️ CONVERSION RECIPE ALGORITHMS AREA (UNTUK MODAL EDIT) =================
+  const handleAddRecipeRow = () => {
+    if (stockIngredients.length === 0) {
+      alert('Stok barang mentah kosong, Gar! Isi data di tab Stock dulu.');
+      return;
+    }
+    const firstMat = stockIngredients[0];
+    let displayUnit = firstMat.unit;
+    let initialQty = 10;
+    let unitCost = Number(firstMat.unit_price || 0);
+
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter') {
+      displayUnit = 'ml';
+      initialQty = 30;
+      unitCost = Number(firstMat.unit_price || 0) / 1000;
+    } else if (firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = 'gram';
+      initialQty = 15;
+      unitCost = Number(firstMat.unit_price || 0) / 1000;
+    }
+
+    setRecipeRows([
+      ...recipeRows,
+      { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }
+    ]);
+  };
+
+  const handleUpdateRecipeRow = (index, key, value) => {
+    const updatedRows = [...recipeRows];
+    updatedRows[index][key] = value;
+
+    if (key === 'ingredientId' || key === 'qty') {
+      const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
+      const matchedMaterial = stockIngredients.find(m => m.id === targetId);
+      
+      if (matchedMaterial) {
+        let displayUnit = matchedMaterial.unit;
+        let unitCost = Number(matchedMaterial.unit_price || 0);
+
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter') {
+          displayUnit = 'ml';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        } else if (matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = 'gram';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        }
+
+        updatedRows[index].ingredientId = matchedMaterial.id;
+        updatedRows[index].ingredientName = matchedMaterial.material_name;
+        updatedRows[index].unit = displayUnit;
+        
+        const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
+        updatedRows[index].cost = Math.round(currentQty * unitCost);
+      }
+    }
+    setRecipeRows(updatedRows);
+  };
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
       {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
-      <div style={{ 
-        width: isMainSidebarOpen ? '260px' : '80px', 
-        backgroundColor: '#1E3A8A', 
-        color: '#ffffff', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '24px 0', 
-        flexShrink: 0,
-        transition: 'width 0.3s ease-in-out',
-        overflow: 'hidden'
-      }}>
-        
-        {/* Header Branding Sidebar dengan Trigger Collapse */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justify: isMainSidebarOpen ? 'space-between' : 'center', 
-          padding: '0 20px', 
-          marginBottom: '32px',
-          height: '40px'
-        }}>
-          <div 
-            onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)}
-            style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
+      <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
+          <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <CuaninLogoMini />
             {isMainSidebarOpen && (
               <div>
@@ -242,18 +379,13 @@ export default function MenuManagement({ onNavigateView }) {
               </div>
             )}
           </div>
-
           {isMainSidebarOpen && (
-            <div 
-              onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }}
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}
-            >
+            <div onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }} style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}>
               <MenuIcon size={16} color="#93C5FD" />
             </div>
           )}
         </div>
 
-        {/* Menu Utama List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
@@ -263,137 +395,43 @@ export default function MenuManagement({ onNavigateView }) {
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
           ].map((menu, idx) => {
             const isActive = currentView === menu.target && activeSubView === 'menu-table';
-
             return (
-              <div 
-                key={idx} 
-                onClick={menu.action} 
-                title={!isMainSidebarOpen ? menu.name : ''}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justify: isMainSidebarOpen ? 'flex-start' : 'center',
-                  gap: '12px', 
-                  padding: '12px 16px', 
-                  borderRadius: '10px', 
-                  cursor: 'pointer',
-                  fontWeight: isActive ? 'bold' : '500',
-                  backgroundColor: isActive ? '#006847' : 'transparent', 
-                  color: isActive ? '#ffffff' : '#93C5FD',
-                  transition: 'all 0.3s ease-in-out',
-                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
-                }}
-              >
+              <div key={idx} onClick={menu.action} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: isActive ? 'bold' : '500', backgroundColor: isActive ? '#006847' : 'transparent', color: isActive ? '#ffffff' : '#93C5FD', transition: 'all 0.3s ease-in-out' }}>
                 {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
         </div>
 
-        {/* Footer Sidebar Area */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div 
-            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
-            title={!isMainSidebarOpen ? 'Settings' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justify: isMainSidebarOpen ? 'space-between' : 'center', 
-              padding: '12px 16px', 
-              color: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
-            }}
-          >
+          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyItem: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>
-                <ChevronDown size={14} />
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}><ChevronDown size={14} /></div>}
           </div>
 
           {isMainSidebarOpen && (
-            <div style={{
-              maxHeight: isSettingsOpen ? '200px' : '0px',
-              opacity: isSettingsOpen ? 1 : 0,
-              paddingTop: isSettingsOpen ? '4px' : '0px',
-              paddingBottom: isSettingsOpen ? '4px' : '0px',
-              overflow: 'hidden',
-              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              paddingLeft: '14px',
-              marginBottom: '4px'
-            }}>
+            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, overflow: 'hidden', transition: 'max-height 0.4s, opacity 0.3s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
                 { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
                 { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
-              ].map((sub, i) => {
-                const isSubActive = activeSubView === sub.target;
-                return (
-                  <div 
-                    key={i}
-                    onClick={() => setActiveSubView(sub.target)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      color: isSubActive ? '#ffffff' : '#93C5FD', 
-                      backgroundColor: isSubActive ? '#006847' : 'transparent',
-                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    {sub.icon} <span>{sub.name}</span>
-                  </div>
-                );
-              })}
+              ].map((sub, i) => (
+                <div key={i} onClick={() => setActiveSubView(sub.target)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', color: activeSubView === sub.target ? '#ffffff' : '#93C5FD', backgroundColor: activeSubView === sub.target ? '#006847' : 'transparent', fontSize: '12px', cursor: 'pointer' }}>
+                  {sub.icon} <span>{sub.name}</span>
+                </div>
+              ))}
             </div>
           )}
 
-          <div 
-            onClick={logout}
-            title={!isMainSidebarOpen ? 'Logout' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justify: isMainSidebarOpen ? 'flex-start' : 'center',
-              gap: '12px', 
-              padding: '12px 16px', 
-              color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}
-          >
-            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}>
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>Logout</span>}
           </div>
-
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justify: isMainSidebarOpen ? 'flex-start' : 'center',
-            gap: '12px', 
-            padding: '12px 16px', 
-            backgroundColor: '#111827', 
-            borderRadius: '12px', 
-            marginTop: '4px' 
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
-            {isMainSidebarOpen && (
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span></div>}
           </div>
         </div>
       </div>
@@ -401,7 +439,7 @@ export default function MenuManagement({ onNavigateView }) {
       {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR HEADER AREA */}
+        {/* TOPBAR AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
@@ -413,46 +451,19 @@ export default function MenuManagement({ onNavigateView }) {
             </button>
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Alex Graham {isProfileOpen ? <ChevronUp size={14} color="#6B7280" /> : <ChevronDown size={14} color="#6B7280" />}
-                </p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
                 <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
               <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
-
-            {/* FLOATING DROPDOWN PROFIL POPUP */}
-            <div style={{
-              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
-              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
-            }}>
-              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
-              </div>
-              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
-              </div>
-              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
-              </div>
-            </div>
-
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW DYNAMIC CHANGER */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', position: 'relative' }}>
+        {/* CONTAINER CONTENT VIEW */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
           
-          {isLoading && activeSubView === 'menu-table' && (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(248, 249, 250, 0.7)', zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847' }}>
-              🔄 Menghubungkan ke Menu Catalog Engine Supabase...
-            </div>
-          )}
-
           {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('menu-table')} />}
           {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('menu-table')} />}
           {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('menu-table')} />}
@@ -466,37 +477,29 @@ export default function MenuManagement({ onNavigateView }) {
                   <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Menu Management</h1>
                   <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant menu catalog.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
+                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
                   <Plus size={16} /> Add New Item
                 </button>
               </div>
 
-              {/* THREE HEAD METRICS CARDS ROW */}
+              {/* THREE HEAD METRICS */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ width: '48px', height: '48px', backgroundColor: '#E6F4EA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📋</div>
-                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Total Menu Items</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{menuSummary.totalItems}</h2></div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Total Menu Items</span>
+                  <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>{menuSummary.totalItems}</h2>
                 </div>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ width: '48px', height: '48px', backgroundColor: '#EEF2FF', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🎲</div>
-                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Active Categories</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{menuSummary.totalCategories}</h2></div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Active Categories</span>
+                  <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold' }}>{menuSummary.totalCategories}</h2>
                 </div>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ width: '48px', height: '48px', backgroundColor: '#FEE2E2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={22} /></div>
-                  <div><span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Out of Stock</span><h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: menuSummary.outOfStockCount > 0 ? '#DC2626' : '#111827' }}>{menuSummary.outOfStockCount}</h2></div>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Out of Stock</span>
+                  <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>{menuSummary.outOfStockCount}</h2>
                 </div>
               </div>
 
-              {/* ⚡ LOGIKA CONDITIONAL RENDERING CONDITIONAL: JIKA DATA MENUS TERISI VS KOSONG */}
               {menus.length > 0 ? (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-                  <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Active Menu List</h3>
-                    <div style={{ display: 'flex', gap: '10px', color: '#6B7280' }}>
-                      <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><SlidersHorizontal size={16} /></div>
-                      <div style={{ padding: '6px', border: '1px solid #E5E7EB', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: '#F3F4F6' }}><Grid size={16} /></div>
-                    </div>
-                  </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
@@ -509,34 +512,21 @@ export default function MenuManagement({ onNavigateView }) {
                     </thead>
                     <tbody>
                       {menus.map((item) => (
-                        <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: item.is_available ? 'transparent' : '#FAF8F8' }}>
+                        <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                           <td style={{ padding: '16px 24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <img src={item.image_url} alt={item.menu_name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
-                              <div>
-                                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p>
-                                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {item.id.substring(0, 8).toUpperCase()}</span>
-                              </div>
+                              <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {item.id.substring(0, 8).toUpperCase()}</span></div>
                             </div>
                           </td>
+                          <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>{item.category}</span></td>
+                          <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>Rp {Number(item.price).toLocaleString('id-ID')}</td>
                           <td style={{ padding: '16px 24px' }}>
-                            <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
-                              {item.category}
+                            <span onClick={() => handleToggleAvailability(item.id, item.is_available)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>
+                              <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />{item.is_available ? 'Available' : 'Out of Stock'}
                             </span>
                           </td>
-                          <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>
-                            Rp {Number(item.price).toLocaleString('id-ID')}
-                          </td>
-                          <td style={{ padding: '16px 24px' }}>
-                            <span 
-                              onClick={() => handleToggleAvailability(item.id, item.is_available)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}
-                            >
-                              <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
-                              {item.is_available ? 'Available' : 'Out of Stock'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '16px 24px', textAlign: 'right', color: '#9CA3AF' }}>
+                          <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
                               <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingMenu(item)} />
                               <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteMenu(item.id)} />
@@ -548,18 +538,9 @@ export default function MenuManagement({ onNavigateView }) {
                   </table>
                 </div>
               ) : (
-                /* 🎨 UX BARU: TAMPILAN ZERO-STATE PREMIUM PAS DATA KOSONG */
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '64px', height: '64px', backgroundColor: '#F3F4F6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#006847' }}>☕</div>
-                  <div>
-                    <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Katalog Menu Masih Kosong, Gar</h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#6B7280', maxWidth: '400px', lineHeight: '1.5' }}>
-                      Database berhasil dikosongkan. Sekarang giliran lu untuk menambahkan produk original Warung Kopi Jaya melalui form pengisian di atas.
-                    </p>
-                  </div>
-                  <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px' }}>
-                    <Plus size={14} /> Tambah Produk Pertama
-                  </button>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '28px' }}>☕</div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold' }}>Katalog Menu Masih Kosong, Gar</h3>
                 </div>
               )}
             </>
@@ -571,11 +552,11 @@ export default function MenuManagement({ onNavigateView }) {
       {/* ================= WINDOW POPUP OVERLAY ADD NEW ITEM ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleCreateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <form onSubmit={handleCreateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111827' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '24px', height: '24px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Tambah Menu Baru ke Supabase</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Tambah Produk ke Menu</h2>
               </div>
               <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsModalOpen(false)} />
             </div>
@@ -583,52 +564,25 @@ export default function MenuManagement({ onNavigateView }) {
             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><Info size={14}/> Informasi Dasar</h4>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><Info size={14}/> Informasi Dasar</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
-                      <input 
-                        type="text" 
-                        required
-                        placeholder="Contoh: Iced Caramel Latte" 
-                        value={newMenu.menu_name}
-                        onChange={(e) => setNewMenu({...newMenu, menu_name: e.target.value})}
-                        style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                      />
+                      <input type="text" required placeholder="Contoh: Americano Ice" value={newMenu.menu_name} onChange={(e) => setNewMenu({...newMenu, menu_name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual (Rp)</label>
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                           <span style={{ position: 'absolute', left: '12px', fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Rp</span>
-                          <input 
-                            type="text" 
-                            required
-                            placeholder="0"
-                            value={newMenu.price}
-                            onChange={(e) => {
-                              const cleanNum = e.target.value.replace(/[^0-9]/g, '');
-                              setNewMenu({...newMenu, price: cleanNum});
-                            }}
-                            style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} 
-                          />
+                          <input type="text" required placeholder="0" value={newMenu.price} onChange={(e) => setNewMenu({...newMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
                         </div>
                       </div>
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           {['Coffee', 'Non-Coffee', 'Food', 'Pastry'].map((cat) => (
-                            <span 
-                              key={cat}
-                              onClick={() => setSelectedCategory(cat)}
-                              style={{ 
-                                padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                                backgroundColor: selectedCategory === cat ? '#006847' : '#E5E7EB',
-                                color: selectedCategory === cat ? '#ffffff' : '#4B5563'
-                              }}
-                            >
-                              {cat}
-                            </span>
+                            <span key={cat} onClick={() => setSelectedCategory(cat)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: selectedCategory === cat ? '#006847' : '#E5E7EB', color: selectedCategory === cat ? '#ffffff' : '#4B5563' }}>{cat}</span>
                           ))}
                         </div>
                       </div>
@@ -636,46 +590,58 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
+                {/* 🛠️ SUNTIKAN KONVERSI: PEMETAAN RESEP UNTUK KATEGORI ADD NEW ITEM BARU */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep</h4>
-                    <span style={{ color: '#9CA3AF', fontSize: '11px', fontStyle: 'italic' }}>Module resep terintegrasi di V2</span>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Mentah</h4>
+                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddNewMenuRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
-                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px', opacity: 0.7 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
-                      <span>Bahan Baku</span><span>Qty</span><span>Cost (Rp)</span><span></span>
+                  
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold' }}>
+                      <span>Bahan Baku</span><span>Takaran</span><span>Cost Modal</span><span></span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
-                      <span>Espresso Blend (Auto-Read)</span><span>30ml</span><span style={{ fontWeight: 'bold' }}>Rp 4.500</span><span></span>
-                    </div>
+                    {newMenuRecipe.length > 0 ? (
+                      newMenuRecipe.map((row, index) => (
+                        <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6' }}>
+                          <select value={row.ingredientId} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'ingredientId', e.target.value)} style={{ border: '1px solid #D1D5DB', padding: '6px', borderRadius: '6px', backgroundColor: '#fff', fontSize: '12px', outline: 'none' }}>
+                            <option value="">-- Pilih Stok Bahan --</option>
+                            {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
+                          </select>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                            <input type="text" value={row.qty} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                            <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
+                          </div>
+                          <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveNewMenuRecipeRow(index)} />
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic' }}>Belum ada pemetaan resep. Klik '+ Tambah Bahan' di atas, Gar.</div>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* AREA KANAN ANALISIS PROFIT MODAL ADD */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Foto Menu</label>
-                  <input 
-                    type="text" 
-                    value={newMenu.image_url}
-                    onChange={(e) => setNewMenu({...newMenu, image_url: e.target.value})}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', marginBottom: '10px' }} 
-                  />
-                  <div style={{ border: '1px dashed #D1D5DB', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', backgroundColor: '#FAFAFA' }}>
-                    <img src={newMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200"; }} />
+                  <input type="text" value={newMenu.image_url} onChange={(e) => setNewMenu({...newMenu, image_url: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} />
+                  <div style={{ border: '1px dashed #D1D5DB', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '110px', backgroundColor: '#FAFAFA' }}>
+                    <img src={newMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} />
                   </div>
                 </div>
-
                 <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Layers size={16}/> Instant Profit Analysis</div>
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Layers size={16}/> Instant Profit Analysis</span>
                   <div>
                     <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>ESTIMATED COGS</span>
-                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold' }}>Rp 4.500</h3>
+                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold' }}>Rp {newMenuTotalCogs.toLocaleString('id-ID')}</h3>
                   </div>
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
                     <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>PROJECTED MARGIN</span>
                     <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#34D399' }}>
-                      {Number(newMenu.price) > 0 ? `${Math.round(((Number(newMenu.price) - 4500) / Number(newMenu.price)) * 100)}%` : '0%'}
+                      {Number(newMenu.price) > 0 ? `${Math.round(((Number(newMenu.price) - newMenuTotalCogs) / Number(newMenu.price)) * 100)}%` : '0%'}
                     </h2>
                   </div>
                 </div>
@@ -683,8 +649,8 @@ export default function MenuManagement({ onNavigateView }) {
             </div>
 
             <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 24px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
-              <button type="submit" style={{ padding: '10px 24px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Simpan Menu</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 24px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}>Batal</button>
+              <button type="submit" style={{ padding: '10px 24px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}><Save size={14}/> Simpan Menu</button>
             </div>
           </form>
         </div>
@@ -695,153 +661,81 @@ export default function MenuManagement({ onNavigateView }) {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleUpdateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#111827' }}>
-                <div style={{ width: '24px', height: '24px', backgroundColor: '#FEF3C7', color: '#D97706', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Edit2 size={12} /></div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Edit Detil Menu Produk & Resep</h2>
-              </div>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>Edit Detil Menu Produk & Resep</h2>
               <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setEditingMenu(null)} />
             </div>
 
             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><Info size={14}/> Informasi Utama</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={editingMenu.menu_name}
-                        onChange={(e) => setEditingMenu({...editingMenu, menu_name: e.target.value})}
-                        style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                      />
-                    </div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
+                  <input type="text" required value={editingMenu.menu_name} onChange={(e) => setEditingMenu({...editingMenu, menu_name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual Baru (Rp)</label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <span style={{ position: 'absolute', left: '12px', fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Rp</span>
-                          <input 
-                            type="text" 
-                            required
-                            value={editingMenu.price}
-                            onChange={(e) => {
-                              const cleanNumber = e.target.value.replace(/[^0-9]/g, '');
-                              setEditingMenu({...editingMenu, price: cleanNumber});
-                            }}
-                            style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} 
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
-                        <select 
-                          value={editingMenu.category}
-                          onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})}
-                          style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
-                        >
-                          <option value="Coffee">Coffee</option>
-                          <option value="Non-Coffee">Non-Coffee</option>
-                          <option value="Food">Food</option>
-                          <option value="Pastry">Pastry</option>
-                        </select>
-                      </div>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual Baru (Rp)</label>
+                    <input type="text" required value={editingMenu.price} onChange={(e) => setEditingMenu({...editingMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
+                    <select value={editingMenu.category} onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }} >
+                      <option value="Coffee">Coffee</option><option value="Non-Coffee">Non-Coffee</option><option value="Food">Food</option><option value="Pastry">Pastry</option>
+                    </select>
                   </div>
                 </div>
 
+                {/* 🛠️ SUNTIKAN KONVERSI: PEMETAAN RESEP UNTUK MODAL EDIT */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
-                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }} onClick={() => alert('Fitur link database bahan baku baru aktif di modul inventori, Gar!')}><Plus size={14}/> Tambah Bahan</span>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
+                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
                   
                   <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
-                      <span>Bahan Terikat</span>
-                      <span>Takaran</span>
-                      <span>Cost Modal</span>
-                      <span></span>
+                      <span>Bahan Terikat</span><span>Takaran</span><span>Cost Modal</span><span></span>
                     </div>
-                    {editingMenu.category === 'Coffee' ? (
-                      <>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6' }}>
-                          <span style={{ fontWeight: '600', color: '#374151' }}>Houseblend Coffee Beans (kg)</span>
-                          <span style={{ textAlign: 'center', color: '#6B7280' }}>18 gram</span>
-                          <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 2.160</span>
-                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
+                    {recipeRows.map((row, index) => (
+                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6' }}>
+                        <select value={row.ingredientId} onChange={(e) => handleUpdateRecipeRow(index, 'ingredientId', e.target.value)} style={{ border: '1px solid #D1D5DB', padding: '6px', borderRadius: '6px', backgroundColor: '#fff', fontSize: '12px', outline: 'none' }}>
+                          <option value="">-- Pilih Stok Bahan --</option>
+                          {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
+                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                          <input type="text" value={row.qty} onChange={(e) => handleUpdateRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                          <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
-                          <span style={{ fontWeight: '600', color: '#374151' }}>Full Cream Milk (Litre)</span>
-                          <span style={{ textAlign: 'center', color: '#6B7280' }}>120 ml</span>
-                          <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 2.220</span>
-                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center' }}>
-                        <span style={{ fontWeight: '600', color: '#374151' }}>Default Recipe Raw Materials</span>
-                        <span style={{ textAlign: 'center', color: '#6B7280' }}>1 unit</span>
-                        <span style={{ fontWeight: 'bold', color: '#111827', paddingLeft: '6px' }}>Rp 4.500</span>
-                        <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} />
+                        <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                        <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveRecipeRow(index)} />
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
 
+              {/* KOLOM KANAN MODAL EDIT */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Gambar Produk</label>
-                  <input 
-                    type="text" 
-                    value={editingMenu.image_url}
-                    onChange={(e) => setEditingMenu({...editingMenu, image_url: e.target.value})}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} 
-                  />
+                  <input type="text" value={editingMenu.image_url} onChange={(e) => setEditingMenu({...editingMenu, image_url: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} />
                   <div style={{ border: '1px dashed #D1D5DB', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', backgroundColor: '#FAFAFA' }}>
-                    <img src={editingMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200"; }} />
+                    <img src={editingMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} />
                   </div>
                 </div>
-
                 <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Layers size={16}/> Brainy Live Margin Simulator</div>
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399' }}><Layers size={16}/> Brainy Live Margin Simulator</span>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>TOTAL COGS (MODAL BAHAN)</span>
-                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold' }}>
-                      {editingMenu.category === 'Coffee' ? 'Rp 4.380' : 'Rp 4.500'}
-                    </h3>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>TOTAL COGS (MODAL BAHAN REAL)</span>
+                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Rp {currentTotalCogs.toLocaleString('id-ID')}</h3>
                   </div>
-                  
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
                     <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>SIMULATED MARGIN PROFIT</span>
                     <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#34D399' }}>
-                      {Number(editingMenu.price) > 0 
-                        ? `${Math.round(((Number(editingMenu.price) - (editingMenu.category === 'Coffee' ? 4380 : 4500)) / Number(editingMenu.price) * 100))}%` 
-                        : '0%'}
+                      {Number(editingMenu.price) > 0 ? `${Math.round(((Number(editingMenu.price) - currentTotalCogs) / Number(editingMenu.price) * 100))}%` : '0%'}
                     </h2>
                   </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', fontSize: '12px' }}>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
-                      <span style={{ color: '#9CA3AF', display: 'block', fontSize: '10px' }}>NET PROFIT (RP)</span>
-                      <strong style={{ display: 'block', marginTop: '2px', color: '#34D399' }}>
-                        Rp {(Number(editingMenu.price) - (editingMenu.category === 'Coffee' ? 4380 : 4500)).toLocaleString('id-ID')}
-                      </strong>
-                    </div>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
-                      <span style={{ color: '#9CA3AF', display: 'block', fontSize: '10px' }}>PRICE STATUS</span>
-                      <strong style={{ display: 'block', marginTop: '2px', color: '#FBBF24' }}>
-                        {Number(editingMenu.price) > 20000 ? 'High Tier' : 'Healthy Price'}
-                      </strong>
-                    </div>
-                  </div>
                 </div>
-
               </div>
             </div>
 
