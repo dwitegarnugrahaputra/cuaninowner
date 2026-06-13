@@ -40,8 +40,6 @@ export default function StockIntelligence({ onNavigateView }) {
   // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
-  
-  {/* State pengontrol visibilitas popup menu mengambang dropdown topbar */}
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   {/* SINKRONISASI WORKSPACE ROUTE POINTER UTUH */}
@@ -54,7 +52,7 @@ export default function StockIntelligence({ onNavigateView }) {
   const [stockSummary, setStockSummary] = useState({
     totalValue: 0,
     criticalCount: 0,
-    monthlySpend: 12300000 
+    monthlySpend: 0 // 💡 REVISI: Default awal Rp 0, murni dihitung dari database
   });
 
   // 🚀 ENGINE REVISI REALTIME: Fungsi mandiri untuk fetch data inventory agar bisa dipanggil berulang secara realtime
@@ -68,31 +66,55 @@ export default function StockIntelligence({ onNavigateView }) {
 
       if (matError) throw matError;
 
-      // Pipeline 2: Ambil riwayat log supply penambahan barang masuk beserta relasi nama bahannya
+      // Pipeline 2: Ambil seluruh riwayat log supply untuk kalkulasi spending bulanan
       const { data: logData, error: logError } = await supabase
         .from('supply_logs')
-        .select('*, raw_materials(material_name)')
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .select('*, raw_materials(material_name, unit_price)')
+        .order('created_at', { ascending: false });
 
       if (logError) throw logError;
+
+      let calculatedValue = 0;
+      let calculatedCritical = 0;
 
       if (matData) {
         setMaterials(matData);
         // 📐 MATEMATIKA AGREGASI: Hitung Total Nilai Aset Inventori & Jumlah Item Kritis
-        const calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
-        const calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
-
-        setStockSummary(prev => ({
-          ...prev,
-          totalValue: calculatedValue,
-          criticalCount: calculatedCritical
-        }));
+        calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
+        calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
+      } else {
+        setMaterials([]);
       }
+
+      // 📅 PIPELINE AKUNTANSI DINAMIS: Hitung total pengeluaran hanya untuk bulan berjalan saat ini
+      let calculatedMonthlySpend = 0;
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth(); // 0 = Januari, 11 = Desember
 
       if (logData) {
-        setSupplyLogs(logData);
+        // Ambil 5 log terakhir untuk keperluan visual list widget di UI kanan
+        setSupplyLogs(logData.slice(0, 5));
+
+        logData.forEach(log => {
+          const logDate = new Date(log.created_at);
+          // Cek apakah log transaksi supply ini terjadi di bulan dan tahun yang sama dengan hari ini
+          if (logDate.getFullYear() === currentYear && logDate.getMonth() === currentMonth) {
+            // Gunakan harga dari relasi raw_materials atau fallback ke nilai default
+            const pricePerUnit = log.raw_materials ? Number(log.raw_materials.unit_price) : 0;
+            calculatedMonthlySpend += Number(log.quantity_added) * pricePerUnit;
+          }
+        });
+      } else {
+        setSupplyLogs([]);
       }
+
+      // Update state summary global secara kolektif
+      setStockSummary({
+        totalValue: calculatedValue,
+        criticalCount: calculatedCritical,
+        monthlySpend: calculatedMonthlySpend
+      });
+
     } catch (err) {
       console.error('⚠️ Gagal menyinkronkan data Stock Intelligence ke Supabase:', err.message);
     }
@@ -171,7 +193,7 @@ export default function StockIntelligence({ onNavigateView }) {
           )}
         </div>
 
-        {/* Menu Utama List - SIDEBAR TETAP LOCK HIGHLIGHT DI MENU STOCK */}
+        {/* Menu Utama List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
@@ -190,7 +212,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Benerin Typo CSS dari 'justify' ke 'justifyContent'
+                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
                   gap: '12px',
                   padding: '12px 16px',
                   borderRadius: '10px',
@@ -207,17 +229,16 @@ export default function StockIntelligence({ onNavigateView }) {
           })}
         </div>
 
-        {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
+        {/* Footer Sidebar Area */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           
-          {/* Tombol Settings Utama */}
           <div
             onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)}
             title={!isMainSidebarOpen ? 'Settings' : ''}
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', // 👈 Properti CSS Typo dibetulkan
+              justifyContent: isMainSidebarOpen ? 'space-between' : 'center',
               padding: '12px 16px',
               color: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD',
               backgroundColor: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
@@ -280,14 +301,13 @@ export default function StockIntelligence({ onNavigateView }) {
             </div>
           )}
 
-          {/* Tombol Logout Mandiri */}
           <div
             onClick={logout}
             title={!isMainSidebarOpen ? 'Logout' : ''}
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Properti CSS Typo dibetulkan
+              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
               gap: '12px',
               padding: '12px 16px',
               color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
@@ -298,17 +318,7 @@ export default function StockIntelligence({ onNavigateView }) {
             <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
           </div>
 
-          {/* Card Profile Merchant */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Properti CSS Typo dibetulkan
-            gap: '12px',
-            padding: '12px 16px',
-            backgroundColor: '#111827',
-            borderRadius: '12px',
-            marginTop: '4px'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justify: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
             {isMainSidebarOpen && (
               <div style={{ flex: 1, textAlign: 'left' }}>
@@ -335,7 +345,6 @@ export default function StockIntelligence({ onNavigateView }) {
              </button>
             <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             
-            {/* INTEGRASI TARGET PROFILE: Trigger klik pembawa identitas OWNER */}
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -348,7 +357,6 @@ export default function StockIntelligence({ onNavigateView }) {
               </div>
             </div>
 
-            {/* INTEGRASI DROPDOWN POPUP FLOATING UTUH */}
             <div style={{
               position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
               borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
@@ -407,9 +415,20 @@ export default function StockIntelligence({ onNavigateView }) {
 
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
-                    <span style={{ backgroundColor: stockSummary.criticalCount > 0 ? '#FEE2E2' : '#E6F4EA', color: stockSummary.criticalCount > 0 ? '#DC2626' : '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                      {stockSummary.criticalCount > 0 ? 'Action Needed' : 'Secure'}
+                    <div style={{ 
+                      width: '36px', height: '36px', 
+                      backgroundColor: stockSummary.criticalCount > 0 ? '#FEE2E2' : '#E6F4EA', 
+                      borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      color: stockSummary.criticalCount > 0 ? '#DC2626' : '#006847' 
+                    }}>
+                      <AlertTriangle size={18} />
+                    </div>
+                    <span style={{ 
+                      backgroundColor: stockSummary.criticalCount > 0 ? '#FEE2E2' : '#E6F4EA', 
+                      color: stockSummary.criticalCount > 0 ? '#DC2626' : '#006847', 
+                      padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' 
+                    }}>
+                      {materials.length === 0 ? 'No Data' : stockSummary.criticalCount > 0 ? 'Action Needed' : 'Secure'}
                     </span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Critical Items (Count)</span>
@@ -418,10 +437,13 @@ export default function StockIntelligence({ onNavigateView }) {
                   </h2>
                 </div>
 
+                {/* 🛠️ CARD UPDATE REVISI: Nilai belanja bulanan sekarang murni dinamis (bisa Rp 0 jika log kosong) */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingCart size={18} color="#4B5563" /></div>
-                    <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>Budget</span>
+                    <span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>
+                      {stockSummary.monthlySpend > 0 ? 'Active' : 'No Spend'}
+                    </span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500', display: 'block' }}>Monthly Supply Spend</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
@@ -459,8 +481,6 @@ export default function StockIntelligence({ onNavigateView }) {
                         materials.map((row) => {
                           const isCritical = Number(row.current_stock) <= Number(row.minimum_threshold);
                           const isOut = Number(row.current_stock) <= 0;
-                          
-                          // Kalkulasi total harga nilai barang per baris secara reaktif
                           const totalItemPrice = Number(row.current_stock) * Number(row.unit_price);
 
                           let statusLabel = 'AMAN';
@@ -488,11 +508,9 @@ export default function StockIntelligence({ onNavigateView }) {
                               <td style={{ padding: '14px 8px', fontWeight: '600', color: '#4B5563' }}>
                                 Rp {Number(row.unit_price).toLocaleString('id-ID')}
                               </td>
-
                               <td style={{ padding: '14px 8px', fontWeight: 'bold', color: '#006847' }}>
                                 Rp {totalItemPrice.toLocaleString('id-ID')}
                               </td>
-
                               <td style={{ padding: '14px 8px' }}>
                                 <span style={{ backgroundColor: badgeBg, color: badgeText, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>
                                   {statusLabel}
@@ -504,7 +522,7 @@ export default function StockIntelligence({ onNavigateView }) {
                         })
                       ) : (
                         <tr>
-                          <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontWeight: '500' }}>
+                          <td colSpan="8" style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF', fontWeight: '500' }}>
                             Data Master Bahan Baku Kosong di Supabase.
                           </td>
                         </tr>
@@ -544,56 +562,49 @@ export default function StockIntelligence({ onNavigateView }) {
                       </div>
                     )}
                   </div>
-                  <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontweight: 'bold', cursor: 'pointer' }}>View All Logs</button>
+                  <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
                 </div>
               </div>
 
-              {/* ================= ⚡ AUTOMATED WHATSAPP RESTOCK MESSAGE DISPATCHER ================= */}
-              <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justify: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                    <AlertCircle size={20} />
+              {/* ================= BAR REVISI CONDITIONAL RENDERING ALERT ================= */}
+              {materials.length > 0 && stockSummary.criticalCount > 0 && (
+                <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                      <AlertCircle size={20} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold', letterSpacing: '0.5px', display: 'block' }}>BRAINY INSIGHT</span>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>
+                        Ada {stockSummary.criticalCount} bahan baku menipis di bawah batas minimum. Buat draf restok otomatis?
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold', letterSpacing: '0.5px', display: 'block' }}>BRAINY INSIGHT</span>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#E5E7EB' }}>
-                      {stockSummary.criticalCount > 0 
-                        ? `Ada ${stockSummary.criticalCount} bahan baku menipis di bawah batas minimum. Buat draf restok otomatis?` 
-                        : "Kondisi seluruh stok gudang aman terkendali berdasarkan parameter AI."}
-                    </p>
+                  <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                    <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
+                    <button 
+                      onClick={() => {
+                        const criticalItems = materials.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold));
+                        let message = `*⚠️ PEMBERITAHUAN RESTOK OTOMATIS - cuanin.id* %0A%0A`;
+                        message += `Halo Admin Stok, Brainy AI mendeteksi bahwa bahan baku berikut sudah menyentuh batas minimum dan harus segera di-restok: %0A%0A`;
+                        
+                        criticalItems.forEach((item, idx) => {
+                          message += `${idx + 1}. *${item.material_name}* %0A`;
+                          message += `   - Sisa Stok: ${Number(item.current_stock).toLocaleString('id-ID')} ${item.unit} %0A`;
+                          message += `   - Batas Minimum: ${item.minimum_threshold} ${item.unit} %0A%0A`;
+                        });
+
+                        message += `Mohon segera buat Purchase Order (PO) ke pihak supplier resmi. Terima kasih!`;
+                        const adminWhatsAppNumber = "628512345678"; 
+                        window.open(`https://wa.me/${adminWhatsAppNumber}?text=${message}`, '_blank');
+                      }} 
+                      style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      Confirm
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-                  <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
-                  
-                  <button 
-                    onClick={() => {
-                      const criticalItems = materials.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold));
-                      
-                      if (criticalItems.length === 0) {
-                        alert('Seluruh kondisi stok aman terkendali, Gar! Tidak ada pesan restok yang perlu dikirim ke WhatsApp.');
-                        return;
-                      }
-
-                      let message = `*⚠️ PEMBERITAHUAN RESTOK OTOMATIS - cuanin.id* %0A%0A`;
-                      message += `Halo Admin Stok, Brainy AI mendeteksi bahwa bahan baku berikut sudah menyentuh batas minimum dan harus segera di-restok: %0A%0A`;
-                      
-                      criticalItems.forEach((item, idx) => {
-                        message += `${idx + 1}. *${item.material_name}* %0A`;
-                        message += `   - Sisa Stok: ${Number(item.current_stock).toLocaleString('id-ID')} ${item.unit} %0A`;
-                        message += `   - Batas Minimum: ${item.minimum_threshold} ${item.unit} %0A%0A`;
-                      });
-
-                      message += `Mohon segera buat Purchase Order (PO) ke pihak supplier resmi. Terima kasih!`;
-                      const adminWhatsAppNumber = "628512345678"; 
-                      window.open(`https://wa.me/${adminWhatsAppNumber}?text=${message}`, '_blank');
-                    }} 
-                    style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                  >
-                    Confirm
-                  </button>
-                </div>
-              </div>
+              )}
             </>
           )}
 
