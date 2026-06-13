@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, Bell, HelpCircle, Plus, MoreVertical, Filter, ArrowUpDown,
-  ChevronLeft, ChevronRight, MessageSquare, UserPlus, Users2, UserCheck, 
-  CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe, Shield
+  Search, Bell, HelpCircle, Plus, Filter, ArrowUpDown, Edit2,
+  CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, 
+  Store, Sliders, ShieldCheck, User, Key, Globe, Shield, UserPlus, Users2, UserCheck, Trash2,
+  MessageSquare
 } from 'lucide-react';
+
+// Impor koneksi client Supabase murni 
+import { supabase } from '../../config/supabaseClient';
 
 // Import komponen form internal settings yang sudah kita desentralisasikan
 import InfoOutlet from '../settings/InfoOutlet.jsx';
@@ -14,25 +18,15 @@ import Keamanan from '../settings/Keamanan.jsx';
 import Bahasa from '../settings/Bahasa.jsx'; 
 import EditProfile from '../dashboard/EditProfile.jsx'; 
 
-// Logo cuanin.id versi mini murni CSS, presisi untuk Sidebar & Smart Cards
 function CuaninLogoMini() {
   return (
     <div style={{
       width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
       display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0
     }}>
-      <div style={{
-        width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px',
-        padding: '3px 0px 3px 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', boxSizing: 'border-box'
-      }}>
-        <div style={{
-          width: '100%', height: '100%', backgroundColor: '#006847', borderRadius: '3px 0 0 3px',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', boxSizing: 'border-box'
-        }}>
-          <div style={{
-            width: '12px', height: '12px', backgroundColor: '#ffffff', borderRadius: '3px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', marginRight: '-1px'
-          }}>
+      <div style={{ width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px', padding: '3px 0px 3px 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', height: '100%', backgroundColor: '#006847', borderRadius: '3px 0 0 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', boxSizing: 'border-box' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#ffffff', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', marginRight: '-1px' }}>
             <div style={{ width: '4px', height: '4px', backgroundColor: '#006847', borderRadius: '50%' }} />
           </div>
         </div>
@@ -45,47 +39,165 @@ export default function StaffManagement({ onNavigateView }) {
   const { logout } = useAuth();
   const currentView = 'staff';
 
-  // State kendali interaksi UI internal (Modal, Role, dan Collapsible Sidebar)
+  // State kendali interaksi UI internal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('Manager');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
-  
-  {/* State pengontrol buka-tutup dropdown mengambang profil topbar */}
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  {/* KUNCI SINKRONISASI WORKSPACE LENGKAP: 'staff-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
   const [activeSubView, setActiveSubView] = useState('staff-table');
+
+  // ================= STATE INTEGRASI DATABASE STAFF =================
+  const [staffList, setStaffList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [staffSummary, setStaffSummary] = useState({ totalStaff: 0, activeStaff: 0, leaveStaff: 0 });
+
+  // State Data Input Form Tambah Staf Baru (Create)
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    email: '',
+    whatsapp_number: '',
+    image_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
+  });
+
+  // 🛠️ STATE BARU: Kontrol Data Staf yang Sedang Diedit (Update)
+  const [editingStaff, setEditingStaff] = useState(null);
+
+  // 🚀 PIPELINE 1: FETCH DATA TIM STAF DARI SUPABASE
+  const fetchStaffData = async () => {
+    if (activeSubView !== 'staff-table') return;
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setStaffList(data);
+        
+        const total = data.length;
+        const active = data.filter(s => s.status === 'Active').length;
+        const leave = data.filter(s => s.status === 'On Leave').length;
+
+        setStaffSummary({ totalStaff: total, activeStaff: active, leaveStaff: leave });
+      }
+    } catch (err) {
+      console.error('⚠️ Gagal memuat data staf dari database:', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaffData();
+  }, [activeSubView]);
+
+  // 🚀 PIPELINE 2: ACTION SIMPAN DATA STAF BARU (CREATE)
+  const handleCreateStaff = async (e) => {
+    e.preventDefault();
+    if (!newStaff.name.trim() || !newStaff.email.trim() || !newStaff.whatsapp_number.trim()) {
+      alert('Nama, Email, dan Nomor WhatsApp pilar staf wajib diisi, Gar!');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .insert([{
+          name: newStaff.name,
+          role: selectedRole, 
+          email: newStaff.email,
+          whatsapp_number: newStaff.whatsapp_number,
+          status: 'Active',
+          image_url: newStaff.image_url
+        }]);
+
+      if (error) throw error;
+
+      setNewStaff({ name: '', email: '', whatsapp_number: '', image_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' });
+      setIsModalOpen(false);
+      fetchStaffData();
+      alert('Akun staf berhasil disimpan ke Supabase, Gar!');
+    } catch (err) {
+      alert('Gagal mendaftarkan staf baru: ' + err.message);
+    }
+  };
+
+  // 🚀 PIPELINE 3: ACTION SIMPAN PERUBAHAN DATA STAF (UPDATE)
+  const handleUpdateStaff = async (e) => {
+    e.preventDefault();
+    if (!editingStaff.name.trim() || !editingStaff.email.trim() || !editingStaff.whatsapp_number.trim()) {
+      alert('Nama, Email, dan Nomor WhatsApp staf tidak boleh kosong, Gar!');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          name: editingStaff.name,
+          role: editingStaff.role,
+          email: editingStaff.email,
+          whatsapp_number: editingStaff.whatsapp_number,
+          status: editingStaff.status
+        })
+        .eq('id', editingStaff.id);
+
+      if (error) throw error;
+
+      setEditingStaff(null);
+      fetchStaffData();
+      alert('Data staf berhasil diperbarui, Gar!');
+    } catch (err) {
+      alert('Gagal mengupdate data staf: ' + err.message);
+    }
+  };
+
+  // 🚀 PIPELINE 4: ACTION TOGGLE UPDATE STATUS KERJA (QUICK UPDATE)
+  const handleToggleStaffStatus = async (id, currentStatus) => {
+    let nextStatus = 'Active';
+    if (currentStatus === 'Active') nextStatus = 'On Leave';
+    else if (currentStatus === 'On Leave') nextStatus = 'Inactive';
+
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({ status: nextStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchStaffData();
+    } catch (err) {
+      console.error('⚠️ Gagal merubah status kerja staf:', err.message);
+    }
+  };
+
+  // 🚀 PIPELINE 5: ACTION HAPUS AKUN STAF (DELETE)
+  const handleDeleteStaff = async (id) => {
+    if (!window.confirm('Apakah lu yakin pengen menghapus akun staf ini secara permanen dari database, Gar?')) return;
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchStaffData();
+    } catch (err) {
+      alert('Gagal menghapus data staf: ' + err.message);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
-      {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
-      <div style={{ 
-        width: isMainSidebarOpen ? '260px' : '80px', 
-        backgroundColor: '#1E3A8A', 
-        color: '#ffffff', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '24px 0', 
-        flexShrink: 0,
-        transition: 'width 0.3s ease-in-out',
-        overflow: 'hidden'
-      }}>
-        
-        {/* Header Branding Sidebar dengan Trigger Collapse */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
-          padding: '0 20px', 
-          marginBottom: '32px',
-          height: '40px'
-        }}>
-          <div 
-            onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)}
-            style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
+      {/* ================= SIDEBAR AREA ================= */}
+      <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
+          <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <CuaninLogoMini />
             {isMainSidebarOpen && (
               <div>
@@ -94,18 +206,13 @@ export default function StaffManagement({ onNavigateView }) {
               </div>
             )}
           </div>
-
           {isMainSidebarOpen && (
-            <div 
-              onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }}
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}
-            >
-              <Menu size={16} color="#93C5FD" />
+            <div onClick={() => { setIsMainSidebarOpen(false); setIsSettingsOpen(false); }} style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)' }}>
+              <Menu size={16} />
             </div>
           )}
         </div>
 
-        {/* Menu Utama List - Sidebar TETAP STAY HIGHLIGHTED DI STAFF MANAGEMENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
@@ -115,151 +222,51 @@ export default function StaffManagement({ onNavigateView }) {
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => setActiveSubView('staff-table') } 
           ].map((menu, idx) => {
             const isActive = currentView === menu.target && activeSubView === 'staff-table';
-
             return (
-              <div 
-                key={idx} 
-                onClick={menu.action} 
-                title={!isMainSidebarOpen ? menu.name : ''}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-                  gap: '12px', 
-                  padding: '12px 16px', 
-                  borderRadius: '10px', 
-                  cursor: 'pointer',
-                  fontWeight: isActive ? 'bold' : '500',
-                  backgroundColor: isActive ? '#006847' : 'transparent', 
-                  color: isActive ? '#ffffff' : '#93C5FD',
-                  transition: 'all 0.3s ease-in-out',
-                  transform: (isActive && isMainSidebarOpen) ? 'scale(1.02)' : 'scale(1)',
-                }}
-              >
+              <div key={idx} onClick={menu.action} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: isActive ? 'bold' : '500', backgroundColor: isActive ? '#006847' : 'transparent', color: isActive ? '#ffffff' : '#93C5FD', transition: 'all 0.3s ease-in-out' }}>
                 {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
         </div>
 
-        {/* Footer Sidebar Area dengan Akordion Settings, Logout, dan Info Toko */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          
-          {/* Tombol Settings Utama */}
-          <div 
-            onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} 
-            title={!isMainSidebarOpen ? 'Settings' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', 
-              padding: '12px 16px', 
-              color: isSettingsOpen || (activeSubView !== 'staff-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', 
-              backgroundColor: isSettingsOpen || (activeSubView !== 'staff-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' 
-            }}
-          >
+          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'staff-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'staff-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>
-                <ChevronDown size={14} />
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}><ChevronDown size={14} /></div>}
           </div>
 
-          {/* Sub-menu Akordion Pop-down Settings dengan Animasi Ekspansi Tinggi */}
           {isMainSidebarOpen && (
-            <div style={{
-              maxHeight: isSettingsOpen ? '200px' : '0px',
-              opacity: isSettingsOpen ? 1 : 0,
-              paddingTop: isSettingsOpen ? '4px' : '0px',
-              paddingBottom: isSettingsOpen ? '4px' : '0px',
-              overflow: 'hidden',
-              transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              paddingLeft: '14px',
-              marginBottom: '4px'
-            }}>
+            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, overflow: 'hidden', transition: 'max-height 0.4s, opacity 0.3s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
                 { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
                 { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
-              ].map((sub, i) => {
-                const isSubActive = activeSubView === sub.target;
-                
-                return (
-                  <div 
-                    key={i}
-                    onClick={() => setActiveSubView(sub.target)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      color: isSubActive ? '#ffffff' : '#93C5FD', 
-                      backgroundColor: isSubActive ? '#006847' : 'transparent',
-                      fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    {sub.icon} <span>{sub.name}</span>
-                  </div>
-                );
-              })}
+              ].map((sub, i) => (
+                <div key={i} onClick={() => setActiveSubView(sub.target)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', color: activeSubView === sub.target ? '#ffffff' : '#93C5FD', backgroundColor: activeSubView === sub.target ? '#006847' : 'transparent', fontSize: '12px', cursor: 'pointer' }}>
+                  {sub.icon} <span>{sub.name}</span>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Tombol Logout Mandiri */}
-          <div 
-            onClick={logout}
-            title={!isMainSidebarOpen ? 'Logout' : ''}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-              gap: '12px', 
-              padding: '12px 16px', 
-              color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}
-          >
-            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}>
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>Logout</span>}
           </div>
-
-          {/* Card Profile Merchant */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center',
-            gap: '12px', 
-            padding: '12px 16px', 
-            backgroundColor: '#111827', 
-            borderRadius: '12px', 
-            marginTop: '4px' 
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
-            {isMainSidebarOpen && (
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span></div>}
           </div>
         </div>
       </div>
 
-      {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
+      {/* ================= MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR HEADER AREA */}
+        {/* TOPBAR AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
@@ -269,10 +276,8 @@ export default function StaffManagement({ onNavigateView }) {
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                <MessageSquare size={16} /> Ask Brainy
             </button>
-            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <Bell size={20} color="#4B5563" /><HelpCircle size={20} color="#4B5563" />
             
-            {/* Profil Data Identitas OWNER Terintegrasi Click Event */}
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -280,66 +285,33 @@ export default function StaffManagement({ onNavigateView }) {
                 </p>
                 <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
 
-            {/* FLOATING DROPDOWN PROFIL POPUP */}
-            <div style={{
-              position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff',
-              borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box'
-            }}>
-              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
-              </div>
-              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
-              </div>
-              <div onClick={() => alert('API Credentials')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Key size={14} /> <span style={{ fontWeight: '500' }}>API Credentials</span>
-              </div>
+            <div style={{ position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px' }}>
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }}><User size={14} /> <span>Edit Profile</span></div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }}><Shield size={14} /> <span>Account Security</span></div>
             </div>
-
           </div>
         </div>
 
-        {/* CONTAINER CONTENT VIEW (DINAMIS WORKSPACE SWAPPER) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box' }}>
+        {/* CONTAINER CONTENT VIEW */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', position: 'relative' }}>
           
-          {/* ================= KONDISI 1: TAMPILKAN FORM INFO OUTLET SECARA INTERNAL ================= */}
-          {activeSubView === 'info-outlet' && (
-            <InfoOutlet onSaveSuccess={() => { alert('Data Outlet Berhasil Diperbarui!'); setActiveSubView('staff-table'); }} />
-          )}
+          {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('staff-table')} />}
+          {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('staff-table')} />}
+          {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('staff-table')} />}
+          {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('staff-table')} />}
+          {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('staff-table')} />}
 
-          {/* ================= KONDISI 2: TAMPILKAN FORM KONFIGURASI AI SECARA INTERNAL ================= */}
-          {activeSubView === 'konfigurasi-ai' && (
-            <KonfigurasiAI onSaveSuccess={() => { alert('Parameter Brainy POS Berhasil Disimpan!'); setActiveSubView('staff-table'); }} />
-          )}
-
-          {/* ================= KONDISI 3: TAMPILKAN FORM KEAMANAN SYSTEM SECARA INTERNAL ================= */}
-          {activeSubView === 'keamanan' && (
-            <Keamanan onSaveSuccess={() => { alert('Kebijakan Aturan Keamanan Berhasil Diperbarui!'); setActiveSubView('staff-table'); }} />
-          )}
-
-          {/* ================= KONDISI 3.5: FORM INTERNAL BAHASA SYSTEM ================= */}
-          {activeSubView === 'bahasa' && (
-            <Bahasa onSaveSuccess={() => { alert('Pengaturan Bahasa Berhasil Diterapkan!'); setActiveSubView('staff-table'); }} />
-          )}
-
-          {/* ================= KONDISI 3.8: FORM INTERNAL EDIT PROFILE PENGGUNA ================= */}
-          {activeSubView === 'edit-profile' && (
-            <EditProfile onSaveSuccess={() => setActiveSubView('staff-table')} />
-          )}
-
-          {/* ================= KONDISI 4: RENDER UTUH KATALOG UTAMA DATABASE TEAM STAF ================= */}
           {activeSubView === 'staff-table' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Staff Management</h1>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Manage access and information for your team members efficiently.</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant team pillars.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,104,71,0.2)' }}>
+                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
                   <UserPlus size={16} /> Add New Staff
                 </button>
               </div>
@@ -351,24 +323,21 @@ export default function StaffManagement({ onNavigateView }) {
                     <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Total Staff</span>
                     <div style={{ width: '32px', height: '32px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users2 size={16} /></div>
                   </div>
-                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>12</h2>
-                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>+1 this month</span>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>{staffSummary.totalStaff}</h2>
                 </div>
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>Active Staff</span>
                     <div style={{ width: '32px', height: '32px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserCheck size={16} /></div>
                   </div>
-                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>10<span style={{ color: '#9CA3AF', fontSize: '16px', fontWeight: '500' }}>/12</span></h2>
-                  <span style={{ fontSize: '11px', color: '#6B7280', display: 'block', marginTop: '6px' }}>currently online</span>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>{staffSummary.activeStaff}</h2>
                 </div>
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 'bold' }}>On Leave</span>
                     <div style={{ width: '32px', height: '32px', backgroundColor: '#FFF5F5', color: '#E53E3E', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalendarDays size={16} /></div>
                   </div>
-                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>2</h2>
-                  <span style={{ fontSize: '11px', color: '#E53E3E', fontWeight: 'bold', display: 'block', marginTop: '6px' }}>Today</span>
+                  <h2 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: '#DC2626' }}>{staffSummary.leaveStaff}</h2>
                 </div>
               </div>
 
@@ -384,36 +353,68 @@ export default function StaffManagement({ onNavigateView }) {
                     <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><ArrowUpDown size={14}/> Sort</button>
                   </div>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
-                      <th style={{ padding: '14px 24px' }}>Name</th>
-                      <th style={{ padding: '14px 24px' }}>Role</th>
-                      <th style={{ padding: '14px 24px' }}>Email</th>
-                      <th style={{ padding: '14px 24px' }}>Status</th>
-                      <th style={{ padding: '14px 24px', textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { name: 'Jordan Smith', join: 'Joined Oct 2023', role: 'MANAGER', roleBg: '#EEF2FF', roleColor: '#4F46E5', email: 'jordan.s@cuanin.id', status: 'Active', isLeave: false, img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100' },
-                      { name: 'Casey Wong', join: 'Joined Jan 2024', role: 'BARISTA', roleBg: '#F3F4F6', roleColor: '#4B5563', email: 'casey.w@cuanin.id', status: 'On Leave', isLeave: true, img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100' }
-                    ].map((staff, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                        <td style={{ padding: '14px 24px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <img src={staff.img} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                            <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>{staff.join}</span></div>
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 24px' }}><span style={{ backgroundColor: staff.roleBg, color: staff.roleColor, padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>{staff.role}</span></td>
-                        <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
-                        <td style={{ padding: '14px 24px' }}><span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.isLeave ? '#D97706' : '#059669' }}><div style={{ width: '6px', height: '6px', backgroundColor: staff.isLeave ? '#FBBF24' : '#10B981', borderRadius: '50%' }} />{staff.status}</span></td>
-                        <td style={{ padding: '14px 24px', textAlign: 'right', color: '#9CA3AF' }}><MoreVertical size={16} style={{ cursor: 'pointer' }} /></td>
+
+                {staffList.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
+                        <th style={{ padding: '14px 24px' }}>Name</th>
+                        <th style={{ padding: '14px 24px' }}>Role</th>
+                        <th style={{ padding: '14px 24px' }}>Email</th>
+                        <th style={{ padding: '14px 24px' }}>WhatsApp Number</th>
+                        <th style={{ padding: '14px 24px' }}>Status</th>
+                        {/* 💡 FIXED: Kolom ACTIONS ditarik agak lebar untuk memuat dua tombol */}
+                        <th style={{ padding: '14px 24px', textAlign: 'right', width: '100px' }}>Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {staffList.map((staff) => (
+                        <tr key={staff.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: staff.status === 'Inactive' ? '#FAF8F8' : 'transparent' }}>
+                          <td style={{ padding: '14px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                              <img src={staff.image_url} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}} />
+                              <div>
+                                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p>
+                                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {staff.id.substring(0,8).toUpperCase()}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 24px' }}>
+                            <span style={{ 
+                              backgroundColor: staff.role === 'Manager' ? '#EEF2FF' : staff.role === 'Admin Stok' ? '#E6F4EA' : '#FFF7ED', 
+                              color: staff.role === 'Manager' ? '#4F46E5' : staff.role === 'Admin Stok' ? '#006847' : '#C2410C', 
+                              padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' 
+                            }}>
+                              {staff.role}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
+                          <td style={{ padding: '14px 24px', fontWeight: 'bold', color: '#1E3A8A' }}>+{staff.whatsapp_number}</td>
+                          <td style={{ padding: '14px 24px' }}>
+                            <span 
+                              onClick={() => handleToggleStaffStatus(staff.id, staff.status)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.status === 'On Leave' ? '#D97706' : staff.status === 'Active' ? '#059669' : '#DC2626', cursor: 'pointer' }}
+                            >
+                              <div style={{ width: '6px', height: '6px', backgroundColor: staff.status === 'On Leave' ? '#FBBF24' : staff.status === 'Active' ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
+                              {staff.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                            {/* 💡 FIXED ACTIONS: Menyuntikkan kancing icon Edit2 di sebelah tong sampah */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', color: '#9CA3AF' }}>
+                              <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingStaff(staff)} />
+                              <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteStaff(staff.id)} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: '48px', textAlign: 'center', color: '#6B7280', fontStyle: 'italic' }}>
+                     Belum ada pilar staf yang terdaftar di database, Gar. Klik 'Add New Staff' untuk menambahkan!
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -421,10 +422,10 @@ export default function StaffManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= MODAL TAMBAH STAF BARU ================= */}
+      {/* ================= WINDOW POPUP OVERLAY ADD NEW STAFF ================= */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <form onSubmit={handleCreateStaff} style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Tambah Staf Baru</h2>
               <X size={18} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsModalOpen(false)} />
@@ -432,27 +433,33 @@ export default function StaffManagement({ onNavigateView }) {
 
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', margin: '0 auto 6px auto' }}>
-                <div style={{ width: '80px', height: '80px', border: '1px dashed #D1D5DB', borderRadius: '50%', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '4px' }}>
+                <div style={{ width: '80px', height: '80px', border: '1px dashed #D1D5DB', borderRadius: '50%', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                   <ImageIcon size={18} color="#9CA3AF" />
-                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6B7280' }}>UPLOAD</span>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6B7280' }}>AVATAR</span>
                 </div>
-                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Format: JPG, PNG (Max 2MB)</span>
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Lengkap</label>
-                <input type="text" placeholder="Masukkan nama lengkap staf" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Masukkan nama lengkap staf" 
+                  value={newStaff.name}
+                  onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                />
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '8px' }}>Peran (Role)</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {['Manager', 'Barista', 'Kasir'].map((role) => (
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '8px' }}>Role</label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {['Kasir', 'Admin Stok'].map((role) => (
                     <span
                       key={role}
                       onClick={() => setSelectedRole(role)}
                       style={{
-                        padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
+                        padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
                         backgroundColor: selectedRole === role ? '#006847' : '#E5E7EB',
                         color: selectedRole === role ? '#ffffff' : '#4B5563'
                       }}
@@ -463,14 +470,28 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Email</label>
-                  <input type="email" placeholder="contoh@cuanin.id" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="contoh@cuanin.id" 
+                    value={newStaff.email}
+                    onChange={(e) => setNewStaff({...newStaff, email: e.target.value})}
+                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                  />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor Telepon</label>
-                  <input type="text" placeholder="0812xxxx" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor WhatsApp</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Contoh: 628123456xxx" 
+                    value={newStaff.whatsapp_number}
+                    onChange={(e) => setNewStaff({...newStaff, whatsapp_number: e.target.value.replace(/[^0-9]/g, '')})}
+                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                  />
                 </div>
               </div>
 
@@ -480,19 +501,104 @@ export default function StaffManagement({ onNavigateView }) {
                   <Lock size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
                   <input 
                     type="password" 
-                    placeholder="Masukkan password untuk kredensial login staf" 
+                    placeholder="Masukkan password untuk kredensial login" 
                     style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FCFDFD' }} 
                   />
                 </div>
-                <span style={{ fontSize: '10.5px', color: '#6B7280', marginTop: '4px', display: 'block' }}>*Password ini bakal digunain kru terkait pas pertama kali masuk aplikasi.</span>
+                <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px', display: 'block' }}>*Password ini bakal digunain kru terkait pas pertama kali masuk aplikasi.</span>
               </div>
             </div>
 
             <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button onClick={() => setIsModalOpen(false)} style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
-              <button onClick={() => { alert('Data Staf & Akun Login Berhasil Dibuat!'); setIsModalOpen(false); }} style={{ padding: '10px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Simpan Data Staf</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
+              <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Simpan Data Staf</button>
             </div>
-          </div>
+          </form>
+        </div>
+      )}
+
+      {/* ================= 🛠️ WINDOW POPUP OVERLAY EDIT STAFF ITEM (UPDATE PANEL) ================= */}
+      {editingStaff && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <form onSubmit={handleUpdateStaff} style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Edit Informasi Staf</h2>
+              <X size={18} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setEditingStaff(null)} />
+            </div>
+
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxSizing: 'border-box' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Lengkap</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editingStaff.name}
+                  onChange={(e) => setEditingStaff({...editingStaff, name: e.target.value})}
+                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '8px' }}>Role</label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {['Kasir', 'Admin Stok'].map((role) => (
+                    <span
+                      key={role}
+                      onClick={() => setEditingStaff({...editingStaff, role: role})}
+                      style={{
+                        padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
+                        backgroundColor: editingStaff.role === role ? '#006847' : '#E5E7EB',
+                        color: editingStaff.role === role ? '#ffffff' : '#4B5563'
+                      }}
+                    >
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Email</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={editingStaff.email}
+                    onChange={(e) => setEditingStaff({...editingStaff, email: e.target.value})}
+                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor WhatsApp</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editingStaff.whatsapp_number}
+                    onChange={(e) => setEditingStaff({...editingStaff, whatsapp_number: e.target.value.replace(/[^0-9]/g, '')})}
+                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Status Kerja</label>
+                <select 
+                  value={editingStaff.status}
+                  onChange={(e) => setEditingStaff({...editingStaff, status: e.target.value})}
+                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
+                >
+                  <option value="Active">Active</option>
+                  <option value="On Leave">On Leave</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={() => setEditingStaff(null)} style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
+              <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Perbarui Data</button>
+            </div>
+          </form>
         </div>
       )}
 
