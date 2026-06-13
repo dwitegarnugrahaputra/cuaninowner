@@ -54,10 +54,9 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
-  // State Dropdown Kunci Tren Bahan Baku - DISINKRONKAN PAKAI 'c' MENGIKUTI HASIL COLAB LU
+  // State Dropdown Kunci Tren Bahan Baku (Diselaraskan dengan data asli Python string spacing)
   const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
 
-  {/* 🗄️ STATE PENAMPUNG AWAL MURNI KOSONGAN (Rp 0) SESUAI REALITAS DATABASE AKTIF */}
   const [isLoading, setIsLoading] = useState(true);
   const [financials, setFinancials] = useState({
     totalSales: 0,
@@ -68,8 +67,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     weeklySalesPath: 'M 0 50 Q 116 50 233 50 T 466 50 T 700 50',
     weeklyExpensesPath: 'M 0 80 Q 116 80 233 80 T 466 80 T 700 80',
     tableRows: [],
-    
-    // Field Laba Rugi Deep-Dive
     monthLabel: 'JULY 2024',
     grossRevenue: 0,
     cogs: 0,
@@ -77,8 +74,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     operatingExpenses: 0,
     netProfitMarginLabel: 'Margin: 0%',
     brainyInsightText: "Brainy Insights: Menunggu data analisis jualan masuk...",
-    
-    // Field Tiga Kartu Metrik Paling Bawah
     avgTransaction: 0,
     avgTransactionTrend: '0%',
     loyaltyRate: 0,
@@ -89,10 +84,11 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [criticalStockCount, setCriticalStockCount] = useState(0);
   const [topMenus, setTopMenus] = useState([]);
   
-  // State khusus penampung list tren bahan baku dari Python Colab
+  // List master komoditas asli dari database
+  const [rawTrendsFromDB, setRawTrendsFromDB] = useState([]);
   const [materialsData, setMaterialsData] = useState({});
 
-  // ⚡ STATE KUNCI BARU: Memaksa sinkronisasi kurva reaktif setelah GitHub Actions update data Supabase
+  // State kurva reaktif
   const [activeCurve, setActiveCurve] = useState({
     labelColor: '#006847',
     svgPath: 'M 30 110 Q 180 110 340 110 T 650 110',
@@ -100,14 +96,13 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     bottomMetrics: { name: '-', price: 'Rp 0' }
   });
 
-  // Sinkronisasi state jika ada kiriman props forcedSubView dari luar
   useEffect(() => {
     if (forcedSubView) {
       setActiveSubView(forcedSubView);
     }
   }, [forcedSubView]);
 
-  {/* 🚀 ENGINE SINKRONISASI NYATA TERISOLASI KHUSUS DATA TREN BAHAN BAKU PYTHON COLAB LU */}
+  {/* 🚀 ENGINE SINKRONISASI UTAMA: MEMBACA DAN MENCOCOKKAN KOORDINAT PATH DAN RUPIAH MINGGUAN SECARA REALTIME */}
   useEffect(() => {
     async function fetchCommodityTrendsOnly() {
       if (activeSubView !== 'main-dashboard') return;
@@ -118,30 +113,48 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           .select('*');
 
         if (!trendsError && trendsData && trendsData.length > 0) {
+          setRawTrendsFromDB(trendsData);
           const mappedTrends = {};
+          
+          const formatKeRupiah = (val) => {
+            if (!val) return 'Rp 0';
+            const cleanStr = String(val).trim();
+            if (cleanStr.includes('Rp')) return cleanStr;
+            const num = Number(cleanStr.replace(/[^0-9.-]+/g, ""));
+            return isNaN(num) ? `Rp ${cleanStr}` : `Rp ${num.toLocaleString('id-ID')}`;
+          };
+
           trendsData.forEach(item => {
-            const normalizedKey = item.material_name.trim();
-            mappedTrends[normalizedKey] = {
+            // Menggunakan nama asli dari Python tanpa di-lowercase paksa agar pencocokan presisi
+            const key = item.material_name.trim();
+            
+            mappedTrends[key] = {
               labelColor: item.hex_color || '#006847',
               svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
-              weeks: [item.week_1 || 'Rp 0', item.week_2 || 'Rp 0', item.week_3 || 'Rp 0', item.week_4 || 'Rp 0'],
+              weeks: [
+                formatKeRupiah(item.week_1),
+                formatKeRupiah(item.week_2),
+                formatKeRupiah(item.week_3),
+                formatKeRupiah(item.week_4)
+              ],
               bottomMetrics: { 
-                name: item.short_code || normalizedKey.substring(0, 3).toUpperCase(), 
-                price: item.current_price_label || item.week_4 || 'Rp 0' 
+                name: item.short_code || key.substring(0, 3).toUpperCase(), 
+                price: item.current_price_label || formatKeRupiah(item.week_4)
               }
             };
           });
           
           setMaterialsData(mappedTrends);
 
-          // ⚡ AKTIVASI TRIGGER: Paksa state activeCurve mengambil data terupdate dari Supabase
+          // Ambil data kurva berdasarkan material komoditas terpilih di dropdown
           const currentKey = selectedMaterial.trim();
           if (mappedTrends[currentKey]) {
             setActiveCurve(mappedTrends[currentKey]);
           } else if (trendsData[0]) {
-            const firstKey = trendsData[0].material_name.trim();
-            setSelectedMaterial(firstKey);
-            setActiveCurve(mappedTrends[firstKey]);
+            // Fallback otomatis jika komoditas pertama belum ter-set di state awal
+            const fallbackKey = trendsData[0].material_name.trim();
+            setSelectedMaterial(fallbackKey);
+            setActiveCurve(mappedTrends[fallbackKey]);
           }
         }
       } catch (err) {
@@ -152,25 +165,13 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
 
     fetchCommodityTrendsOnly();
-  }, [activeSubView, selectedMaterial]); // Kunci selectedMaterial di sini biar pemicu re-render aktif pas dropdown diputar
+  }, [activeSubView, selectedMaterial]); 
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
       {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
-      <div style={{ 
-        width: isMainSidebarOpen ? '260px' : '80px', 
-        backgroundColor: '#1E3A8A', 
-        color: '#ffffff', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '24px 0', 
-        flexShrink: 0,
-        transition: 'width 0.3s ease-in-out',
-        overflow: 'hidden'
-      }}>
-        
-        {/* Header Branding Sidebar */}
+      <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <CuaninLogoMini />
@@ -188,7 +189,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           )}
         </div>
 
-        {/* Menu Utama List */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => setActiveSubView('main-dashboard') },
@@ -199,58 +199,51 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           ].map((menu, idx) => {
             const isActive = menu.target === 'dashboard' && activeSubView === 'main-dashboard';
             return (
-              <div key={idx} onClick={menu.action} title={!isMainSidebarOpen ? menu.name : ''} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: isActive ? 'bold' : '500', backgroundColor: isActive ? '#006847' : 'transparent', color: isActive ? '#ffffff' : '#93C5FD', transition: 'all 0.3s ease-in-out' }}>
+              <div key={idx} onClick={menu.action} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: isActive ? 'bold' : '500', backgroundColor: isActive ? '#006847' : 'transparent', color: isActive ? '#ffffff' : '#93C5FD', transition: 'all 0.3s ease-in-out' }}>
                 {menu.icon} {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>{menu.name}</span>}
               </div>
             );
           })}
         </div>
 
-        {/* FOOTER SIDEBAR AREA */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'main-dashboard' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
             {isMainSidebarOpen && (
-              <div style={{ display: 'flex', alignItems: 'center', transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
                 <ChevronDown size={14} />
               </div>
             )}
           </div>
 
           {isMainSidebarOpen && (
-            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, paddingTop: isSettingsOpen ? '4px' : '0px', paddingBottom: isSettingsOpen ? '4px' : '0px', overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
+            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, overflow: 'hidden', transition: 'max-height 0.4s, opacity 0.3s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' },
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' },
                 { name: 'Keamanan', icon: <ShieldCheck size={14} />, target: 'keamanan' },
                 { name: 'Bahasa', icon: <Globe size={14} />, target: 'bahasa' }
               ].map((sub, i) => (
-                <div key={i} onClick={() => setActiveSubView(sub.target)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', color: activeSubView === sub.target ? '#ffffff' : '#93C5FD', backgroundColor: activeSubView === sub.target ? '#006847' : 'transparent', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div key={i} onClick={() => setActiveSubView(sub.target)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', color: activeSubView === sub.target ? '#ffffff' : '#93C5FD', backgroundColor: activeSubView === sub.target ? '#006847' : 'transparent', fontSize: '12px', cursor: 'pointer' }}>
                   {sub.icon} <span>{sub.name}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; e.currentTarget.style.color = '#F87171'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#FFCACA'; }}>
-            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}>
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>Logout</span>}
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
-            {isMainSidebarOpen && (
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span>
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span></div>}
           </div>
         </div>
       </div>
 
-      {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
+      {/* ================= MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* TOPBAR PROFILE AREA */}
@@ -264,8 +257,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <MessageSquare size={16} /> Ask Brainy
             </button>
-            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-            <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
 
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
@@ -274,19 +266,12 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </p>
                 <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>ADMINISTRATOR</span>
               </div>
-              <div style={{ width: '40px', height: '40px', backgroundColor: '#E5E7EB', borderRadius: '50%', overflow: 'hidden' }}>
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
 
-            {/* FLOATING DROPDOWN PROFIL */}
             <div style={{ position: 'absolute', top: '55px', right: '0px', width: '220px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, display: isProfileOpen ? 'flex' : 'none', flexDirection: 'column', padding: '6px', boxSizing: 'border-box' }}>
-              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <User size={14} /> <span style={{ fontWeight: '500' }}>Edit Profile</span>
-              </div>
-              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; e.currentTarget.style.color = '#006847'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#374151'; }}>
-                <Shield size={14} /> <span style={{ fontWeight: '500' }}>Account Security</span>
-              </div>
+              <div onClick={() => { setActiveSubView('edit-profile'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }}><User size={14} /> <span>Edit Profile</span></div>
+              <div onClick={() => { setActiveSubView('keamanan'); setIsProfileOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', color: '#374151', fontSize: '13px', cursor: 'pointer' }}><Shield size={14} /> <span>Account Security</span></div>
             </div>
           </div>
         </div>
@@ -300,14 +285,12 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             </div>
           )}
 
-          {/* FORM SETTINGS REDIRECTORS */}
           {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
           {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
           {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
           {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
           {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('main-dashboard')} />}
 
-          {/* VIEW UTAMA BI DASHBOARD */}
           {activeSubView === 'main-dashboard' && (
             <>
               {/* SMART CARDS ROW SUMMARY */}
@@ -371,8 +354,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
                 <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', overflow: 'visible' }}>
-                    <path d={financials.weeklySalesPath} fill="none" stroke="#006847" strokeWidth="4" style={{ transition: 'd 0.5s ease-in-out' }} />
-                    <path d={financials.weeklyExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="4" style={{ transition: 'd 0.5s ease-in-out' }} />
+                    <path d={financials.weeklySalesPath} fill="none" stroke="#006847" strokeWidth="4" />
+                    <path d={financials.weeklyExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="4" />
                   </svg>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
                     {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
@@ -380,7 +363,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 </div>
 
                 {/* BREAKDOWN PANEL DETAIL MINGGUAN */}
-                <div style={{ maxHeight: isBreakdownOpen ? '400px' : '0px', overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease', opacity: isBreakdownOpen ? 1 : 0, borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none', paddingTop: isBreakdownOpen ? '16px' : '0px' }}>
+                <div style={{ maxHeight: isBreakdownOpen ? '400px' : '0px', overflow: 'hidden', transition: 'max-height 0.4s, opacity 0.3s', opacity: isBreakdownOpen ? 1 : 0, borderTop: isBreakdownOpen ? '1px dashed #E5E7EB' : 'none', paddingTop: isBreakdownOpen ? '16px' : '0px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '12px' }}>📋 RINCIAN OPERASIONAL MINGGUAN (DATABASE)</span>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
@@ -464,18 +447,17 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                         onChange={(e) => setSelectedMaterial(e.target.value)}
                         style={{ padding: '6px 28px 6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', color: '#374151', backgroundColor: '#FAFAFA', outline: 'none', cursor: 'pointer', appearance: 'none' }}
                       >
-                        {/* ITERASI DROPDOWN SELEKSI YANG 100% DINAMIS BERDASARKAN OBJEK HASIL SCRAPING NYATA */}
-                        {Object.keys(materialsData).length > 0 ? (
-                          Object.keys(materialsData).map((matName) => (
-                            <option key={matName} value={matName}>{matName}</option>
+                        {rawTrendsFromDB.length > 0 ? (
+                          rawTrendsFromDB.map((item) => (
+                            <option key={item.id} value={item.material_name.trim()}>{item.material_name.trim().toUpperCase()}</option>
                           ))
                         ) : (
                           <>
-                            <option value="Kopi Arabica">Kopi Arabica</option>
-                            <option value="Beras Premium">Beras Premium</option>
-                            <option value="Daging Ayam">Daging Ayam</option>
-                            <option value="Gula Aren">Gula Aren</option>
-                            <option value="Fresh Milk">Fresh Milk</option>
+                            <option value="Kopi Arabica">KOPI ARABICA</option>
+                            <option value="Beras Premium">BERAS PREMIUM</option>
+                            <option value="Daging Ayam">DAGING AYAM</option>
+                            <option value="Gula Aren">GULA AREN</option>
+                            <option value="Fresh Milk">FRESH MILK</option>
                           </>
                         )}
                       </select>
@@ -483,7 +465,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* ⚡ LOGIKA SINKRONISASI UTAMA: MENIMPA CANVAS SVG MEMAKAI STATE SELEKSI REAKTIF `activeCurve` */}
+                  {/* Canvas SVG kurva reaktif fluktuatif */}
                   <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
                     <svg viewBox="0 0 650 160" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
                       <path d={activeCurve.svgPath} fill="none" stroke={activeCurve.labelColor} strokeWidth="4" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
@@ -493,7 +475,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* Label harga per-week dinamis membaca dari state activeCurve */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
                     {activeCurve.weeks.map((priceLabel, wIdx) => (
                       <div key={wIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
