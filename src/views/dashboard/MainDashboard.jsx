@@ -54,7 +54,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [activeSubView, setActiveSubView] = useState(forcedSubView || 'main-dashboard');
 
-  // State Dropdown Kunci Tren Bahan Baku (Diselaraskan dengan data asli Python string spacing)
+  // State Dropdown Kunci Tren Bahan Baku
   const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
 
   const [isLoading, setIsLoading] = useState(true);
@@ -88,11 +88,11 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
   const [rawTrendsFromDB, setRawTrendsFromDB] = useState([]);
   const [materialsData, setMaterialsData] = useState({});
 
-  // State kurva reaktif
+  // State kurva reaktif linear
   const [activeCurve, setActiveCurve] = useState({
     labelColor: '#006847',
-    svgPath: 'M 30 110 Q 180 110 340 110 T 650 110',
     weeks: ['Rp 0', 'Rp 0', 'Rp 0', 'Rp 0'],
+    numericWeeks: [0, 0, 0, 0], 
     bottomMetrics: { name: '-', price: 'Rp 0' }
   });
 
@@ -102,7 +102,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
   }, [forcedSubView]);
 
-  {/* 🚀 ENGINE REVISI: ENGINE SINKRONISASI UTAMA DENGAN REALTIME SUBSCRIPTION SAKTI */}
+  {/* 🚀 ENGINE SINKRONISASI DATA LIVE SUPABASE */}
   useEffect(() => {
     if (activeSubView !== 'main-dashboard') return;
 
@@ -114,7 +114,12 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
       return isNaN(num) ? `Rp ${cleanStr}` : `Rp ${num.toLocaleString('id-ID')}`;
     };
 
-    // 1. Fungsi murni untuk memproses array data mentah database menjadi state siap render grafik
+    const ambilAngkaMurni = (val) => {
+      if (!val) return 0;
+      const num = Number(String(val).replace(/[^0-9.-]+/g, ""));
+      return isNaN(num) ? 0 : num;
+    };
+
     const prosesDanBagiDataTren = (trendsData) => {
       if (!trendsData || trendsData.length === 0) return;
 
@@ -123,14 +128,20 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
       trendsData.forEach(item => {
         const key = item.material_name.trim();
+
         mappedTrends[key] = {
           labelColor: item.hex_color || '#006847',
-          svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
           weeks: [
             formatKeRupiah(item.week_1),
             formatKeRupiah(item.week_2),
             formatKeRupiah(item.week_3),
             formatKeRupiah(item.week_4)
+          ],
+          numericWeeks: [
+            ambilAngkaMurni(item.week_1),
+            ambilAngkaMurni(item.week_2),
+            ambilAngkaMurni(item.week_3),
+            ambilAngkaMurni(item.week_4)
           ],
           bottomMetrics: { 
             name: item.short_code || key.substring(0, 3).toUpperCase(), 
@@ -141,7 +152,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
       setMaterialsData(mappedTrends);
 
-      // Sinkronisasikan kurva aktif berdasarkan dropdown material yang dipilih user saat ini
       const currentKey = selectedMaterial.trim();
       if (mappedTrends[currentKey]) {
         setActiveCurve(mappedTrends[currentKey]);
@@ -152,7 +162,6 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
       }
     };
 
-    // 2. Fungsi Fetch Data Awal saat layar dashboard pertama kali dimuat
     async function fetchInitialCommodityTrends() {
       setIsLoading(true);
       try {
@@ -172,24 +181,15 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
     fetchInitialCommodityTrends();
 
-    // 3. LOGIKA REALTIME KUNCI: Mendengarkan trigger data mendarat hasil tembakan robot Python di cloud
     const cloudRealtimeChannel = supabase
       .channel('live_dashboard_commodity_trends')
       .on(
         'postgres_changes',
-        {
-          event: '*', // Menangkap event INSERT, UPDATE, ataupun UPSERT masal
-          schema: 'public',
-          table: 'raw_material_trends'
-        },
+        { event: '*', schema: 'public', table: 'raw_material_trends' },
         async (payload) => {
-          console.log('⚡ Data komoditas terdeteksi update dari robot cloud, Gar! Sinkronisasi ulang...', payload);
-          
-          // Tarik data terbaru pasca modifikasi dan timpa struktur kurva visual secara realtime
           const { data: updatedTrends, error: refreshError } = await supabase
             .from('raw_material_trends')
             .select('*');
-            
           if (!refreshError && updatedTrends) {
             prosesDanBagiDataTren(updatedTrends);
           }
@@ -197,16 +197,55 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
       )
       .subscribe();
 
-    // Jalankan fungsi cleanup pemutusan koneksi websocket saat user berpindah halaman menu biar laptop kaga lag/leak
     return () => {
       supabase.removeChannel(cloudRealtimeChannel);
     };
-  }, [activeSubView, selectedMaterial]); // State selectedMaterial & subview memicu kalkulasi ulang pemetaan kurva secara instan
+  }, [activeSubView, selectedMaterial]); 
+
+  // ================= 🛠️ ALGORITMA HIGH-PRECISION LINEAR CHART MATRIX =================
+  const xCoords = [100, 240, 380, 520]; 
+
+  // MATH SCALE CALCULATOR UNTUK MENCARI SKALA MIN-MAX HARGA ASLI DATABASE
+  const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
+  const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
+  const rawMin = validPrices.length > 0 ? Math.min(...validPrices) : 10000;
+  const priceRange = rawMax - rawMin;
+
+  // Set buffer atas dan bawah agar titik ekstrim tidak menempel di langit-langit kanvas SVG
+  const scaleMax = rawMax + (priceRange * 0.1 || 5000);
+  const scaleMin = Math.max(0, rawMin - (priceRange * 0.1 || 2000));
+  const scaleRange = scaleMax - scaleMin;
+
+  // Batas tinggi gambar grafik di kanvas SVG (Sama dengan y1 dan y2 garis bantu horizontal)
+  const yTopBoundary = 30;   // Garis Atas (Baris 1)
+  const yBottomBoundary = 150; // Garis Bawah (Baris 4)
+  const yGraphHeight = yBottomBoundary - yTopBoundary; // Total tinggi aktif = 120px
+
+  // ⚡ FORMULA PROPORSI VERTIKAL: Menghitung letak Y simpul secara absolut murni berdasarkan nilai rupiah asli pasar!
+  const calculatedPoints = activeCurve.numericWeeks.map(price => {
+    if (price <= 0 || scaleRange === 0) return yBottomBoundary;
+    // Semakin mahal harganya, koordinat Y semakin mengecil mendekati angka 30 (puncak kanvas)
+    const ratio = (price - scaleMin) / scaleRange;
+    return yBottomBoundary - (ratio * yGraphHeight);
+  });
+
+  const linePath = `M ${xCoords[0]} ${calculatedPoints[0]} L ${xCoords[1]} ${calculatedPoints[1]} L ${xCoords[2]} ${calculatedPoints[2]} L ${xCoords[3]} ${calculatedPoints[3]}`;
+
+  // Cetak Label Angka Nominal Sumbu Y
+  const yLabels = [
+    scaleMax,
+    scaleMax - (scaleRange * 0.333),
+    scaleMin + (scaleRange * 0.333),
+    scaleMin
+  ].map(num => {
+    if (num <= 0) return 'Rp 0';
+    return num >= 1000 ? `Rp ${(num / 1000).toFixed(2)}k` : `Rp ${num}`;
+  });
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
-      {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
+      {/* ================= SIDEBAR KIRI ================= */}
       <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -247,11 +286,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
-            {isMainSidebarOpen && (
-              <div style={{ display: 'flex', alignItems: 'center', transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
-                <ChevronDown size={14} />
-              </div>
-            )}
+            {isMainSidebarOpen && <div style={{ transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}><ChevronDown size={14} /></div>}
           </div>
 
           {isMainSidebarOpen && (
@@ -270,7 +305,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
           )}
 
           <div onClick={logout} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}>
-            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px' }}>Logout</span>}
+            <LogOut size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: '500' }}>Logout</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>WJ</div>
@@ -282,7 +317,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
       {/* ================= MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* TOPBAR PROFILE AREA */}
+        {/* TOPBAR AREA */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0, position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '450px' }}>
             <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
@@ -293,7 +328,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
             <button onClick={() => onNavigateView('chat')} style={{ backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <MessageSquare size={16} /> Ask Brainy
             </button>
-            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} /><HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Bell size={20} color="#4B5563" /></button>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer' }}><HelpCircle size={20} color="#4B5563" /></button>
 
             <div onClick={() => setIsProfileOpen(!isProfileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px', cursor: 'pointer', userSelect: 'none' }}>
               <div style={{ textAlign: 'right' }}>
@@ -334,7 +370,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CuaninLogoMini /></div>
-                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> {financials.salesTrend}</div>
+                    <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px' }}><TrendingUp size={12}/> {financials.salesTrend}</div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>TOTAL PENJUALAN</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
@@ -344,7 +380,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                 <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
-                    <div style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingDown size={12}/> {financials.profitTrend}</div>
+                    <div style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '12px' }}><TrendingDown size={12}/> {financials.profitTrend}</div>
                   </div>
                   <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>PROFIT BERSIH</span>
                   <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>
@@ -446,10 +482,12 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
               {/* FINANCIAL DEEP-DIVE SECTION */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontweight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>
+              {/* PORSI GRID SETENGAH (50% - 50%) STABIL */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+                
                 {/* BLOK LABA RUGI DARI DATABASE */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -472,7 +510,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                   </div>
                 </div>
 
-                {/* 🛠️ BOKS TREN HARGA BAHAN BAKU (SINKRON DATA PIPELINE PYTHON COLAB LU) */}
+                {/* 🛠️ BOKS TREN HARGA BAHAN BAKU: 100% PREMANENT MATHEMATICAL SCALE PRECISE ACCURACY */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div><span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span></div>
@@ -501,23 +539,54 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* Canvas SVG kurva reaktif fluktuatif */}
-                  <div style={{ height: '160px', borderLeft: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', position: 'relative', marginBottom: '10px' }}>
-                    <svg viewBox="0 0 650 160" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
-                      <path d={activeCurve.svgPath} fill="none" stroke={activeCurve.labelColor} strokeWidth="4" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
+                  {/* WADAH FIXED RATIO */}
+                  <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
+                    <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
+                      
+                      {/* Sumbu Y Vertikal Tegak Lurus di x="75" (Sejajar rapi lurus dgn kata "TREN") */}
+                      <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
+
+                      {/* ⚡ GRIDLINE & LABEL SUMBU Y DENGAN AKURASI SKALA LINEAR ASLI */}
+                      <g>
+                        {/* Baris 1: Skala Tertinggi */}
+                        <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
+                        <text x="65" y="34" fill="#6B7280" fontSize="11" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
+
+                        {/* Baris 2: Mid-High */}
+                        <line x1="75" y1="70" x2="550" y2="70" stroke="#F3F4F6" strokeWidth="1" />
+                        <text x="65" y="74" fill="#9CA3AF" fontSize="11" textAnchor="end">{yLabels[1]}</text>
+
+                        {/* Baris 3: Mid-Low */}
+                        <line x1="75" y1="110" x2="550" y2="110" stroke="#F3F4F6" strokeWidth="1" />
+                        <text x="65" y="114" fill="#9CA3AF" fontSize="11" textAnchor="end">{yLabels[2]}</text>
+
+                        {/* Baris 4: Skala Terendah */}
+                        <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
+                        <text x="65" y="154" fill="#6B7280" fontSize="11" fontWeight="bold" textAnchor="end">{yLabels[3]}</text>
+                      </g>
+
+                      {/* 1. Jalur Garis Lurus Hasil Perhitungan Linear Matematika (Anti-Penyok) */}
+                      <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
+
+                      {/* 2. Bulatan Simpul Titik Pas Menempel Sempurna Tepat di Atas Garis Skala Sumbu Y */}
+                      {xCoords.map((xVal, index) => (
+                        <g key={index}>
+                          <circle cx={xVal} cy={calculatedPoints[index]} r="6" fill={activeCurve.labelColor} fillOpacity="0.2" style={{ transition: 'cy 0.4s ease-in-out' }} />
+                          <circle cx={xVal} cy={calculatedPoints[index]} r="3.5" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2" style={{ transition: 'cy 0.4s ease-in-out' }} />
+                        </g>
+                      ))}
                     </svg>
                     <div style={{ position: 'absolute', top: '-15px', right: '0px', fontSize: '10px', fontWeight: 'bold', color: activeCurve.labelColor }}>
                       ● {selectedMaterial.toUpperCase()}
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px' }}>
-                    {activeCurve.weeks.map((priceLabel, wIdx) => (
-                      <div key={wIdx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span>Week {wIdx + 1}</span>
-                        <span style={{ color: '#4B5563', fontSize: '10px' }}>{priceLabel}</span>
-                      </div>
-                    ))}
+                  {/* Sumbu X Layout: Penjajaran Grid Teks Pekan bawah */}
+                  <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', marginTop: '4px', paddingLeft: '65px', paddingRight: '100px', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <span style={{ width: '50px', textAlign: 'center' }}>Week 1</span>
+                    <span style={{ width: '50px', textAlign: 'center' }}>Week 2</span>
+                    <span style={{ width: '50px', textAlign: 'center' }}>Week 3</span>
+                    <span style={{ width: '50px', textAlign: 'center' }}>Week 4</span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
