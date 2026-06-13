@@ -102,70 +102,106 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     }
   }, [forcedSubView]);
 
-  {/* 🚀 ENGINE SINKRONISASI UTAMA: MEMBACA DAN MENCOCOKKAN KOORDINAT PATH DAN RUPIAH MINGGUAN SECARA REALTIME */}
+  {/* 🚀 ENGINE REVISI: ENGINE SINKRONISASI UTAMA DENGAN REALTIME SUBSCRIPTION SAKTI */}
   useEffect(() => {
-    async function fetchCommodityTrendsOnly() {
-      if (activeSubView !== 'main-dashboard') return;
+    if (activeSubView !== 'main-dashboard') return;
+
+    const formatKeRupiah = (val) => {
+      if (!val) return 'Rp 0';
+      const cleanStr = String(val).trim();
+      if (cleanStr.includes('Rp')) return cleanStr;
+      const num = Number(cleanStr.replace(/[^0-9.-]+/g, ""));
+      return isNaN(num) ? `Rp ${cleanStr}` : `Rp ${num.toLocaleString('id-ID')}`;
+    };
+
+    // 1. Fungsi murni untuk memproses array data mentah database menjadi state siap render grafik
+    const prosesDanBagiDataTren = (trendsData) => {
+      if (!trendsData || trendsData.length === 0) return;
+
+      setRawTrendsFromDB(trendsData);
+      const mappedTrends = {};
+
+      trendsData.forEach(item => {
+        const key = item.material_name.trim();
+        mappedTrends[key] = {
+          labelColor: item.hex_color || '#006847',
+          svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
+          weeks: [
+            formatKeRupiah(item.week_1),
+            formatKeRupiah(item.week_2),
+            formatKeRupiah(item.week_3),
+            formatKeRupiah(item.week_4)
+          ],
+          bottomMetrics: { 
+            name: item.short_code || key.substring(0, 3).toUpperCase(), 
+            price: item.current_price_label || formatKeRupiah(item.week_4)
+          }
+        };
+      });
+
+      setMaterialsData(mappedTrends);
+
+      // Sinkronisasikan kurva aktif berdasarkan dropdown material yang dipilih user saat ini
+      const currentKey = selectedMaterial.trim();
+      if (mappedTrends[currentKey]) {
+        setActiveCurve(mappedTrends[currentKey]);
+      } else if (trendsData[0]) {
+        const fallbackKey = trendsData[0].material_name.trim();
+        setSelectedMaterial(fallbackKey);
+        setActiveCurve(mappedTrends[fallbackKey]);
+      }
+    };
+
+    // 2. Fungsi Fetch Data Awal saat layar dashboard pertama kali dimuat
+    async function fetchInitialCommodityTrends() {
       setIsLoading(true);
       try {
         const { data: trendsData, error: trendsError } = await supabase
           .from('raw_material_trends')
           .select('*');
 
-        if (!trendsError && trendsData && trendsData.length > 0) {
-          setRawTrendsFromDB(trendsData);
-          const mappedTrends = {};
-          
-          const formatKeRupiah = (val) => {
-            if (!val) return 'Rp 0';
-            const cleanStr = String(val).trim();
-            if (cleanStr.includes('Rp')) return cleanStr;
-            const num = Number(cleanStr.replace(/[^0-9.-]+/g, ""));
-            return isNaN(num) ? `Rp ${cleanStr}` : `Rp ${num.toLocaleString('id-ID')}`;
-          };
-
-          trendsData.forEach(item => {
-            // Menggunakan nama asli dari Python tanpa di-lowercase paksa agar pencocokan presisi
-            const key = item.material_name.trim();
-            
-            mappedTrends[key] = {
-              labelColor: item.hex_color || '#006847',
-              svgPath: item.svg_coordinate_path || 'M 30 110 Q 180 110 340 110 T 650 110',
-              weeks: [
-                formatKeRupiah(item.week_1),
-                formatKeRupiah(item.week_2),
-                formatKeRupiah(item.week_3),
-                formatKeRupiah(item.week_4)
-              ],
-              bottomMetrics: { 
-                name: item.short_code || key.substring(0, 3).toUpperCase(), 
-                price: item.current_price_label || formatKeRupiah(item.week_4)
-              }
-            };
-          });
-          
-          setMaterialsData(mappedTrends);
-
-          // Ambil data kurva berdasarkan material komoditas terpilih di dropdown
-          const currentKey = selectedMaterial.trim();
-          if (mappedTrends[currentKey]) {
-            setActiveCurve(mappedTrends[currentKey]);
-          } else if (trendsData[0]) {
-            // Fallback otomatis jika komoditas pertama belum ter-set di state awal
-            const fallbackKey = trendsData[0].material_name.trim();
-            setSelectedMaterial(fallbackKey);
-            setActiveCurve(mappedTrends[fallbackKey]);
-          }
+        if (!trendsError && trendsData) {
+          prosesDanBagiDataTren(trendsData);
         }
       } catch (err) {
-        console.error('Error memuat data tren bahan baku dari Supabase:', err.message);
+        console.error('Error memuat data tren bahan baku awal dari Supabase:', err.message);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchCommodityTrendsOnly();
-  }, [activeSubView, selectedMaterial]); 
+    fetchInitialCommodityTrends();
+
+    // 3. LOGIKA REALTIME KUNCI: Mendengarkan trigger data mendarat hasil tembakan robot Python di cloud
+    const cloudRealtimeChannel = supabase
+      .channel('live_dashboard_commodity_trends')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Menangkap event INSERT, UPDATE, ataupun UPSERT masal
+          schema: 'public',
+          table: 'raw_material_trends'
+        },
+        async (payload) => {
+          console.log('⚡ Data komoditas terdeteksi update dari robot cloud, Gar! Sinkronisasi ulang...', payload);
+          
+          // Tarik data terbaru pasca modifikasi dan timpa struktur kurva visual secara realtime
+          const { data: updatedTrends, error: refreshError } = await supabase
+            .from('raw_material_trends')
+            .select('*');
+            
+          if (!refreshError && updatedTrends) {
+            prosesDanBagiDataTren(updatedTrends);
+          }
+        }
+      )
+      .subscribe();
+
+    // Jalankan fungsi cleanup pemutusan koneksi websocket saat user berpindah halaman menu biar laptop kaga lag/leak
+    return () => {
+      supabase.removeChannel(cloudRealtimeChannel);
+    };
+  }, [activeSubView, selectedMaterial]); // State selectedMaterial & subview memicu kalkulasi ulang pemetaan kurva secara instan
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
@@ -410,7 +446,7 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
 
               {/* FINANCIAL DEEP-DIVE SECTION */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontweight: 'bold', color: '#111827', borderLeft: '4px solid #006847', paddingLeft: '10px' }}>Financial Deep-Dive</h3>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '24px', alignItems: 'start' }}>

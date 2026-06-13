@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import {
-  LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings,
+import { 
+  LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
   Search, Bell, HelpCircle, TrendingUp, AlertTriangle, ShoppingCart,
   FileText, Edit2, SlidersHorizontal, Download, MessageSquare, AlertCircle, 
   LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, 
@@ -57,55 +57,84 @@ export default function StockIntelligence({ onNavigateView }) {
     monthlySpend: 12300000 
   });
 
-  // Fetch data live stock dan logs dari Supabase secara paralel
-  useEffect(() => {
-    async function fetchInventoryData() {
-      if (activeSubView !== 'stock-table') return;
-      setIsLoading(true);
-      try {
-        // 🚀 PIPELINE 1: Ambil data Master Bahan Baku
-        const { data: matData, error: matError } = await supabase
-          .from('raw_materials')
-          .select('*')
-          .order('material_name', { ascending: true });
+  // 🚀 ENGINE REVISI REALTIME: Fungsi mandiri untuk fetch data inventory agar bisa dipanggil berulang secara realtime
+  const refreshInventoryCalculations = async () => {
+    try {
+      // Pipeline 1: Ambil data Master Bahan Baku
+      const { data: matData, error: matError } = await supabase
+        .from('raw_materials')
+        .select('*')
+        .order('material_name', { ascending: true });
 
-        if (matError) throw matError;
+      if (matError) throw matError;
 
-        // 🚀 PIPELINE 2: Ambil riwayat log supply penambahan barang masuk
-        const { data: logData, error: logError } = await supabase
-          .from('supply_logs')
-          .select('*, raw_materials(material_name)')
-          .order('created_at', { ascending: false })
-          .limit(5);
+      // Pipeline 2: Ambil riwayat log supply penambahan barang masuk beserta relasi nama bahannya
+      const { data: logData, error: logError } = await supabase
+        .from('supply_logs')
+        .select('*, raw_materials(material_name)')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-        if (logError) throw logError;
+      if (logError) throw logError;
 
-        if (matData) {
-          setMaterials(matData);
+      if (matData) {
+        setMaterials(matData);
+        // 📐 MATEMATIKA AGREGASI: Hitung Total Nilai Aset Inventori & Jumlah Item Kritis
+        const calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
+        const calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
 
-          // 📐 MATEMATIKA AGREGASI: Hitung Total Nilai Aset Inventori & Jumlah Item Kritis
-          const calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
-          const calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
-
-          setStockSummary(prev => ({
-            ...prev,
-            totalValue: calculatedValue,
-            criticalCount: calculatedCritical
-          }));
-        }
-
-        if (logData) {
-          setSupplyLogs(logData);
-        }
-
-      } catch (err) {
-        console.error('⚠️ Gagal menyinkronkan data Stock Intelligence ke Supabase:', err.message);
-      } finally {
-        setIsLoading(false);
+        setStockSummary(prev => ({
+          ...prev,
+          totalValue: calculatedValue,
+          criticalCount: calculatedCritical
+        }));
       }
-    }
 
-    fetchInventoryData();
+      if (logData) {
+        setSupplyLogs(logData);
+      }
+    } catch (err) {
+      console.error('⚠️ Gagal menyinkronkan data Stock Intelligence ke Supabase:', err.message);
+    }
+  };
+
+  // Fetch data live stock dan logs dari Supabase secara paralel + Realtime Listener
+  useEffect(() => {
+    if (activeSubView !== 'stock-table') return;
+    
+    // Jalankan fetch pertama kali pas komponen dimuat
+    async function initFetch() {
+      setIsLoading(true);
+      await refreshInventoryCalculations();
+      setIsLoading(false);
+    }
+    initFetch();
+
+    // ⚡ REALTIME PIPELINE SAKTI: Dengerin perubahan data di tabel raw_materials dan supply_logs sekaligus
+    const inventorySubscription = supabase
+      .channel('live_inventory_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'raw_materials' },
+        (payload) => {
+          console.log('🔄 Terjadi fluktuasi stok sisa bahan baku, Gar! Menghitung ulang...', payload);
+          refreshInventoryCalculations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'supply_logs' },
+        (payload) => {
+          console.log('📝 Ada log supply baru masuk (OCR/Manual), Gar! Menyegarkan data...', payload);
+          refreshInventoryCalculations();
+        }
+      )
+      .subscribe();
+
+    // Cleanup pemutusan websocket koneksi pas ganti view biar ga lag
+    return () => {
+      supabase.removeChannel(inventorySubscription);
+    };
   }, [activeSubView]);
 
   return (
@@ -161,7 +190,7 @@ export default function StockIntelligence({ onNavigateView }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justify: isMainSidebarOpen ? 'flex-start' : 'center',
+                  justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Benerin Typo CSS dari 'justify' ke 'justifyContent'
                   gap: '12px',
                   padding: '12px 16px',
                   borderRadius: '10px',
@@ -188,7 +217,7 @@ export default function StockIntelligence({ onNavigateView }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justify: isMainSidebarOpen ? 'space-between' : 'center',
+              justifyContent: isMainSidebarOpen ? 'space-between' : 'center', // 👈 Properti CSS Typo dibetulkan
               padding: '12px 16px',
               color: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD',
               backgroundColor: isSettingsOpen || (activeSubView !== 'stock-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
@@ -258,7 +287,7 @@ export default function StockIntelligence({ onNavigateView }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justify: isMainSidebarOpen ? 'flex-start' : 'center',
+              justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Properti CSS Typo dibetulkan
               gap: '12px',
               padding: '12px 16px',
               color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease-in-out'
@@ -273,7 +302,7 @@ export default function StockIntelligence({ onNavigateView }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justify: isMainSidebarOpen ? 'flex-start' : 'center',
+            justifyContent: isMainSidebarOpen ? 'flex-start' : 'center', // 👈 Properti CSS Typo dibetulkan
             gap: '12px',
             padding: '12px 16px',
             backgroundColor: '#111827',
@@ -497,7 +526,7 @@ export default function StockIntelligence({ onNavigateView }) {
                             <div style={{ width: '32px', height: '32px', backgroundColor: '#F3F4F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <FileText size={16} color="#6B7280" />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', justify: 'space-between' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                               <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{log.supplier_name}</h4>
                               <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>
                                 +{log.quantity_added} {(log.raw_materials && log.raw_materials.material_name) || 'Bahan'}
@@ -515,11 +544,11 @@ export default function StockIntelligence({ onNavigateView }) {
                       </div>
                     )}
                   </div>
-                  <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
+                  <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontweight: 'bold', cursor: 'pointer' }}>View All Logs</button>
                 </div>
               </div>
 
-              {/* ================= ⚡ UPDATE ENGINE: AUTOMATED WHATSAPP RESTOCK MESSAGE DISPATCHER ================= */}
+              {/* ================= ⚡ AUTOMATED WHATSAPP RESTOCK MESSAGE DISPATCHER ================= */}
               <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 64px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justify: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 50 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
@@ -539,7 +568,6 @@ export default function StockIntelligence({ onNavigateView }) {
                   
                   <button 
                     onClick={() => {
-                      // 1. Filter bahan baku yang masuk status kritis secara dinamis dari database state
                       const criticalItems = materials.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold));
                       
                       if (criticalItems.length === 0) {
@@ -547,7 +575,6 @@ export default function StockIntelligence({ onNavigateView }) {
                         return;
                       }
 
-                      // 2. Konstruksi teks draf order otomatis menggunakan Markdown tebal (*) dan ganti baris (%0A) khas API WA
                       let message = `*⚠️ PEMBERITAHUAN RESTOK OTOMATIS - cuanin.id* %0A%0A`;
                       message += `Halo Admin Stok, Brainy AI mendeteksi bahwa bahan baku berikut sudah menyentuh batas minimum dan harus segera di-restok: %0A%0A`;
                       
@@ -558,12 +585,7 @@ export default function StockIntelligence({ onNavigateView }) {
                       });
 
                       message += `Mohon segera buat Purchase Order (PO) ke pihak supplier resmi. Terima kasih!`;
-
-                      // 3. Masukkan nomor WhatsApp tujuan admin stok gudang lu (Ganti ke nomor riil admin lu nanti)
-                      // Harus format kode negara tanpa spasi, strip, atau awalan tanda tambah (+), misal: 62812345678
                       const adminWhatsAppNumber = "628512345678"; 
-
-                      // 4. Trigger pemanggilan window open scheme wa.me
                       window.open(`https://wa.me/${adminWhatsAppNumber}?text=${message}`, '_blank');
                     }} 
                     style={{ backgroundColor: '#10B981', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
