@@ -17,7 +17,7 @@ jobs:
     - name: 🐍 Inisialisasi Environment Python
       uses: actions/setup-python@v5
       with:
-        python_version: '3.10'
+        python-version: '3.10'  
         cache: 'pip'
 
     - name: 📦 Instalasi Dependensi Big Data Pipeline
