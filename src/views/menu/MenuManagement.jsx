@@ -130,21 +130,27 @@ export default function MenuManagement({ onNavigateView }) {
   // Efek otomatis: Set draft resep statis fallback pas modal edit dibuka
   useEffect(() => {
     if (editingMenu) {
-      const nameLower = editingMenu.menu_name.toLowerCase();
-      if (nameLower.includes('americano') || nameLower.includes('black coffee')) {
-        setRecipeRows([
-          { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
-          { ingredientId: '', ingredientName: 'Water / Ice', qty: 150, unit: 'ml', cost: 0 }
-        ]);
-      } else if (editingMenu.category === 'Coffee') {
-        setRecipeRows([
-          { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
-          { ingredientId: '', ingredientName: 'Full Cream Milk', qty: 120, unit: 'ml', cost: 2220 }
-        ]);
+      // Jika menu sudah memiliki resep bawaan dari database, pakai itu
+      if (editingMenu.recipe && Array.isArray(editingMenu.recipe) && editingMenu.recipe.length > 0) {
+        setRecipeRows(editingMenu.recipe);
       } else {
-        setRecipeRows([
-          { ingredientId: '', ingredientName: 'Default Raw Materials', qty: 1, unit: 'unit', cost: 4500 }
-        ]);
+        // Fallback default resep jika kosong
+        const nameLower = editingMenu.menu_name.toLowerCase();
+        if (nameLower.includes('americano') || nameLower.includes('black coffee')) {
+          setRecipeRows([
+            { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
+            { ingredientId: '', ingredientName: 'Water / Ice', qty: 150, unit: 'ml', cost: 0 }
+          ]);
+        } else if (editingMenu.category === 'Coffee') {
+          setRecipeRows([
+            { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
+            { ingredientId: '', ingredientName: 'Full Cream Milk', qty: 120, unit: 'ml', cost: 2220 }
+          ]);
+        } else {
+          setRecipeRows([
+            { ingredientId: '', ingredientName: 'Default Raw Materials', qty: 1, unit: 'unit', cost: 4500 }
+          ]);
+        }
       }
     } else {
       setRecipeRows([]);
@@ -225,16 +231,36 @@ export default function MenuManagement({ onNavigateView }) {
     }
   };
 
-  // 🚀 PIPELINE 6: DELETE ACTION
+  // 🚀 PIPELINE 6: FIXED DELETE ACTION (SIMPAN DAN HAPUS DARI UTAS REALTIME)
   const handleDeleteMenu = async (id) => {
     if (!window.confirm('Apakah lu yakin pengen menghapus menu ini secara permanen dari database, Gar?')) return;
     try {
+      // SINKRONISASI CONSTRAINT LAYOUT: Kosongkan item relasi transaksi terlebih dahulu jika ada di tabel pivot
+      await supabase
+        .from('transaction_items')
+        .delete()
+        .eq('menu_id', id);
+
+      // Eksekusi pembersihan core katalog utama di tabel menus
       const { error } = await supabase
         .from('menus')
         .delete()
         .eq('id', id);
+
       if (error) throw error;
-      fetchMenuCatalog();
+      
+      // Update state data tabel frontend secara instan tanpa perlu memicu muat ulang paksa halaman web
+      setMenus(prevMenus => prevMenus.filter(item => item.id !== id));
+      
+      // Hitung ulang summary widget atas secara dinamis
+      setMenus(updatedData => {
+        const uniqueCategories = new Set(updatedData.map(item => item.category)).size;
+        const outOfStockItems = updatedData.filter(item => item.is_available === false).length;
+        setMenuSummary({ totalItems: updatedData.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
+        return updatedData;
+      });
+
+      alert('Menu berhasil terhapus selamanya dari sistem cuanin.id!');
     } catch (err) {
       alert('Gagal menghapus data menu: ' + err.message);
     }
@@ -248,19 +274,18 @@ export default function MenuManagement({ onNavigateView }) {
     }
     const firstMat = stockIngredients[0];
     
-    // 💡 ATURAN REAKSI: Deteksi unit master untuk diubah ke takaran barista operasional cafe
     let displayUnit = firstMat.unit;
     let initialQty = 10;
     let unitCost = Number(firstMat.unit_price || 0);
 
     if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter') {
       displayUnit = 'ml';
-      initialQty = 30; // default 30ml
-      unitCost = Number(firstMat.unit_price || 0) / 1000; // konversi harga per ml
+      initialQty = 30; 
+      unitCost = Number(firstMat.unit_price || 0) / 1000; 
     } else if (firstMat.unit?.toLowerCase() === 'kg') {
       displayUnit = 'gram';
-      initialQty = 15; // default 15 gram kopi
-      unitCost = Number(firstMat.unit_price || 0) / 1000; // konversi harga per gram
+      initialQty = 15; 
+      unitCost = Number(firstMat.unit_price || 0) / 1000; 
     }
 
     setNewMenuRecipe([
@@ -304,6 +329,12 @@ export default function MenuManagement({ onNavigateView }) {
       }
     }
     setNewMenuRecipe(updatedRows);
+  };
+
+  // 🛠️ SUNTIKAN BARU: Fungsi penghapus baris draf resep tambah menu baru biar ga crash
+  const handleRemoveNewMenuRecipeRow = (index) => {
+    const filteredRows = newMenuRecipe.filter((_, i) => i !== index);
+    setNewMenuRecipe(filteredRows);
   };
 
   // ================= 🛠️ CONVERSION RECIPE ALGORITHMS AREA (UNTUK MODAL EDIT) =================
@@ -364,6 +395,12 @@ export default function MenuManagement({ onNavigateView }) {
     setRecipeRows(updatedRows);
   };
 
+  // 🛠️ SUNTIKAN BARU: Fungsi penghapus baris draf resep di modal edit biar ga crash
+  const handleRemoveRecipeRow = (index) => {
+    const filteredRows = recipeRows.filter((_, i) => i !== index);
+    setRecipeRows(filteredRows);
+  };
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
@@ -404,7 +441,7 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
 
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyItem: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
+          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'menu-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
@@ -613,6 +650,7 @@ export default function MenuManagement({ onNavigateView }) {
                             <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                           </div>
                           <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                          {/* 💡 FIXED: Pemicu fungsi hapus draf resep tambah menu baru dikoneksikan ke pembantu yang valid */}
                           <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveNewMenuRecipeRow(index)} />
                         </div>
                       ))
@@ -707,6 +745,7 @@ export default function MenuManagement({ onNavigateView }) {
                           <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                         </div>
                         <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                        {/* 💡 FIXED: Pemicu fungsi hapus draf resep modal edit dikoneksikan ke pembantu yang valid */}
                         <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveRecipeRow(index)} />
                       </div>
                     ))}

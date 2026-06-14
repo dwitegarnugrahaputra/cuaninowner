@@ -202,44 +202,48 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
     };
   }, [activeSubView, selectedMaterial]); 
 
-  // ================= 🛠️ ALGORITMA HIGH-PRECISION LINEAR CHART MATRIX =================
+  // ================= 🛠 COMPLETE ALGORITMA HIGH-PRECISION LINEAR CHART MATRIX =================
+  // ⚡ FIXED: Sumbu X Penempatan Koordinat: Menyebar titik simpul (W1-W4) merata dari pixel 100 ke 520 [cite: Line 139]
   const xCoords = [100, 240, 380, 520]; 
 
-  // MATH SCALE CALCULATOR UNTUK MENCARI SKALA MIN-MAX HARGA ASLI DATABASE
+  // MATH SCALE CALCULATOR UNTUK MENCARI SKALA MIN-MAX HARGA ASLI DATABASE [cite: Line 142]
   const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
   const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
   const rawMin = validPrices.length > 0 ? Math.min(...validPrices) : 10000;
   const priceRange = rawMax - rawMin;
 
-  // Set buffer atas dan bawah agar titik ekstrim tidak menempel di langit-langit kanvas SVG
+  // Set buffer atas dan bawah agar titik ekstrim tidak menempel di langit-langit kanvas SVG [cite: Line 148]
   const scaleMax = rawMax + (priceRange * 0.1 || 5000);
   const scaleMin = Math.max(0, rawMin - (priceRange * 0.1 || 2000));
   const scaleRange = scaleMax - scaleMin;
 
-  // Batas tinggi gambar grafik di kanvas SVG (Sama dengan y1 dan y2 garis bantu horizontal)
+  // Batas tinggi gambar grafik di kanvas SVG (Sama dengan y1 dan y2 garis bantu horizontal) [cite: Line 153]
   const yTopBoundary = 30;   // Garis Atas (Baris 1)
   const yBottomBoundary = 150; // Garis Bawah (Baris 4)
   const yGraphHeight = yBottomBoundary - yTopBoundary; // Total tinggi aktif = 120px
 
-  // ⚡ FORMULA PROPORSI VERTIKAL: Menghitung letak Y simpul secara absolut murni berdasarkan nilai rupiah asli pasar!
+  // ⚡ FORMULA PROPORSI VERTIKAL: Menghitung letak Y simpul secara absolut murni berdasarkan nilai rupiah asli pasar! [cite: Line 159]
   const calculatedPoints = activeCurve.numericWeeks.map(price => {
     if (price <= 0 || scaleRange === 0) return yBottomBoundary;
-    // Semakin mahal harganya, koordinat Y semakin mengecil mendekati angka 30 (puncak kanvas)
+    // Semakin mahal harganya, koordinat Y semakin mengecil mendekati angka 30 (puncak kanvas) [cite: Line 162]
     const ratio = (price - scaleMin) / scaleRange;
     return yBottomBoundary - (ratio * yGraphHeight);
   });
 
   const linePath = `M ${xCoords[0]} ${calculatedPoints[0]} L ${xCoords[1]} ${calculatedPoints[1]} L ${xCoords[2]} ${calculatedPoints[2]} L ${xCoords[3]} ${calculatedPoints[3]}`;
 
-  // Cetak Label Angka Nominal Sumbu Y
+  // 🛠️ FIXED ROUNDING CALCULATOR: Mengeliminasi total pecahan desimal panjang di Beras & Gula Aren [cite: Line 169]
   const yLabels = [
     scaleMax,
-    scaleMax - (scaleRange * 0.333),
-    scaleMin + (scaleRange * 0.333),
+    scaleMax - (scaleRange * 0.3333),
+    scaleMin + (scaleRange * 0.3333),
     scaleMin
   ].map(num => {
     if (num <= 0) return 'Rp 0';
-    return num >= 1000 ? `Rp ${(num / 1000).toFixed(2)}k` : `Rp ${num}`;
+    // Gunakan Math.round agar pembagian sisa split terpotong bulat mulus [cite: Line 176]
+    const roundedNum = Math.round(num);
+    // ⚡ FIXED: Format full ribuan tanpa 'k' (misal: "Rp 100.000") [cite: Line 178]
+    return `Rp ${roundedNum.toLocaleString('id-ID')}`;
   });
 
   return (
@@ -510,8 +514,8 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                   </div>
                 </div>
 
-                {/* 🛠️ BOKS TREN HARGA BAHAN BAKU: 100% PREMANENT MATHEMATICAL SCALE PRECISE ACCURACY */}
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                {/* 🛠️ BOKS TREN HARGA BAHAN BAKU: INTEGRASI ALGORITMA SKALA LINEAR DAN REVISI UI MEPEET */}
+                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justify: 'space-between' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div><span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>TREN HARGA BAHAN BAKU</span></div>
                     
@@ -539,16 +543,16 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* WADAH FIXED RATIO */}
+                  {/* WADAH FIXED RATIO AGAR GRAFIK TIDAK PENYOK */}
                   <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
                     <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
                       
-                      {/* Sumbu Y Vertikal Tegak Lurus di x="75" (Sejajar rapi lurus dgn kata "TREN") */}
+                      {/* Sumbu Y Vertikal Tegak Lurus di x="75" agar tidak menimpa label */}
                       <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
 
                       {/* ⚡ GRIDLINE & LABEL SUMBU Y DENGAN AKURASI SKALA LINEAR ASLI */}
                       <g>
-                        {/* Baris 1: Skala Tertinggi */}
+                        {/* Baris 1: Skala Tertinggi [cite: yTopBoundary = 30] */}
                         <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
                         <text x="65" y="34" fill="#6B7280" fontSize="11" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
 
@@ -560,18 +564,18 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                         <line x1="75" y1="110" x2="550" y2="110" stroke="#F3F4F6" strokeWidth="1" />
                         <text x="65" y="114" fill="#9CA3AF" fontSize="11" textAnchor="end">{yLabels[2]}</text>
 
-                        {/* Baris 4: Skala Terendah */}
+                        {/* Baris 4: Skala Terendah [cite: yBottomBoundary = 150] */}
                         <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
                         <text x="65" y="154" fill="#6B7280" fontSize="11" fontWeight="bold" textAnchor="end">{yLabels[3]}</text>
                       </g>
 
-                      {/* 1. Jalur Garis Lurus Hasil Perhitungan Linear Matematika (Anti-Penyok) */}
+                      {/* 1. Jalur Garis Lurus Hasil Perhitungan Linear Matematika (Anti-Penyok) [cite: Line 166] */}
                       <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" style={{ transition: 'd 0.4s ease-in-out, stroke 0.3s ease' }} />
 
-                      {/* 2. Bulatan Simpul Titik Pas Menempel Sempurna Tepat di Atas Garis Skala Sumbu Y */}
+                      {/* 2. Bulatan Simpul Titik Pas Menempel Sempurna Tepat di Atas Garis Skala Sumbu Y [cite: xCoords, calculatedPoints] */}
                       {xCoords.map((xVal, index) => (
                         <g key={index}>
-                          <circle cx={xVal} cy={calculatedPoints[index]} r="6" fill={activeCurve.labelColor} fillOpacity="0.2" style={{ transition: 'cy 0.4s ease-in-out' }} />
+                          {/* Outer circle point */}
                           <circle cx={xVal} cy={calculatedPoints[index]} r="3.5" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2" style={{ transition: 'cy 0.4s ease-in-out' }} />
                         </g>
                       ))}
@@ -581,15 +585,16 @@ export default function MainDashboard({ onNavigateView, forcedSubView }) {
                     </div>
                   </div>
 
-                  {/* Sumbu X Layout: Penjajaran Grid Teks Pekan bawah */}
-                  <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', marginTop: '4px', paddingLeft: '65px', paddingRight: '100px', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <span style={{ width: '50px', textAlign: 'center' }}>Week 1</span>
-                    <span style={{ width: '50px', textAlign: 'center' }}>Week 2</span>
-                    <span style={{ width: '50px', textAlign: 'center' }}>Week 3</span>
-                    <span style={{ width: '50px', textAlign: 'center' }}>Week 4</span>
+                  {/* Sumbu X Layout: ⚡ FIXED Sumbu X Penjajaran Teks agar tidak mepet [cite: Line 139] */}
+                  {/* Gunakan display: flex dan padding merata sesuai pixel awal grafik (100) */}
+                  <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', marginTop: '4px', paddingLeft: '85px', paddingRight: '120px', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <span style={{ width: '30px', textAlign: 'center' }}>Week 1</span>
+                    <span style={{ width: '30px', textAlign: 'center' }}>Week 2</span>
+                    <span style={{ width: '30px', textAlign: 'center' }}>Week 3</span>
+                    <span style={{ width: '30px', textAlign: 'center' }}>Week 4</span>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
+                  <div style={{ display: 'flex', justify: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '14px' }}>
                     <div style={{ textAlign: 'center', padding: '0 20px' }}>
                       <span style={{ color: '#9CA3AF', fontWeight: 'bold', display: 'block', fontSize: '9px', letterSpacing: '0.5px' }}>
                         KOMODITAS TERPILIH: {activeCurve.bottomMetrics.name}
