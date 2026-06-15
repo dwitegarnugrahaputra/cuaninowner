@@ -127,7 +127,7 @@ export default function MenuManagement({ onNavigateView }) {
 
     // ⚡ FORM VALIDATION CONSTRAINT: Intersepsi draf jika list resep masih kosong murni
     if (newMenuRecipe.length === 0) {
-      alert('Waduh gak bisa disimpan, Gar! Masukkan minimal satu resep bahan baku dulu biar hitungan HPP (COGS) dan Profit Margin cafe lu akurat.');
+      alert('Mohon isi resep produk.');
       return;
     }
 
@@ -225,7 +225,7 @@ export default function MenuManagement({ onNavigateView }) {
   // ================= 🛠️ ARSITEKTUR FORMULA KONVERSI TAKARAN RESEP BARU =================
   const handleAddNewMenuRecipeRow = () => {
     if (stockIngredients.length === 0) {
-      alert('Stok gudang kosong, Gar! Daftarkan bahan baku dulu di tab Stock.');
+      alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.');
       return;
     }
     const firstMat = stockIngredients[0];
@@ -497,7 +497,7 @@ export default function MenuManagement({ onNavigateView }) {
               ) : (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center' }}>
                   <div style={{ fontSize: '28px' }}>☕</div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 'bold' }}>Katalog Menu Masih Kosong, Gar</h3>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold' }}>Katalog Menu Masih Kosong</h3>
                 </div>
               )}
             </>
@@ -550,7 +550,7 @@ export default function MenuManagement({ onNavigateView }) {
                 {/* PEMETAAN RESEP UNTUK KATEGORI ADD NEW ITEM BARU */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Mentah</h4>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep produk</h4>
                     <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddNewMenuRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
                   
@@ -574,7 +574,7 @@ export default function MenuManagement({ onNavigateView }) {
                         </div>
                       ))
                     ) : (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic' }}>Belum ada pemetaan resep. Klik '+ Tambah Bahan' di atas, Gar.</div>
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic' }}>Belum ada pemetaan resep. Klik '+ Tambah Bahan' di atas.</div>
                     )}
                   </div>
                 </div>

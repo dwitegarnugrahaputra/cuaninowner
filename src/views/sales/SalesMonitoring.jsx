@@ -369,7 +369,7 @@ export default function SalesMonitoring({ onNavigateView }) {
                         })
                       ) : (
                         <tr>
-                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>Belum ada riwayat transaksi jualan di Supabase.</td>
+                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>Belum ada riwayat transaksi jualan.</td>
                         </tr>
                       )}
                     </tbody>

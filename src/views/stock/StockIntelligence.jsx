@@ -523,7 +523,7 @@ export default function StockIntelligence({ onNavigateView }) {
                       ) : (
                         <tr>
                           <td colSpan="8" style={{ padding: '36px', textAlign: 'center', color: '#9CA3AF', fontWeight: '500' }}>
-                            Data Master Bahan Baku Kosong di Supabase.
+                            Data Bahan Baku Kosong.
                           </td>
                         </tr>
                       )}

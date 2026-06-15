@@ -5,7 +5,7 @@ import {
   Search, Bell, HelpCircle, Plus, Filter, ArrowUpDown, Edit2,
   CalendarDays, X, ImageIcon, Save, Lock, LogOut, ChevronDown, ChevronUp, 
   Store, Sliders, ShieldCheck, User, Key, Globe, Shield, UserPlus, Users2, UserCheck, Trash2,
-  MessageSquare
+  MessageSquare, Calendar, Clock
 } from 'lucide-react';
 
 // Impor koneksi client Supabase murni 
@@ -41,14 +41,17 @@ export default function StaffManagement({ onNavigateView }) {
 
   // State kendali interaksi UI internal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false); // ⚡ State modal tambah shift baru
   const [selectedRole, setSelectedRole] = useState('Manager');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeSubView, setActiveSubView] = useState('staff-table');
+  const [managementTab, setManagementTab] = useState('list'); // ⚡ Kendali Tab: 'list' atau 'shifts'
 
   // ================= STATE INTEGRASI DATABASE STAFF =================
   const [staffList, setStaffList] = useState([]);
+  const [shiftsList, setShiftsList] = useState([]); // ⚡ State list data log roster shift
   const [isLoading, setIsLoading] = useState(true);
   const [staffSummary, setStaffSummary] = useState({ totalStaff: 0, activeStaff: 0, leaveStaff: 0 });
 
@@ -60,40 +63,59 @@ export default function StaffManagement({ onNavigateView }) {
     image_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
   });
 
-  // 🛠️ STATE BARU: Kontrol Data Staf yang Sedang Diedit (Update)
+  // ⚡ State Form Input Penugasan Jadwal Shift Baru
+  const [newShift, setNewShift] = useState({
+    staff_id: '',
+    shift_name: 'Pagi',
+    start_time: '07:00',
+    end_time: '15:00',
+    shift_date: new Date().toISOString().split('T')[0]
+  });
+
+  // Kontrol Data Staf yang Sedang Diedit (Update)
   const [editingStaff, setEditingStaff] = useState(null);
 
-  // 🚀 PIPELINE 1: FETCH DATA TIM STAF DARI SUPABASE
+  // 🚀 PIPELINE 1: FETCH DATA TIM STAF & ROSTER SHIFT DARI SUPABASE
   const fetchStaffData = async () => {
-    if (activeSubView !== 'staff-table') return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Ambil list kru karyawan
+      const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (staffError) throw staffError;
 
-      if (data) {
-        setStaffList(data);
-        
-        const total = data.length;
-        const active = data.filter(s => s.status === 'Active').length;
-        const leave = data.filter(s => s.status === 'On Leave').length;
-
+      if (staffData) {
+        setStaffList(staffData);
+        const total = staffData.length;
+        const active = staffData.filter(s => s.status === 'Active').length;
+        const leave = staffData.filter(s => s.status === 'On Leave').length;
         setStaffSummary({ totalStaff: total, activeStaff: active, leaveStaff: leave });
       }
+
+      // ⚡ FETCH LOG ROSTER SHIFT BERJALAN
+      const { data: shiftData, error: shiftError } = await supabase
+        .from('staff_shifts')
+        .select('*, staff(name, role, image_url)')
+        .order('shift_date', { ascending: false });
+
+      if (shiftError) throw shiftError;
+      if (shiftData) setShiftsList(shiftData);
+
     } catch (err) {
-      console.error('⚠️ Gagal memuat data staf dari database:', err.message);
+      console.error('⚠️ Gagal menyinkronkan pilar manajemen staf:', err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStaffData();
-  }, [activeSubView]);
+    if (activeSubView === 'staff-table') {
+      fetchStaffData();
+    }
+  }, [activeSubView, managementTab]);
 
   // 🚀 PIPELINE 2: ACTION SIMPAN DATA STAF BARU (CREATE)
   const handleCreateStaff = async (e) => {
@@ -126,6 +148,29 @@ export default function StaffManagement({ onNavigateView }) {
     }
   };
 
+  // ⚡ 🚀 PIPELINE BARU: ACTION SIMPAN DATA ROSTER JADWAL SHIFT KRU (CREATE SHIFT)
+  const handleCreateShift = async (e) => {
+    e.preventDefault();
+    if (!newShift.staff_id) {
+      alert('Pilih personel staf yang mau dijadwalkan dulu, Gar!');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('staff_shifts')
+        .insert([newShift]);
+
+      if (error) throw error;
+
+      setIsShiftModalOpen(false);
+      fetchStaffData();
+      alert('Jadwal shift karyawan berhasil didaftarkan ke sistem, Gar!');
+    } catch (err) {
+      alert('Gagal memproses draf shift baru: ' + err.message);
+    }
+  };
+
   // 🚀 PIPELINE 3: ACTION SIMPAN PERUBAHAN DATA STAF (UPDATE)
   const handleUpdateStaff = async (e) => {
     e.preventDefault();
@@ -153,6 +198,22 @@ export default function StaffManagement({ onNavigateView }) {
       alert('Data staf berhasil diperbarui, Gar!');
     } catch (err) {
       alert('Gagal mengupdate data staf: ' + err.message);
+    }
+  };
+
+  // ⚡ 🚀 PIPELINE BARU: ACTION HAPUS JADWAL SHIFT ROSTER (DELETE SHIFT)
+  const handleDeleteShift = async (id) => {
+    if (!window.confirm('Hapus penugasan jadwal shift ini secara permanen, Gar?')) return;
+    try {
+      const { error } = await supabase
+        .from('staff_shifts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchStaffData();
+    } catch (err) {
+      alert('Gagal membatalkan jadwal kerja shift: ' + err.message);
     }
   };
 
@@ -189,6 +250,16 @@ export default function StaffManagement({ onNavigateView }) {
     } catch (err) {
       alert('Gagal menghapus data staf: ' + err.message);
     }
+  };
+
+  // Otomatis atur jam kerja pas dropdown template nama shift diganti
+  const handleShiftNameChange = (name) => {
+    let start = '07:00';
+    let end = '15:00';
+    if (name === 'Siang') { start = '15:00'; end = '23:00'; }
+    else if (name === 'Malam') { start = '23:00'; end = '07:00'; }
+
+    setNewShift({ ...newShift, shift_name: name, start_time: start, end_time: end });
   };
 
   return (
@@ -311,9 +382,17 @@ export default function StaffManagement({ onNavigateView }) {
                   <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Staff Management</h1>
                   <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant team pillars.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  <UserPlus size={16} /> Add New Staff
-                </button>
+                
+                {/* ⚡ CONDITIONAL ACTION BUTTON BASED ON ACTIVE SUB-TAB */}
+                {managementTab === 'list' ? (
+                  <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <UserPlus size={16} /> Add New Staff
+                  </button>
+                ) : (
+                  <button onClick={() => setIsShiftModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#1E3A8A', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <Calendar size={16} /> Assign New Shift
+                  </button>
+                )}
               </div>
 
               {/* THREE METRICS CARDS ROW */}
@@ -341,81 +420,153 @@ export default function StaffManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* STAFF TABLE CATALOG */}
-              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '320px' }}>
-                    <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
-                    <input type="text" placeholder="Search team members..." style={{ width: '100%', padding: '8px 12px 8px 34px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '12px', outline: 'none', backgroundColor: '#F9FAFB' }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><Filter size={14}/> Filter</button>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><ArrowUpDown size={14}/> Sort</button>
-                  </div>
-                </div>
+              {/* ⚡ SUB-TAB CONTROLLER BAR AREA */}
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#E5E7EB', padding: '4px', borderRadius: '10px', width: '320px' }}>
+                <button onClick={() => setManagementTab('list')} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: managementTab === 'list' ? '#ffffff' : 'transparent', color: managementTab === 'list' ? '#111827' : '#4B5563' }}>
+                  Staff Catalog
+                </button>
+                <button onClick={() => setManagementTab('shifts')} style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: managementTab === 'shifts' ? '#ffffff' : 'transparent', color: managementTab === 'shifts' ? '#111827' : '#4B5563' }}>
+                  Shift Roster
+                </button>
+              </div>
 
-                {staffList.length > 0 ? (
+              {/* VIEW AREA 1: TABEL CATALOG STAFF */}
+              {managementTab === 'list' && (
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+                  <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '320px' }}>
+                      <Search size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                      <input type="text" placeholder="Search team members..." style={{ width: '100%', padding: '8px 12px 8px 34px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '12px', outline: 'none', backgroundColor: '#F9FAFB' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><Filter size={14}/> Filter</button>
+                      <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: 'bold', color: '#4B5563', cursor: 'pointer' }}><ArrowUpDown size={14}/> Sort</button>
+                    </div>
+                  </div>
+
+                  {staffList.length > 0 ? (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
+                          <th style={{ padding: '14px 24px' }}>Name</th>
+                          <th style={{ padding: '14px 24px' }}>Role</th>
+                          <th style={{ padding: '14px 24px' }}>Email</th>
+                          <th style={{ padding: '14px 24px' }}>WhatsApp Number</th>
+                          <th style={{ padding: '14px 24px' }}>Status</th>
+                          <th style={{ padding: '14px 24px', textAlign: 'right', width: '100px' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {staffList.map((staff) => (
+                          <tr key={staff.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: staff.status === 'Inactive' ? '#FAF8F8' : 'transparent' }}>
+                            <td style={{ padding: '14px 24px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <img src={staff.image_url} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}} />
+                                <div>
+                                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p>
+                                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {staff.id.substring(0,8).toUpperCase()}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 24px' }}>
+                              <span style={{ 
+                                backgroundColor: staff.role === 'Manager' ? '#EEF2FF' : staff.role === 'Admin Stok' ? '#E6F4EA' : '#FFF7ED', 
+                                color: staff.role === 'Manager' ? '#4F46E5' : staff.role === 'Admin Stok' ? '#006847' : '#C2410C', 
+                                padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' 
+                              }}>
+                                {staff.role}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
+                            <td style={{ padding: '14px 24px', fontWeight: 'bold', color: '#1E3A8A' }}>+{staff.whatsapp_number}</td>
+                            <td style={{ padding: '14px 24px' }}>
+                              <span 
+                                onClick={() => handleToggleStaffStatus(staff.id, staff.status)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.status === 'On Leave' ? '#D97706' : staff.status === 'Active' ? '#059669' : '#DC2626', cursor: 'pointer' }}
+                              >
+                                <div style={{ width: '6px', height: '6px', backgroundColor: staff.status === 'On Leave' ? '#FBBF24' : staff.status === 'Active' ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
+                                {staff.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', color: '#9CA3AF' }}>
+                                <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingStaff(staff)} />
+                                <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteStaff(staff.id)} />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ padding: '48px', textAlign: 'center', color: '#6B7280', fontStyle: 'italic' }}>
+                      Belum ada pilar staf yang terdaftar di database, Gar.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ⚡ VIEW AREA 2: TABEL MANAJEMEN ROSTER SHIFT KERJA STAFF */}
+              {managementTab === 'shifts' && (
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
-                        <th style={{ padding: '14px 24px' }}>Name</th>
-                        <th style={{ padding: '14px 24px' }}>Role</th>
-                        <th style={{ padding: '14px 24px' }}>Email</th>
-                        <th style={{ padding: '14px 24px' }}>WhatsApp Number</th>
-                        <th style={{ padding: '14px 24px' }}>Status</th>
-                        {/* 💡 FIXED: Kolom ACTIONS ditarik agak lebar untuk memuat dua tombol */}
-                        <th style={{ padding: '14px 24px', textAlign: 'right', width: '100px' }}>Actions</th>
+                        <th style={{ padding: '14px 24px' }}>Staff Personel</th>
+                        <th style={{ padding: '14px 24px' }}>Tanggal Kerja</th>
+                        <th style={{ padding: '14px 24px' }}>Nama Shift</th>
+                        <th style={{ padding: '14px 24px' }}>Jam Operasional</th>
+                        <th style={{ padding: '14px 24px', textAlign: 'right', width: '100px' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {staffList.map((staff) => (
-                        <tr key={staff.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827', backgroundColor: staff.status === 'Inactive' ? '#FAF8F8' : 'transparent' }}>
-                          <td style={{ padding: '14px 24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                              <img src={staff.image_url} alt={staff.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}} />
-                              <div>
-                                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{staff.name}</p>
-                                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {staff.id.substring(0,8).toUpperCase()}</span>
+                      {shiftsList.length > 0 ? (
+                        shiftsList.map((log) => (
+                          <tr key={log.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                            <td style={{ padding: '14px 24px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <img src={log.staff?.image_url} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}} alt="avatar"/>
+                                <div>
+                                  <p style={{ margin: 0, fontWeight: 'bold' }}>{log.staff?.name || 'Karyawan Terhapus'}</p>
+                                  <span style={{ fontSize: '10px', color: '#6B7280' }}>{log.staff?.role}</span>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: '14px 24px' }}>
-                            <span style={{ 
-                              backgroundColor: staff.role === 'Manager' ? '#EEF2FF' : staff.role === 'Admin Stok' ? '#E6F4EA' : '#FFF7ED', 
-                              color: staff.role === 'Manager' ? '#4F46E5' : staff.role === 'Admin Stok' ? '#006847' : '#C2410C', 
-                              padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' 
-                            }}>
-                              {staff.role}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 24px', color: '#4B5563' }}>{staff.email}</td>
-                          <td style={{ padding: '14px 24px', fontWeight: 'bold', color: '#1E3A8A' }}>+{staff.whatsapp_number}</td>
-                          <td style={{ padding: '14px 24px' }}>
-                            <span 
-                              onClick={() => handleToggleStaffStatus(staff.id, staff.status)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: staff.status === 'On Leave' ? '#D97706' : staff.status === 'Active' ? '#059669' : '#DC2626', cursor: 'pointer' }}
-                            >
-                              <div style={{ width: '6px', height: '6px', backgroundColor: staff.status === 'On Leave' ? '#FBBF24' : staff.status === 'Active' ? '#10B981' : '#DC2626', borderRadius: '50%' }} />
-                              {staff.status}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 24px', textAlign: 'right' }}>
-                            {/* 💡 FIXED ACTIONS: Menyuntikkan kancing icon Edit2 di sebelah tong sampah */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', color: '#9CA3AF' }}>
-                              <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingStaff(staff)} />
-                              <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteStaff(staff.id)} />
-                            </div>
+                            </td>
+                            <td style={{ padding: '14px 24px', fontWeight: '500', color: '#4B5563' }}>
+                              {new Date(log.shift_date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '14px 24px' }}>
+                              <span style={{ 
+                                backgroundColor: log.shift_name === 'Pagi' ? '#E6F4EA' : log.shift_name === 'Siang' ? '#FFF7ED' : '#F3F4F6', 
+                                color: log.shift_name === 'Pagi' ? '#006847' : log.shift_name === 'Siang' ? '#D97706' : '#111827', 
+                                padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' 
+                              }}>
+                                Shift {log.shift_name}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 24px', fontWeight: 'bold', color: '#1E3A8A' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={12} color="#9CA3AF"/> {log.start_time.substring(0,5)} – {log.end_time.substring(0,5)}
+                              </div>
+                            </td>
+                            <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                              <button onClick={() => handleDeleteShift(log.id)} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: '4px' }} title="Batalkan Shift">
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" style={{ padding: '48px', textAlign: 'center', color: '#6B7280', fontStyle: 'italic' }}>
+                            Belum ada pembagian draf roster shift terdaftar minggu ini, Gar.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
-                ) : (
-                  <div style={{ padding: '48px', textAlign: 'center', color: '#6B7280', fontStyle: 'italic' }}>
-                     Belum ada pilar staf yang terdaftar di database, Gar. Klik 'Add New Staff' untuk menambahkan!
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
 
@@ -517,7 +668,61 @@ export default function StaffManagement({ onNavigateView }) {
         </div>
       )}
 
-      {/* ================= 🛠️ WINDOW POPUP OVERLAY EDIT STAFF ITEM (UPDATE PANEL) ================= */}
+      {/* ================= ⚡ MODAL BARU: WINDOW POPUP ASSIGN SHIFT ROSTER ================= */}
+      {isShiftModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <form onSubmit={handleCreateShift} style={{ width: '440px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Atur Jadwal Shift Personel</h2>
+              <X size={18} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsShiftModalOpen(false)} />
+            </div>
+
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Pilih Karyawan</label>
+                <select required value={newShift.staff_id} onChange={(e) => setNewShift({...newShift, staff_id: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}>
+                  <option value="">-- Pilih Anggota Kru Kopi --</option>
+                  {staffList.filter(s => s.status !== 'Inactive').map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Template Shift</label>
+                <select value={newShift.shift_name} onChange={(e) => handleShiftNameChange(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}>
+                  <option value="Pagi">Pagi (07:00 - 15:00)</option>
+                  <option value="Siang">Siang (15:00 - 23:00)</option>
+                  <option value="Malam">Malam (23:00 - 07:00)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Mulai</label>
+                  <input type="time" required value={newShift.start_time} onChange={(e) => setNewShift({...newShift, start_time: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Selesai</label>
+                  <input type="time" required value={newShift.end_time} onChange={(e) => setNewShift({...newShift, end_time: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none' }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Tanggal Penugasan</label>
+                <input type="date" required value={newShift.shift_date} onChange={(e) => setNewShift({...newShift, shift_date: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={() => setIsShiftModalOpen(false)} style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
+              <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#1E3A8A', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Konfirmasi Shift</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ================= EDIT STAFF POPUP AREA ================= */}
       {editingStaff && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleUpdateStaff} style={{ width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -529,30 +734,14 @@ export default function StaffManagement({ onNavigateView }) {
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', boxSizing: 'border-box' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Lengkap</label>
-                <input 
-                  type="text" 
-                  required
-                  value={editingStaff.name}
-                  onChange={(e) => setEditingStaff({...editingStaff, name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                />
+                <input type="text" required value={editingStaff.name} onChange={(e) => setEditingStaff({...editingStaff, name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '8px' }}>Role</label>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {['Kasir', 'Admin Stok'].map((role) => (
-                    <span
-                      key={role}
-                      onClick={() => setEditingStaff({...editingStaff, role: role})}
-                      style={{
-                        padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                        backgroundColor: editingStaff.role === role ? '#006847' : '#E5E7EB',
-                        color: editingStaff.role === role ? '#ffffff' : '#4B5563'
-                      }}
-                    >
-                      {role}
-                    </span>
+                    <span key={role} onClick={() => setEditingStaff({...editingStaff, role: role})} style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', backgroundColor: editingStaff.role === role ? '#006847' : '#E5E7EB', color: editingStaff.role === role ? '#ffffff' : '#4B5563' }}>{role}</span>
                   ))}
                 </div>
               </div>
@@ -560,33 +749,17 @@ export default function StaffManagement({ onNavigateView }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Email</label>
-                  <input 
-                    type="email" 
-                    required
-                    value={editingStaff.email}
-                    onChange={(e) => setEditingStaff({...editingStaff, email: e.target.value})}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                  />
+                  <input type="email" required value={editingStaff.email} onChange={(e) => setEditingStaff({...editingStaff, email: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor WhatsApp</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={editingStaff.whatsapp_number}
-                    onChange={(e) => setEditingStaff({...editingStaff, whatsapp_number: e.target.value.replace(/[^0-9]/g, '')})}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                  />
+                  <input type="text" required value={editingStaff.whatsapp_number} onChange={(e) => setEditingStaff({...editingStaff, whatsapp_number: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Status Kerja</label>
-                <select 
-                  value={editingStaff.status}
-                  onChange={(e) => setEditingStaff({...editingStaff, status: e.target.value})}
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}
-                >
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Status Kerja</label>
+                <select value={editingStaff.status} onChange={(e) => setEditingStaff({...editingStaff, status: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff' }}>
                   <option value="Active">Active</option>
                   <option value="On Leave">On Leave</option>
                   <option value="Inactive">Inactive</option>
