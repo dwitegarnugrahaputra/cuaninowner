@@ -9,21 +9,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ambil session aktif saat pertama kali dimuat
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // ⚡ FIXED: Cukup dengerin dari onAuthStateChange aja biar gak bentrok double request di awal
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         setUser(session.user);
-        checkUserRole(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Dengarkan status login/logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setUser(session.user);
-        checkUserRole(session.user.id);
+        // Jalankan checkUserRole secara aman
+        await checkUserRole(session.user.id);
       } else {
         setUser(null);
         setRole(null);
@@ -31,7 +22,9 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   const checkUserRole = async (userId) => {
@@ -40,19 +33,21 @@ export const AuthProvider = ({ children }) => {
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // ⚡ FIXED: Gunakan maybeSingle biar gak melempar error keras jika baris tidak klop
+
+      if (error) throw error;
 
       if (data) {
-        // Validasi Role Tertinggi (Owner / Manager)
-        if (data.role === 'owner' || data.role === 'manager') {
-          setRole(data.role);
-        } else {
-          await supabase.auth.signOut();
-          alert('Akses Ditolak: Halaman ini khusus untuk Owner/Manager!');
-        }
+        setRole(data.role); // ⚡ FIXED: Simpan saja rolenya apa adanya ke dalam state (owner, manager, atau kasir)
+        
+        // Catatan: Pembatasan halaman (Akses Ditolak) sebaiknya lu lakukan di level komponen UI (Protected Routes), 
+        // BUKAN dengan cara langsung men-signOut paksa user di dalam AuthContext yang memicu infinite loops!
+      } else {
+        setRole(null);
       }
     } catch (err) {
-      console.error('Error checking role:', err);
+      console.error('Error checking role:', err.message);
+      setRole(null);
     } finally {
       setLoading(false);
     }

@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { GoogleGenAI } from '@google/genai';
+import { supabase } from '../../config/supabaseClient';
 import { 
-  LayoutDashboard, ShoppingBag, Archive, Menu, Users, Settings, 
-  Search, Bell, HelpCircle, Plus, MessageSquare, Paperclip, Send,
-  Calendar, Download, AlertCircle, Truck, DollarSign, BarChart3, ChevronRight,
-  Clock, Rocket, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Info
+  Send, Bot, ArrowLeft, MessageSquare, Sparkles, Loader2,
+  LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, Settings, LogOut, ChevronDown, Plus,
+  Bell, HelpCircle, Search, TrendingUp, BarChart3, LineChart
 } from 'lucide-react';
+
+// Inisialisasi Engine Gemini dengan API Key murni milik Tegar
+const ai = new GoogleGenAI({ apiKey: 'AIzaSyADXX9AkMETb7hcYCbWImyeFutbrkc3vrA' });
 
 function CuaninLogoMini() {
   return (
     <div style={{
       width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px'
+      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0
     }}>
       <div style={{
         width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px',
@@ -35,418 +39,285 @@ function CuaninLogoMini() {
 
 export default function BrainyChat({ onNavigateView }) {
   const { logout } = useAuth();
-  const currentView = 'chat';
-  const [activeTab, setActiveTab] = useState('ask-brainy'); 
-  const [chatInput, setChatInput] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // ⚡ SUB-TAB CONTROLLER BAR: 'ask-brainy' VS 'insights' VS 'forecast'
+  const [activeSubTab, setActiveSubTab] = useState('ask-brainy');
 
-  {/* KAMUS DATA INTEGRATED RECIPE DI TAB INSIGHTS (REAKTIF BERBASIS STATE) */}
-  const menuDatabase = {
-    'Caffe Latte': {
-      title: 'Ingredient Cost Distribution (Caffe Latte)',
-      cogs: '100%',
-      status: "Brainy's Analysis",
-      isAlert: true,
-      alertMessage: "I've detected a significant anomaly in your procurement costs. Your latest delivery from Dairy Fresh Co. reflects a 15.5% increase in the unit price of full-cream milk (Rp 18,500 → Rp 21,350 per liter). This has caused an immediate impact on your \"Coffee Selection\" category. Specifically, the margin for your best-selling Caffe Latte has dropped from 68% to 53%. If left unaddressed, this trend will result in a projected profit loss of Rp 4,200,000 by the end of next month.",
-      gradient: 'conic-gradient(#006847 0% 35%, #059669 35% 60%, #34D399 60% 80%, #A7F3D0 80% 100%)',
-      distribution: [
-        { label: 'Milk Cost', pct: '35.0% (Rp 21,350/L)', color: '#006847' },
-        { label: 'Coffee Beans', pct: '25.0% (Premium Blend)', color: '#059669' },
-        { label: 'Packaging & Other', pct: '20.0% (Cups, Sugar)', color: '#34D399' },
-        { label: 'Target Margin', pct: '20.0% (Calculated)', color: '#A7F3D0' }
-      ]
-    },
-    'Nasi Goreng Special': {
-      title: 'Ingredient Cost Distribution (Nasi Goreng Special)',
-      cogs: '100%',
-      status: 'Brainy AI Optimal Report',
-      isAlert: false,
-      alertMessage: "Katalog menu makanan utama terpantau sangat stabil, Gar. Struktur modal beras premium dan minyak goreng curah di area pasar grosir Tegal masih aman di kisaran Rp 11.200 per porsi. Target margin aman terkendali di angka 72%. Tidak diperlukan penyesuaian harga jual menu dalam 30 hari ke depan.",
-      gradient: 'conic-gradient(#1E3A8A 0% 31.2%, #3B82F6 31.2% 50.8%, #60A5FA 50.8% 100%)',
-      distribution: [
-        { label: 'Beras Premium', pct: '31.2% (Grosir Supplier)', color: '#1E3A8A' },
-        { label: 'Telor & Ayam Suwir', pct: '19.6% (Fresh Market)', color: '#3B82F6' },
-        { label: 'Bumbu & Minyak', pct: '49.2% (Calculated Cost)', color: '#60A5FA' }
-      ]
-    },
-    'Es Teh Manis Kristal': {
-      title: 'Ingredient Cost Distribution (Es Teh Manis Kristal)',
-      cogs: '100%',
-      status: 'Brainy High Margin Alert',
-      isAlert: false,
-      alertMessage: "Menu 'Es Teh Manis Kristal' mencatatkan efisiensi resep paling prima bulan ini dengan COGS hanya Rp 1.800. Margin keuntungan bersih menembus batas psikologis 85%. Rekomendasi AI: Pertahankan bundling paket kombo makanan+minuman untuk mendongkrak perputaran stok daun teh di gudang.",
-      gradient: 'conic-gradient(#8B5CF6 0% 33.3%, #a78bfa 33.3% 77.7%, #ddd6fe 77.7% 100%)',
-      distribution: [
-        { label: 'Daun Teh Premium', pct: '33.3% (Sari Wangi)', color: '#8B5CF6' },
-        { label: 'Gula Cair Cairan', pct: '44.4% (Palm Sugar Hub)', color: '#a78bfa' },
-        { label: 'Es Batu Kristal', pct: '22.3% (Ice Factory)', color: '#ddd6fe' }
-      ]
+  // State Manajemen Chat & Integritas AI
+  const [messages, setMessages] = useState([
+    { role: 'brainy', text: 'Halo Gar! Gua Brainy, asisten finansial AI internal cuanin.id. Ada yang bisa gua bantu pantau dari performa bisnis Warung Kopi Jaya hari ini?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [dbSnapshot, setDbSnapshot] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // State Kontrol Dropdown Sidebar Internal
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Auto-scroll ke chat paling bawah biar UX mulus
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isGenerating]);
+
+  // 📥 AUTOMATIC CONTEXT INJECTION PIPELINE (Makanan Otak Gemini)
+  useEffect(() => {
+    async function compileBusinessContext() {
+      try {
+        const { data: menus } = await supabase.from('menus').select('menu_name, price, is_available');
+        const { data: staff } = await supabase.from('staff').select('name, role, status');
+        const { data: sales } = await supabase.from('sales_transactions').select('total_amount, status, payment_method').limit(15);
+
+        const menuStr = menus ? menus.map(m => `- ${m.menu_name}: Rp ${m.price} (${m.is_available ? 'Tersedia' : 'Habis'})`).join('\n') : 'Kosong';
+        const staffStr = staff ? staff.map(s => `- ${s.name}: Role ${s.role} (${s.status})`).join('\n') : 'Kosong';
+        
+        let totalRevenue = 0;
+        if (sales) {
+          totalRevenue = sales.filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS').reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
+        }
+
+        const snapshot = `
+CONTEXT DATA REAL-TIME WARUNG KOPI JAYA:
+--- KATALOG MENU PRODUK ---
+${menuStr}
+
+--- PILAR TIM KARYAWAN ---
+${staffStr}
+
+--- RINGKASAN FINANSIAL TERKINI ---
+- Total Omset penjualan terlacak: Rp ${totalRevenue.toLocaleString('id-ID')}
+- Total baris transaksi feed terbaru: ${sales ? sales.length : 0} item.
+        `;
+        setDbSnapshot(snapshot);
+      } catch (err) {
+        console.error('⚠️ Gagal menyuntikkan konteks database ke AI:', err.message);
+      }
+    }
+    compileBusinessContext();
+  }, []);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || isGenerating) return;
+
+    const userMessage = input;
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setInput('');
+    setIsGenerating(true);
+
+    try {
+      const systemInstruction = `
+Lu adalah "Brainy", asisten bisnis, CFO virtual, dan analis kecerdasan buatan (AI) handal yang terintegrasi di dalam sistem POS cuanin.id. 
+Tugas utama lu adalah membantu owner cafe (bernama Tegar) menganalisis performa cafe-nya yang bernama "Warung Kopi Jaya".
+Gunakan gaya bahasa yang santai, humanis, akrab seperti memakai panggilan 'lu' dan 'gua', layaknya gaya bicara anak tongkrongan Jakarta/Surabaya, tapi isi analisis lu harus tetap kritis, tajam, logis, dan berbasis data. Jangan kaku!
+
+Berikut adalah data kondisi live database cafe saat ini yang wajib lu jadikan acuan mutlak untuk menjawab pertanyaan user jika relevan:
+${dbSnapshot}
+
+Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan menggunakan bullet points bold agar mudah dibaca. Jika ditanya hal di luar bisnis atau cafe, ingatkan user secara santai untuk fokus ngomongin cuan cafe aja.
+      `;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: systemInstruction + `\n\nPertanyaan User: ${userMessage}` }] }
+        ]
+      });
+
+      const aiText = response.text || 'Waduh Gar, otak gua lagi nge-blank bentar. Coba ulangi pertanyaannya, deh.';
+      setMessages(prev => [...prev, { role: 'brainy', text: aiText }]);
+    } catch (err) {
+      console.error('Gemini API Error:', err);
+      setMessages(prev => [...prev, { role: 'brainy', text: 'Eror koneksi API Gemini, Gar! Pastikan kuota API Key lu aman atau coba refresh halaman.' }]);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  {/* STATE DROPDOWN ENGINE SELECTOR DAN KALENDER DINAMIS */}
-  const [selectedMenu, setSelectedMenu] = useState('Caffe Latte');
-  const [startDate, setStartDate] = useState('2023-10-01');
-  const [endDate, setEndDate] = useState('2023-10-30');
-  
-  {/* 🛠️ SUNTIKAN STATE BARU: PENGENDALI DROP-DOWN EXPLANATION GRAFIK FORECAST */}
-  const [isForecastDescOpen, setIsForecastDescOpen] = useState(false);
-  
-  const activeMenuData = menuDatabase[selectedMenu];
-
-  const handleSendChat = (e) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    alert(`Fitur integrasi AI database belum terhubung. Pesan: "${chatInput}"`);
-    setChatInput('');
-  };
-
   const handleNewConversation = () => {
-    setActiveTab('ask-brainy');
-    setIsSidebarOpen(true);
+    setMessages([
+      { role: 'brainy', text: 'Sesi chat di-reset! Yuk Gar, mari kita ulas dari nol lagi perihal strategi cuan Warung Kopi Jaya.' }
+    ]);
   };
 
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#ffffff', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0 }}>
       
-      {/* ================= 1. SIDEBAR UTAMA KIRI ================= */}
+      {/* ================= SIDEBAR KIRI UTAMA ================= */}
       <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 24px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 20px', marginBottom: '32px' }}>
           <CuaninLogoMini />
           <div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', letterSpacing: '-0.5px' }}>cuanin.id</h2>
-            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>POS INTELLIGENCE</span>
+            <span style={{ fontSize: '9px', color: '#93C5FD', letterSpacing: '0.5px', fontWeight: 'bold' }}>BUSINESS ASSISTANCE</span>
           </div>
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 16px' }}>
-          {[
-            { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard' },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales' },
-            { name: 'Stock', icon: <Archive size={18} />, target: 'stock' },
-            { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu' },
-            { name: 'Staff Management', icon: <Users size={18} />, target: 'staff' }
-          ].map((menu, idx) => {
-            const isActive = currentView === menu.target;
-            return (
-              <div 
-                key={idx} 
-                onClick={() => onNavigateView(menu.target)} 
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer',
-                  fontWeight: isActive ? 'bold' : '500',
-                  backgroundColor: isActive ? '#006847' : 'transparent', 
-                  color: isActive ? '#ffffff' : '#93C5FD',
-                  transition: 'all 0.3s ease-in-out',
-                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
-                }}
-              >
-                {menu.icon} <span style={{ fontSize: '14px' }}>{menu.name}</span>
-              </div>
-            );
-          })}
+          <div onClick={() => onNavigateView('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', color: '#93C5FD' }}><LayoutDashboard size={18} /> <span style={{ fontSize: '14px' }}>Dashboard</span></div>
+          <div onClick={() => onNavigateView('sales')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', color: '#93C5FD' }}><ShoppingBag size={18} /> <span style={{ fontSize: '14px' }}>Sales</span></div>
+          <div onClick={() => onNavigateView('stock')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', color: '#93C5FD' }}><Archive size={18} /> <span style={{ fontSize: '14px' }}>Stock</span></div>
+          <div onClick={() => onNavigateView('menu')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', color: '#93C5FD' }}><MenuIcon size={18} /> <span style={{ fontSize: '14px' }}>Menu Management</span></div>
+          <div onClick={() => onNavigateView('staff')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', color: '#93C5FD' }}><Users size={18} /> <span style={{ fontSize: '14px' }}>Staff Management</span></div>
         </div>
 
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
-            <Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span>
+          <div onClick={() => setIsSettingsOpen(!isSettingsOpen)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', color: '#93C5FD', borderRadius: '10px', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Settings size={18} /> <span style={{ fontSize: '14px' }}>Settings</span></div>
+            <ChevronDown size={14} />
           </div>
-          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '12px', cursor: 'pointer' }}>
+          <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}><LogOut size={18} /> <span style={{ fontSize: '14px' }}>Logout</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>WJ</div>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
-              <span style={{ fontSize: '10px', color: '#93C5FD', fontWeight: '500' }}>Branch: Jakarta South</span>
-            </div>
+            <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span></div>
           </div>
         </div>
       </div>
 
-      {/* ================= 2. SECONDARY PANEL: RECENT CHATS ================= */}
-      <div style={{ 
-        width: isSidebarOpen ? '280px' : '0px', 
-        borderRight: isSidebarOpen ? '1px solid #E5E7EB' : 'none', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: isSidebarOpen ? '24px 16px' : '24px 0px', 
-        boxSizing: 'border-box', 
-        flexShrink: 0, 
-        backgroundColor: '#FAFAFA',
-        transition: 'all 0.3s ease-in-out',
-        opacity: isSidebarOpen ? 1 : 0,
-        overflow: 'hidden'
-      }}>
-        <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginBottom: '24px', flexShrink: 0 }}>
+      {/* ================= RECENT CHATS SUB-SIDEBAR ================= */}
+      <div style={{ width: '240px', backgroundColor: '#ffffff', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0 }}>
+        <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginBottom: '24px' }}>
           <Plus size={16} /> New Conversation
         </button>
-        <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', marginBottom: '12px', display: 'block', flexShrink: 0 }}>RECENT CHATS</span>
+        
+        <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', letterSpacing: '0.5px', marginBottom: '12px', display: 'block' }}>RECENT CHATS</span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-          <div onClick={() => setActiveTab('ask-brainy')} style={{ display: 'flex', gap: '12px', padding: '12px', backgroundColor: '#E6F4EA', borderRadius: '12px', cursor: 'pointer', border: '1px solid #C2E7CB' }}>
-            <MessageSquare size={18} color="#006847" style={{ marginTop: '2px', flexShrink: 0 }} />
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>Analisis Profit Oct</p>
-              <span style={{ fontSize: '11px', color: '#6B7280' }}>2 hours ago</span>
-            </div>
+          <div style={{ padding: '12px', backgroundColor: '#E6F4EA', border: '1px solid #10B981', borderRadius: '10px', cursor: 'pointer' }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#006847', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={14}/> Analisis Profit Oct</p>
+            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px', display: 'block' }}>Active Stream</span>
           </div>
         </div>
       </div>
 
-      {/* ================= 3. WORKSPACE UTAMA KANAN ================= */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F8F9FA', overflow: 'hidden' }}>
+      {/* ================= MAIN WORKSPACE KANAN ================= */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         
-        {/* TOPBAR SUB-NAVIGATION */}
-        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'center', height: '100%' }}>
-            <div 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6', color: '#4B5563', marginRight: '-8px', transition: 'background 0.2s' }}
-            >
-              <Menu size={18} />
-            </div>
-
-            <span onClick={() => setActiveTab('ask-brainy')} style={{ fontSize: '14px', fontWeight: activeTab === 'ask-brainy' ? 'bold' : '500', color: activeTab === 'ask-brainy' ? '#10B981' : '#6B7280', borderBottom: activeTab === 'ask-brainy' ? '2px solid #10B981' : 'none', padding: '24px 0', cursor: 'pointer' }}>Ask Brainy</span>
-            <span onClick={() => setActiveTab('insights')} style={{ fontSize: '14px', fontWeight: activeTab === 'insights' ? 'bold' : '500', color: activeTab === 'insights' ? '#10B981' : '#6B7280', borderBottom: activeTab === 'insights' ? '2px solid #10B981' : 'none', padding: '24px 0', cursor: 'pointer' }}>Insights</span>
-            <span onClick={() => setActiveTab('forecast')} style={{ fontSize: '14px', fontWeight: activeTab === 'forecast' ? 'bold' : '500', color: activeTab === 'forecast' ? '#10B981' : '#6B7280', borderBottom: activeTab === 'forecast' ? '2px solid #10B981' : 'none', padding: '24px 0', cursor: 'pointer' }}>Forecast</span>
-          </div>
+        {/* ⚡ INTEGRATED UNIFIED TOP BAR LAYOUT (Persis Seperti Screenshot Lu) */}
+        <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', padding: '0 32px', justifyContent: 'space-between', flexShrink: 0 }}>
           
+          {/* SUB-TABS NAVIGATION INDICATORS */}
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'center', height: '100%' }}>
+            {['ask-brainy', 'insights', 'forecast'].map((tab) => {
+              const isActive = activeSubTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveSubTab(tab)}
+                  style={{
+                    height: '100%',
+                    padding: '0 4px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderBottom: isActive ? '3px solid #10B981' : '3px solid transparent',
+                    color: isActive ? '#10B981' : '#4B5563',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                    transition: 'all 0.2s',
+                    outline: 'none'
+                  }}
+                >
+                  {tab === 'ask-brainy' ? 'Ask Brainy' : tab}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* SEARCH COMPONENT & ACCOUNT PROFILE METRICS */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '300px' }}>
               <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
-              <input type="text" placeholder="Search business metrics, reports, or ask B..." style={{ width: '100%', padding: '8px 14px 8px 38px', border: '1px solid #E5E7EB', borderRadius: '20px', fontSize: '13px', backgroundColor: '#F3F4F6', outline: 'none' }} />
+              <input type="text" placeholder="Cari data atau tanya AI..." style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '24px', fontSize: '13px', backgroundColor: '#F9FAFB', outline: 'none' }} />
             </div>
-            <Bell size={20} color="#4B5563" />
-            <HelpCircle size={20} color="#4B5563" />
+            <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+            <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
-                <span style={{ fontSize: '10px', color: '#6B7280', fontWeight: 'bold' }}>Admin</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
+                <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>Administrator</span>
               </div>
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" alt="avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
           </div>
         </div>
 
-        {/* CONTENT TABS ENGINE ROUTER BOX */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* SUB-VIEW AREA WRAPPER */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
           
-          {/* TAB 1: ASK BRAINY VIEW */}
-          {activeTab === 'ask-brainy' && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-                <div style={{ width: '56px', height: '56px', backgroundColor: '#10B981', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '28px', color: '#fff' }}>🤖</span>
-                </div>
-                <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>How can Brainy help you today?</h2>
-                <p style={{ margin: 0, fontSize: '14px', color: '#6B7280', textAlign: 'center', maxWidth: '420px', lineHeight: '1.5' }}>Ask me about your sales performance, inventory trends, or menu optimization.</p>
+          {/* VIEW A: CHAT CORE TAB */}
+          {activeSubTab === 'ask-brainy' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {messages.length === 1 && (
+                  <div style={{ textAlign: 'center', margin: '40px auto', maxWidth: '420px' }}>
+                    <div style={{ width: '56px', height: '56px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}><Bot size={28}/></div>
+                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>How can Brainy help you today?</h2>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#6B7280', lineHeight: '1.4' }}>Ask me about your sales performance, staff shifts roster, or menu optimization insights.</p>
+                  </div>
+                )}
+
+                {messages.map((msg, idx) => {
+                  const isBrainy = msg.role === 'brainy';
+                  return (
+                    <div key={idx} style={{ display: 'flex', justifyContent: isBrainy ? 'flex-start' : 'flex-end', gap: '14px', maxWidth: '75%', alignSelf: isBrainy ? 'flex-start' : 'flex-end' }}>
+                      {isBrainy && <div style={{ width: '32px', height: '32px', backgroundColor: '#006847', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Bot size={16}/></div>}
+                      <div style={{ backgroundColor: isBrainy ? '#ffffff' : '#006847', color: isBrainy ? '#111827' : '#ffffff', padding: '14px 18px', borderRadius: isBrainy ? '4px 16px 16px 16px' : '16px 16px 4px 16px', border: isBrainy ? '1px solid #E5E7EB' : 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {isGenerating && (
+                  <div style={{ display: 'flex', gap: '12px', alignSelf: 'flex-start', alignItems: 'center', color: '#6B7280', fontSize: '13px', fontWeight: '500' }}>
+                    <div style={{ width: '32px', height: '32px', backgroundColor: '#E5E7EB', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={16} className="animate-spin" /></div>
+                    <span>Brainy sedang merangkum log keuangan Warung Kopi Jaya...</span>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-              <div style={{ padding: '24px 32px', borderTop: '1px solid #E5E7EB' }}>
-                <form onSubmit={handleSendChat} style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '8px 16px', backgroundColor: '#F9FAFB' }}>
-                  <Paperclip size={20} color="#9CA3AF" style={{ marginRight: '12px' }} />
-                  <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Tanya sesuatu ke Brainy..." style={{ flex: 1, border: 'none', backgroundColor: 'transparent', fontSize: '14px', outline: 'none', padding: '10px 0' }} />
-                  <button type="submit" style={{ border: 'none', backgroundColor: '#10B981', color: '#fff', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Send size={16} fill="#fff" /></button>
+
+              {/* INPUT CONTAINER */}
+              <div style={{ padding: '24px 40px', backgroundColor: '#ffffff', borderTop: '1px solid #E5E7EB' }}>
+                <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', position: 'relative', alignItems: 'center' }}>
+                  <input 
+                    type="text" 
+                    disabled={isGenerating}
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)} 
+                    placeholder="Tanya sesuatu ke Brainy..." 
+                    style={{ flex: 1, padding: '14px 60px 14px 20px', border: '1px solid #E5E7EB', borderRadius: '12px', fontSize: '14px', outline: 'none', backgroundColor: isGenerating ? '#F9FAFB' : '#ffffff' }} 
+                  />
+                  <button type="submit" disabled={isGenerating || !input.trim()} style={{ position: 'absolute', right: '12px', width: '38px', height: '38px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Send size={16} />
+                  </button>
                 </form>
               </div>
             </div>
           )}
 
-          {/* TAB 2: INSIGHTS VIEW UTUH */}
-          {activeTab === 'insights' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Business Intelligence Insights</h1>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time analysis and strategic recommendations for your business.</p>
+          {/* ⚡ VIEW B: INSIGHTS LOG DATA TEMPLATE */}
+          {activeSubTab === 'insights' && (
+            <div style={{ padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><BarChart3 size={18} color="#10B981" /> AI Business Insights Log</h3>
+                <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>Deteksi tren penjualan otomatis berbasis historikal algoritma.</p>
+                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #E5E7EB', borderRadius: '12px', marginTop: '20px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                  Pipeline visual grafik tren margin profit susu vs COGS sedang disinkronisasikan.
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', color: '#4B5563', fontWeight: 'bold' }}>
-                    <Calendar size={14} color="#4B5563" />
-                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ border: 'none', outline: 'none', color: '#374151', fontWeight: 'bold', fontFamily: 'sans-serif', fontSize: '12px', backgroundColor: 'transparent', cursor: 'pointer' }} />
-                    <span style={{ color: '#9CA3AF' }}>to</span>
-                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ border: 'none', outline: 'none', color: '#374151', fontWeight: 'bold', fontFamily: 'sans-serif', fontSize: '12px', backgroundColor: 'transparent', cursor: 'pointer' }} />
-                  </div>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    <Download size={16} /> Export Report
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>{activeMenuData.title}</h3>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>Comparing ingredient procurement costs against category profitability</p>
-                  </div>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <select value={selectedMenu} onChange={(e) => setSelectedMenu(e.target.value)} style={{ padding: '8px 32px 8px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: '#374151', backgroundColor: '#F9FAFB', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
-                      {Object.keys(menuDatabase).map((menuName) => (
-                        <option key={menuName} value={menuName}>{menuName}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} color="#6B7280" style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '80px', padding: '20px 0' }}>
-                  <div style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '50%', background: activeMenuData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' }}>
-                    <div style={{ width: '110px', height: '110px', backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold' }}>Total Cost</span>
-                      <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>{activeMenuData.cogs}</h2>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {activeMenuData.distribution.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                        <div style={{ width: '12px', height: '12px', backgroundColor: item.color, borderRadius: '3px', marginTop: '3px', flexShrink: 0 }} />
-                        <div>
-                          <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#111827' }}>{item.label}</p>
-                          <span style={{ fontSize: '11px', color: '#6B7280' }}>{item.pct}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: activeMenuData.isAlert ? '#FEF2F2' : '#E6F4EA', borderRadius: '16px', border: activeMenuData.isAlert ? '1px solid #FCA5A5' : '1px solid #A7F3D0', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start', transition: 'all 0.3s' }}>
-                <div style={{ width: '36px', height: '36px', backgroundColor: activeMenuData.isAlert ? '#DC2626' : '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                  <AlertCircle size={20} />
-                </div>
-                <div style={{ fontFamily: 'sans-serif', color: '#111827', fontSize: '14px', lineHeight: '1.6' }}>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>{activeMenuData.status}</h3>
-                  <p style={{ margin: 0 }}>{activeMenuData.alertMessage}</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-                {[
-                  { title: 'Review Vendor Prices', desc: 'Compare current milk costs with three alternative local suppliers in the Jakarta South area.', action: 'View Alternatives', icon: <Truck size={22} color="#006847" /> },
-                  { title: 'Adjust Menu Pricing', desc: 'Recommended: Increase Caffe Latte price by Rp 2,000 to recover 12% of the lost margin.', action: 'Update Pricing', icon: <DollarSign size={22} color="#006847" /> },
-                  { title: 'Cost Breakdown', desc: "Deep dive into the per-ingredient cost analysis for all items in the 'Coffee Selection'.", action: 'View Details', icon: <BarChart3 size={22} color="#006847" /> }
-                ].map((tile, i) => (
-                  <div key={i} style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-                    <div>
-                      {tile.icon}
-                      <h4 style={{ margin: '6px 0 6px 0', fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>{tile.title}</h4>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', lineHeight: '1.5' }}>{tile.desc}</p>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#006847', fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>{tile.action} <ChevronRight size={14} /></span>
-                  </div>
-                ))}
               </div>
             </div>
           )}
 
-          {/* TAB 3: FORECAST VIEW UTUH (SUDAH DIUPGRADE SINKRON DESIGN TERBARU LU) */}
-          {activeTab === 'forecast' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div>
-                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>Future Forecast</h1>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>AI-powered revenue projections and strategic growth insights for your business.</p>
-              </div>
-
-              {/* BOKS UTAMA GRAFIK REVENUE FORECAST + INTEGRATED DROPDOWN DESCRIPTION ACCORDION */}
-              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Revenue Forecast</h3>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6B7280' }}>Projected revenue trend for the next 90 days</p>
-                    </div>
-                    
-                    {/* 🛠️ DROPDOWN ICON TRIGGER: Klik ini untuk menampilkan/menyembunyikan penjelasan di bawah grafik */}
-                    <div 
-                      onClick={() => setIsForecastDescOpen(!isForecastDescOpen)}
-                      style={{ 
-                        cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                        backgroundColor: isForecastDescOpen ? '#E6F4EA' : '#F3F4F6', 
-                        color: isForecastDescOpen ? '#006847' : '#4B5563',
-                        transition: 'all 0.2s ease', marginLeft: '6px'
-                      }}
-                      title="Klik untuk melihat detail analisis narasi AI"
-                    >
-                      {isForecastDescOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', fontWeight: '500' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4B5563' }}><div style={{ width: '10px', height: '10px', backgroundColor: '#006847', borderRadius: '50%' }} /> Current Trend</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4B5563' }}><div style={{ width: '12px', height: '0px', borderTop: '2px dashed #10B981' }} /> Projected Growth</span>
-                  </div>
-                </div>
-
-                {/* VISUAL CHART BARS VECTOR SECTION */}
-                <div style={{ position: 'relative', height: '220px', display: 'flex', flexDirection: 'column', justifySelf: 'flex-end', justifyContent: 'flex-end', paddingTop: '20px' }}>
-                  <div style={{ display: 'flex', width: '60%', justifyContent: 'space-between', alignItems: 'flex-end', height: '100%', paddingRight: '20px', boxSizing: 'border-box' }}>
-                    {[
-                      { h: '70px', m: 'Current (Oct)' }, { h: '95px', m: '' }, { h: '110px', m: '' },
-                      { h: '115px', m: 'November' }, { h: '105px', m: '' }, { h: '140px', m: '' }
-                    ].map((bar, i) => (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '40px' }}>
-                        <div style={{ width: '100%', height: bar.h, backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} />
-                      </div>
-                    ))}
-                  </div>
-                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
-                    <line x1="330" y1="100" x2="680" y2="20" stroke="#10B981" strokeWidth="3" strokeDasharray="6,6" />
-                    <circle cx="330" cy="100" r="4" fill="#006847" />
-                  </svg>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '10px', marginTop: '4px', textAlign: 'center' }}>
-                    <span>Current (Oct)</span> <span>November</span> <span>December</span> <span>January 2024</span>
-                  </div>
-                </div>
-
-                {/* 🛠️ PENJELASAN INTEGRATED ACCORDION PANEL (MASIH SATU KOTAK DENGAN GRAFIK) */}
-                <div style={{
-                  maxHeight: isForecastDescOpen ? '200px' : '0px',
-                  opacity: isForecastDescOpen ? 1 : 0,
-                  overflow: 'hidden',
-                  transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-                  borderTop: isForecastDescOpen ? '1px dashed #E5E7EB' : 'none',
-                  paddingTop: isForecastDescOpen ? '16px' : '0px',
-                  marginTop: isForecastDescOpen ? '8px' : '0px'
-                }}>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', backgroundColor: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #F3F4F6' }}>
-                    <Info size={16} color="#006847" style={{ marginTop: '2px', flexShrink: 0 }} />
-                    <div style={{ color: '#374151', fontSize: '13px', lineHeight: '1.6' }}>
-                      <strong style={{ color: '#006847', display: 'block', marginBottom: '4px', fontSize: '14px' }}>Brainy's Forecast Insight Engine</strong>
-                      Berdasarkan visualisasi tren performa outlet di atas, pendapatan bersih Warung Kopi Jaya diproyeksikan mengalami **pertumbuhan konsisten hingga 24%** di kuartal akhir tahun ini, Gar. Lonjakan grafik putus-putus (*Projected Growth*) pada bulan Desember dipicu oleh estimasi tingginya frekuensi kunjungan konsumen lokal serta efisiensi strategi bundling menu kombo cerdas bentukan sistem POS lu.
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* TWO BOTTOM DOCK TILES CARDS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>📋 Inventory Demand Forecast</h4>
-                      <span style={{ backgroundColor: '#E6F4EA', color: '#006847', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '20px' }}>HIGH ACCURACY</span>
-                    </div>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.5' }}>Coffee bean consumption is expected to spike during the holiday season.</p>
-                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#006847' }}>+20% <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Stock recommended</span></h3>
-                  </div>
-                  <span style={{ fontSize: '13px', color: '#006847', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>Adjust Purchase Order <ArrowUpRight size={14} style={{ marginLeft: '4px' }} /></span>
-                </div>
-
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>⏰ Peak Hour Prediction</h4>
-                      <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '20px' }}>NEXT WEEKEND</span>
-                    </div>
-                    <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.5' }}>Significant traffic increase predicted for Saturday morning brunch.</p>
-                    <div style={{ display: 'flex', gap: '28px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
-                      <div>
-                        <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 'bold' }}>START TIME</span>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>09:30 AM</p>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 'bold' }}>INTENSITY</span>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '14px', fontWeight: 'bold', color: '#4F46E5' }}>Very High</p>
-                      </div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '13px', color: '#006847', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>Optimize Staffing Schedule <ArrowUpRight size={14} style={{ marginLeft: '4px' }} /></span>
+          {/* ⚡ VIEW C: FORECAST PREDICTIVE NODE TEMPLATE */}
+          {activeSubTab === 'forecast' && (
+            <div style={{ padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><LineChart size={18} color="#1E3A8A" /> AI Predictive Stock Forecast</h3>
+                <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>Proyeksi ketahanan stok bahan baku Warung Kopi Jaya untuk 7 hari ke depan.</p>
+                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #E5E7EB', borderRadius: '12px', marginTop: '20px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                  Kalkulator matriks estimasi pemakaian komoditas biji kopi/susu aktif.
                 </div>
               </div>
             </div>

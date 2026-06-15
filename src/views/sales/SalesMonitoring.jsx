@@ -52,7 +52,7 @@ export default function SalesMonitoring({ onNavigateView }) {
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  {/* WORKSPACE ENGINE POINTER: 'sales-table' VS 'info-outlet' VS 'konfigurasi-ai' VS 'keamanan' VS 'bahasa' VS 'edit-profile' */}
+  // WORKSPACE ENGINE POINTER
   const [activeSubView, setActiveSubView] = useState('sales-table');
 
   // ================= STATE INTEGRASI DATABASE SUPABASE REALTIME =================
@@ -65,7 +65,7 @@ export default function SalesMonitoring({ onNavigateView }) {
     voidAlerts: 0
   });
 
-  {/* 🚀 ENGINE INTEGRASI CORE: QUERY MULTI-TABLE JOIN DAN PIPELINE AGREGASI DATA SALES & STAFF */}
+  // 🚀 ENGINE INTEGRASI CORE: QUERY MULTI-TABLE JOIN DAN PIPELINE AGREGASI DATA SALES & STAFF
   useEffect(() => {
     if (activeSubView !== 'sales-table') return;
 
@@ -95,7 +95,7 @@ export default function SalesMonitoring({ onNavigateView }) {
 
           // 2. Kalkulasi Matematika Smart Cards Row Induk Operasional
           const completedSales = salesData.filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS');
-          const revenue = completedSales.reduce((sum, tx) => sum + Number(tx.total_amount), 0);
+          const revenue = completedSales.reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
           const voids = salesData.filter(tx => tx.status === 'VOID' || tx.status === 'Critical').length;
 
           setSummary({
@@ -108,7 +108,6 @@ export default function SalesMonitoring({ onNavigateView }) {
           const performanceMap = {};
 
           salesData.forEach(tx => {
-            // Memastikan data staf terinput dan rolenya valid sebagai Kasir
             if (tx.staff) {
               const cashierId = tx.staff.id;
               const isCompleted = tx.status === 'Completed' || tx.status === 'SUCCESS';
@@ -116,7 +115,7 @@ export default function SalesMonitoring({ onNavigateView }) {
               if (!performanceMap[cashierId]) {
                 performanceMap[cashierId] = {
                   name: tx.staff.name,
-                  avatar: tx.staff.image_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100',
+                  avatar: tx.staff.image_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
                   orderCount: 0,
                   totalRevenue: 0
                 };
@@ -124,7 +123,7 @@ export default function SalesMonitoring({ onNavigateView }) {
 
               performanceMap[cashierId].orderCount += 1;
               if (isCompleted) {
-                performanceMap[cashierId].totalRevenue += Number(tx.total_amount);
+                performanceMap[cashierId].totalRevenue += Number(tx.total_amount || 0);
               }
             }
           });
@@ -181,7 +180,7 @@ export default function SalesMonitoring({ onNavigateView }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', padding: isMainSidebarOpen ? '0 16px' : '0' }}>
           {[
             { name: 'Dashboard', icon: <LayoutDashboard size={18} />, target: 'dashboard', action: () => onNavigateView('dashboard') },
-            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => setActiveSubView('sales-table') }, 
+            { name: 'Sales', icon: <ShoppingBag size={18} />, target: 'sales', action: () => { setActiveSubView('sales-table'); setIsSettingsOpen(false); } }, 
             { name: 'Stock', icon: <Archive size={18} />, target: 'stock', action: () => onNavigateView('stock') },
             { name: 'Menu Management', icon: <Menu size={18} />, target: 'menu', action: () => onNavigateView('menu') },
             { name: 'Staff Management', icon: <Users size={18} />, target: 'staff', action: () => onNavigateView('staff') }
@@ -197,7 +196,7 @@ export default function SalesMonitoring({ onNavigateView }) {
 
         {/* Footer Sidebar Area */}
         <div style={{ padding: isMainSidebarOpen ? '0 16px' : '0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
+          <div onClick={() => isMainSidebarOpen ? setIsSettingsOpen(!isSettingsOpen) : setIsMainSidebarOpen(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', color: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? '#ffffff' : '#93C5FD', backgroundColor: isSettingsOpen || (activeSubView !== 'sales-table' && activeSubView !== 'edit-profile') ? 'rgba(255, 255, 255, 0.08)' : 'transparent', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.3s ease-in-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Settings size={18} /> {isMainSidebarOpen && <span style={{ fontSize: '14px', fontWeight: isSettingsOpen ? 'bold' : '500' }}>Settings</span>}
             </div>
@@ -265,13 +264,27 @@ export default function SalesMonitoring({ onNavigateView }) {
         {/* WORKSPACE AREA CONTAINER */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', position: 'relative' }}>
           
-          {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('sales-table')} />}
-          {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('sales-table')} />}
-          {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('sales-table')} />}
-          {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('sales-table')} />}
-          {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('sales-table')} />}
-
-          {activeSubView === 'sales-table' && (
+          {/* ⚡ FIXED CONTEXT WRAPPER: Penataan terpusat agar sub-tab setting tidak kosong melompong */}
+          {activeSubView !== 'sales-table' ? (
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '32px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #F3F4F6', paddingBottom: '16px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    ⚙️ {activeSubView.replace('-', ' ')} PANEL
+                  </h2>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>Konfigurasi parameter sistem outlet Warung Kopi Jaya.</p>
+                </div>
+                <button onClick={() => setActiveSubView('sales-table')} style={{ padding: '8px 16px', backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  Kembali ke Sales Hub
+                </button>
+              </div>
+              {activeSubView === 'info-outlet' && <InfoOutlet onSaveSuccess={() => setActiveSubView('sales-table')} />}
+              {activeSubView === 'konfigurasi-ai' && <KonfigurasiAI onSaveSuccess={() => setActiveSubView('sales-table')} />}
+              {activeSubView === 'keamanan' && <Keamanan onSaveSuccess={() => setActiveSubView('sales-table')} />}
+              {activeSubView === 'bahasa' && <Bahasa onSaveSuccess={() => setActiveSubView('sales-table')} />}
+              {activeSubView === 'edit-profile' && <EditProfile onSaveSuccess={() => setActiveSubView('sales-table')} />}
+            </div>
+          ) : (
             <>
               {/* TITLE BAR */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -326,7 +339,7 @@ export default function SalesMonitoring({ onNavigateView }) {
               {/* LOWER WORKSPACE GRID MIX LAYOUT */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
                 
-                {/* 1. COMPONENT LIVE TRANSACTION FEED (INTEGRASI TABEL JEMBATAN) */}
+                {/* 1. COMPONENT LIVE TRANSACTION FEED */}
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3>
@@ -337,10 +350,11 @@ export default function SalesMonitoring({ onNavigateView }) {
                   
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
+                      {/* ⚡ FIXED HEADER: Bersih total tanpa ada text node spasi ilegal di antara tag th/tr */}
                       <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold' }}>
-                        <th style={{ padding: '12px 8px' }}>TIME</th>
+                        <th style={{ padding: '12px 8px' }}>WAKTU</th>
                         <th style={{ padding: '12px 8px' }}>INVOICE ID</th>
-                        <th style={{ padding: '12px 8px' }}>SERVED BY</th> {/* ⚡ FIELD BARU FOR STAFF LINK */}
+                        <th style={{ padding: '12px 8px' }}>SERVED BY</th>
                         <th style={{ padding: '12px 8px' }}>TOTAL AMOUNT</th>
                         <th style={{ padding: '12px 8px', textAlign: 'center' }}>STATUS</th>
                       </tr>
@@ -354,11 +368,10 @@ export default function SalesMonitoring({ onNavigateView }) {
                             <tr key={tx.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: isVoid ? '#FEF2F2' : 'transparent', color: isVoid ? '#991B1B' : '#111827' }}>
                               <td style={{ padding: '14px 8px', color: '#6B7280' }}>{formattedTime}</td>
                               <td style={{ padding: '14px 8px', fontWeight: '500' }}>{tx.invoice_number}</td>
-                              {/* ⚡ RELASI STAFF: Muncul nama karyawan asli hasil inputan Staff Management secara murni dinamis */}
                               <td style={{ padding: '14px 8px', fontWeight: '500', color: '#1E3A8A' }}>
                                 {tx.staff ? tx.staff.name : 'General Staff'}
                               </td>
-                              <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp {Number(tx.total_amount).toLocaleString('id-ID')}</td>
+                              <td style={{ padding: '14px 8px', fontWeight: 'bold' }}>Rp {Number(tx.total_amount || 0).toLocaleString('id-ID')}</td>
                               <td style={{ padding: '14px 8px', textAlign: 'center' }}>
                                 <span style={{ backgroundColor: isVoid ? '#DC2626' : '#E6F4EA', color: isVoid ? '#ffffff' : '#006847', padding: '4px 12px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', display: 'inline-block', minWidth: '65px' }}>
                                   {tx.status}
@@ -369,14 +382,14 @@ export default function SalesMonitoring({ onNavigateView }) {
                         })
                       ) : (
                         <tr>
-                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF' }}>Belum ada riwayat transaksi jualan.</td>
+                          <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic' }}>Belum ada riwayat transaksi jualan.</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
 
-                {/* 2. COMPONENT CASHIER PERFORMANCE BOARD (100% DINAMIS AGREGASI DATABASE) */}
+                {/* 2. COMPONENT CASHIER PERFORMANCE BOARD */}
                 <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
                   <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance Board</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -384,11 +397,10 @@ export default function SalesMonitoring({ onNavigateView }) {
                       cashierPerformance.map((cashier, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', padding: '12px', border: '1px solid #F3F4F6', borderRadius: '12px', backgroundColor: '#FAFAFA' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {/* Peringkat Emas Silver Medali Dinamis */}
                             <div style={{ width: '24px', height: '24px', backgroundColor: i === 0 ? '#FEF3C7' : '#F3F4F6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: i === 0 ? '#FBBF24' : '#9CA3AF' }}>
                               {i + 1}
                             </div>
-                            <img src={cashier.avatar} alt={cashier.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                            <img src={cashier.avatar} alt={cashier.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}} />
                             <div>
                               <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{cashier.name}</p>
                               <span style={{ fontSize: '10px', color: '#6B7280' }}>{cashier.orderCount} Struk Terbit</span>
