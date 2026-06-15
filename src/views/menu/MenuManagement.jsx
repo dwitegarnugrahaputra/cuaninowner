@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, Settings, 
-  Search, Bell, HelpCircle, Plus, Layers, AlertTriangle, Grid, SlidersHorizontal,
-  Edit2, Trash2, ChevronLeft, ChevronRight, MessageSquare, X, Info, FileSpreadsheet,
-  ImageIcon, Trash, Save, TrendingUp, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe, Shield
+  Search, Bell, HelpCircle, Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet,
+  Trash, Save, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe, Shield,
+  MessageSquare // ⚡ FIXED: Sudah diimport lengkap agar halaman tidak blank putih!
 } from 'lucide-react';
 
-// Impor koneksi client Supabase murni 
+// Koneksi murni client Supabase proyek cuanin.id
 import { supabase } from '../../config/supabaseClient';
 
-// Import komponen form internal settings yang sudah kita desentralisasikan
+// Import komponen internal settings desentralisasi
 import InfoOutlet from '../settings/InfoOutlet.jsx';
 import KonfigurasiAI from '../settings/KonfigurasiAI.jsx';
 import Keamanan from '../settings/Keamanan.jsx';
@@ -19,22 +19,10 @@ import EditProfile from '../dashboard/EditProfile.jsx';
 
 function CuaninLogoMini() {
   return (
-    <div style={{
-      width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0
-    }}>
-      <div style={{
-        width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px',
-        padding: '3px 0px 3px 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', boxSizing: 'border-box'
-      }}>
-        <div style={{
-          width: '100%', height: '100%', backgroundColor: '#006847', borderRadius: '3px 0 0 3px',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', boxSizing: 'border-box'
-        }}>
-          <div style={{
-            width: '12px', height: '12px', backgroundColor: '#ffffff', borderRadius: '3px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', marginRight: '-1px'
-          }}>
+    <div style={{ width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '6px', flexShrink: 0 }}>
+      <div style={{ width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px', padding: '3px 0px 3px 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', height: '100%', backgroundColor: '#006847', borderRadius: '3px 0 0 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', boxSizing: 'border-box' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#ffffff', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', marginRight: '-1px' }}>
             <div style={{ width: '4px', height: '4px', backgroundColor: '#006847', borderRadius: '50%' }} />
           </div>
         </div>
@@ -47,56 +35,41 @@ export default function MenuManagement({ onNavigateView }) {
   const { logout } = useAuth();
   const currentView = 'menu';
   
-  // State Manajemen Kontrol Popup Modal Tambah Menu
+  // Modal & Tab Workspace Controllers
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Coffee');
-
-  // State kendali interaksi UI internal untuk collapse sidebar dan pop-down settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainSidebarOpen, setIsMainSidebarOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeSubView, setActiveSubView] = useState('menu-table');
 
-  // ================= STATE INTEGRASI DATABASE MENU (CRUD AREA) =================
+  // Core Database States
   const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [stockIngredients, setStockIngredients] = useState([]);
   const [menuSummary, setMenuSummary] = useState({ totalItems: 0, totalCategories: 0, outOfStockCount: 0 });
 
-  // State Kontrol Form Tambah Menu Baru (Create)
-  const [newMenu, setNewMenu] = useState({
-    menu_name: '',
-    price: '',
-    image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop'
-  });
-
-  // State reaktif baris penampung draf resep untuk penambahan menu baru
+  // Form Management States (Create & Update)
+  const [newMenu, setNewMenu] = useState({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
   const [newMenuRecipe, setNewMenuRecipe] = useState([]);
-
-  // State Kontrol Data Menu yang Sedang Diedit (Update)
   const [editingMenu, setEditingMenu] = useState(null);
-
-  // State penampung list bahan mentah dari database
-  const [stockIngredients, setStockIngredients] = useState([]);
-
-  // State penampung resep interaktif modal edit
   const [recipeRows, setRecipeRows] = useState([]);
 
-  // 🚀 PIPELINE 1: FETCH LIST INVENTORY DARI TABEL 'raw_materials' SUPABASE
+  // 📥 READ PIPELINE 1: Tarik Data Bahan Baku Aktif dari Gudang
   const fetchStockIngredients = async () => {
     try {
       const { data, error } = await supabase
         .from('raw_materials')
         .select('id, material_name, unit, unit_price')
         .order('material_name', { ascending: true });
-      
       if (error) throw error;
       if (data) setStockIngredients(data);
     } catch (err) {
-      console.error('⚠️ Gagal mengambil list bahan mentah gudang:', err.message);
+      console.error('⚠️ Gagal memuat data inventori gudang:', err.message);
     }
   };
 
-  // 🚀 PIPELINE 2: FETCH KATALOG PRODUK DARI TABEL 'menus' SUPABASE
+  // 📥 READ PIPELINE 2: Ambil Katalog Menu Terkini dari Supabase Cloud
   const fetchMenuCatalog = async () => {
     if (activeSubView !== 'menu-table') return;
     setIsLoading(true);
@@ -116,58 +89,48 @@ export default function MenuManagement({ onNavigateView }) {
         setMenuSummary({ totalItems: data.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
       }
     } catch (err) {
-      console.error('⚠️ Gagal memuat katalog menu:', err.message);
+      console.error('⚠️ Gagal menarik data katalog menu:', err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Trigger Re-fetch Data Otomatis saat SubView Berubah
   useEffect(() => {
     fetchMenuCatalog();
     fetchStockIngredients(); 
   }, [activeSubView]);
 
-  // Efek otomatis: Set draft resep statis fallback pas modal edit dibuka
+  // Sync Data Resep saat Modal Edit Terbuka
   useEffect(() => {
     if (editingMenu) {
-      // Jika menu sudah memiliki resep bawaan dari database, pakai itu
-      if (editingMenu.recipe && Array.isArray(editingMenu.recipe) && editingMenu.recipe.length > 0) {
+      if (editingMenu.recipe && Array.isArray(editingMenu.recipe)) {
         setRecipeRows(editingMenu.recipe);
       } else {
-        // Fallback default resep jika kosong
-        const nameLower = editingMenu.menu_name.toLowerCase();
-        if (nameLower.includes('americano') || nameLower.includes('black coffee')) {
-          setRecipeRows([
-            { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
-            { ingredientId: '', ingredientName: 'Water / Ice', qty: 150, unit: 'ml', cost: 0 }
-          ]);
-        } else if (editingMenu.category === 'Coffee') {
-          setRecipeRows([
-            { ingredientId: '', ingredientName: 'Houseblend Coffee Beans', qty: 18, unit: 'gram', cost: 2160 },
-            { ingredientId: '', ingredientName: 'Full Cream Milk', qty: 120, unit: 'ml', cost: 2220 }
-          ]);
-        } else {
-          setRecipeRows([
-            { ingredientId: '', ingredientName: 'Default Raw Materials', qty: 1, unit: 'unit', cost: 4500 }
-          ]);
-        }
+        setRecipeRows([]);
       }
     } else {
       setRecipeRows([]);
     }
   }, [editingMenu]);
 
-  // Kalkulator COGS reaktif instan
   const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
   const currentTotalCogs = recipeRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
 
-  // 🚀 PIPELINE 3: CREATE ACTION (SIMPAN PRODUK)
+  // 📤 CREATE PIPELINE: Suntik Data Produk Baru ke Supabase (+ VALIDASI INTERCEPT RESEP KOSONG)
   const handleCreateMenu = async (e) => {
     e.preventDefault();
     if (!newMenu.menu_name.trim() || !newMenu.price || Number(newMenu.price) <= 0) {
-      alert('Nama menu dan harga jual wajib diisi secara valid, Gar!');
+      alert('Isi data nama menu dan nominal harga secara valid, Gar!');
       return;
     }
+
+    // ⚡ FORM VALIDATION CONSTRAINT: Intersepsi draf jika list resep masih kosong murni
+    if (newMenuRecipe.length === 0) {
+      alert('Waduh gak bisa disimpan, Gar! Masukkan minimal satu resep bahan baku dulu biar hitungan HPP (COGS) dan Profit Margin cafe lu akurat.');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('menus')
@@ -181,20 +144,22 @@ export default function MenuManagement({ onNavigateView }) {
         }]);
 
       if (error) throw error;
-      setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200&auto=format&fit=crop' });
+      
+      // Reset Form & Tutup Modal jika Sukses Meluncur ke Cloud
+      setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
       setNewMenuRecipe([]);
       setIsModalOpen(false);
-      fetchMenuCatalog();
+      await fetchMenuCatalog();
     } catch (err) {
-      alert('Gagal menyimpan menu baru: ' + err.message);
+      alert('Gagal menyisipkan menu baru ke database: ' + err.message);
     }
   };
 
-  // 🚀 PIPELINE 4: UPDATE ACTION (PERBARUI PRODUK)
+  // 📝 UPDATE PIPELINE 1: Perbarui Seluruh Atribut & Draf Komposisi Resep
   const handleUpdateMenu = async (e) => {
     e.preventDefault();
     if (!editingMenu.menu_name.trim() || !editingMenu.price || Number(editingMenu.price) <= 0) {
-      alert('Nama menu dan harga tidak boleh kosong, Gar!');
+      alert('Form edit nama menu dan harga tidak boleh kosong, Gar!');
       return;
     }
     try {
@@ -211,13 +176,13 @@ export default function MenuManagement({ onNavigateView }) {
 
       if (error) throw error;
       setEditingMenu(null); 
-      fetchMenuCatalog();   
+      await fetchMenuCatalog();   
     } catch (err) {
-      alert('Gagal mengupdate data menu: ' + err.message);
+      alert('Gagal memperbarui rekaman data menu: ' + err.message);
     }
   };
 
-  // 🚀 PIPELINE 5: TOGGLE AVAILABILITY STATUS
+  // 🔄 UPDATE PIPELINE 2: Quick Toggle Tombol Ketersediaan Stok Menu
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
       const { error } = await supabase
@@ -225,23 +190,16 @@ export default function MenuManagement({ onNavigateView }) {
         .update({ is_available: !currentStatus })
         .eq('id', id);
       if (error) throw error;
-      fetchMenuCatalog();
+      await fetchMenuCatalog();
     } catch (err) {
-      console.error('⚠️ Gagal memperbarui status ketersediaan:', err.message);
+      console.error('⚠️ Gagal mengubah status availabilitas:', err.message);
     }
   };
 
-  // 🚀 PIPELINE 6: FIXED DELETE ACTION (SIMPAN DAN HAPUS DARI UTAS REALTIME)
+  // ❌ DELETE PIPELINE: Hapus Data Absolut Menggunakan Pencocokan UUID Murni 36 Karakter
   const handleDeleteMenu = async (id) => {
-    if (!window.confirm('Apakah lu yakin pengen menghapus menu ini secara permanen dari database, Gar?')) return;
+    if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
     try {
-      // SINKRONISASI CONSTRAINT LAYOUT: Kosongkan item relasi transaksi terlebih dahulu jika ada di tabel pivot
-      await supabase
-        .from('transaction_items')
-        .delete()
-        .eq('menu_id', id);
-
-      // Eksekusi pembersihan core katalog utama di tabel menus
       const { error } = await supabase
         .from('menus')
         .delete()
@@ -249,55 +207,39 @@ export default function MenuManagement({ onNavigateView }) {
 
       if (error) throw error;
       
-      // Update state data tabel frontend secara instan tanpa perlu memicu muat ulang paksa halaman web
-      setMenus(prevMenus => prevMenus.filter(item => item.id !== id));
-      
-      // Hitung ulang summary widget atas secara dinamis
-      setMenus(updatedData => {
-        const uniqueCategories = new Set(updatedData.map(item => item.category)).size;
-        const outOfStockItems = updatedData.filter(item => item.is_available === false).length;
-        setMenuSummary({ totalItems: updatedData.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
-        return updatedData;
+      // SYNC HANDLE: Update UI lokal HANYA jika query database berhasil dieksekusi tanpa error
+      setMenus(prev => {
+        const filtered = prev.filter(item => item.id !== id);
+        const uniqueCategories = new Set(filtered.map(item => item.category)).size;
+        const outOfStockItems = filtered.filter(item => item.is_available === false).length;
+        setMenuSummary({ totalItems: filtered.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
+        return filtered;
       });
 
-      alert('Menu berhasil terhapus selamanya dari sistem cuanin.id!');
+      alert('Produk resmi terhapus selamanya dari database cloud!');
     } catch (err) {
-      alert('Gagal menghapus data menu: ' + err.message);
+      alert('Supabase menolak aksi delete! Eror: ' + err.message);
     }
   };
 
-  // ================= 🛠️ CONVERSION RECIPE ALGORITHMS AREA (UNTUK TAMBAH BARANG) =================
+  // ================= 🛠️ ARSITEKTUR FORMULA KONVERSI TAKARAN RESEP BARU =================
   const handleAddNewMenuRecipeRow = () => {
     if (stockIngredients.length === 0) {
-      alert('Stok barang mentah kosong di database, Gar! Daftarkan dulu di tab Stock.');
+      alert('Stok gudang kosong, Gar! Daftarkan bahan baku dulu di tab Stock.');
       return;
     }
     const firstMat = stockIngredients[0];
-    
     let displayUnit = firstMat.unit;
     let initialQty = 10;
     let unitCost = Number(firstMat.unit_price || 0);
 
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter') {
-      displayUnit = 'ml';
-      initialQty = 30; 
-      unitCost = Number(firstMat.unit_price || 0) / 1000; 
-    } else if (firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = 'gram';
-      initialQty = 15; 
-      unitCost = Number(firstMat.unit_price || 0) / 1000; 
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+      initialQty = displayUnit === 'gram' ? 15 : 30;
+      unitCost = Number(firstMat.unit_price || 0) / 1000;
     }
 
-    setNewMenuRecipe([
-      ...newMenuRecipe,
-      { 
-        ingredientId: firstMat.id, 
-        ingredientName: firstMat.material_name, 
-        qty: initialQty, 
-        unit: displayUnit, 
-        cost: Math.round(initialQty * unitCost) 
-      }
-    ]);
+    setNewMenuRecipe([...newMenuRecipe, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
   };
 
   const handleUpdateNewMenuRecipeRow = (index, key, value) => {
@@ -307,23 +249,18 @@ export default function MenuManagement({ onNavigateView }) {
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
-      
       if (matchedMaterial) {
         let displayUnit = matchedMaterial.unit;
         let unitCost = Number(matchedMaterial.unit_price || 0);
 
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter') {
-          displayUnit = 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        } else if (matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = 'gram';
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
           unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
         }
 
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;
-        
         const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
         updatedRows[index].cost = Math.round(currentQty * unitCost);
       }
@@ -331,37 +268,24 @@ export default function MenuManagement({ onNavigateView }) {
     setNewMenuRecipe(updatedRows);
   };
 
-  // 🛠️ SUNTIKAN BARU: Fungsi penghapus baris draf resep tambah menu baru biar ga crash
   const handleRemoveNewMenuRecipeRow = (index) => {
-    const filteredRows = newMenuRecipe.filter((_, i) => i !== index);
-    setNewMenuRecipe(filteredRows);
+    setNewMenuRecipe(newMenuRecipe.filter((_, i) => i !== index));
   };
 
-  // ================= 🛠️ CONVERSION RECIPE ALGORITHMS AREA (UNTUK MODAL EDIT) =================
+  // ================= 🛠️ ARSITEKTUR FORMULA KONVERSI TAKARAN RESEP EDIT =================
   const handleAddRecipeRow = () => {
-    if (stockIngredients.length === 0) {
-      alert('Stok barang mentah kosong, Gar! Isi data di tab Stock dulu.');
-      return;
-    }
+    if (stockIngredients.length === 0) return;
     const firstMat = stockIngredients[0];
     let displayUnit = firstMat.unit;
     let initialQty = 10;
     let unitCost = Number(firstMat.unit_price || 0);
 
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter') {
-      displayUnit = 'ml';
-      initialQty = 30;
-      unitCost = Number(firstMat.unit_price || 0) / 1000;
-    } else if (firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = 'gram';
-      initialQty = 15;
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+      initialQty = displayUnit === 'gram' ? 15 : 30;
       unitCost = Number(firstMat.unit_price || 0) / 1000;
     }
-
-    setRecipeRows([
-      ...recipeRows,
-      { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }
-    ]);
+    setRecipeRows([...recipeRows, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
   };
 
   const handleUpdateRecipeRow = (index, key, value) => {
@@ -371,23 +295,18 @@ export default function MenuManagement({ onNavigateView }) {
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
-      
       if (matchedMaterial) {
         let displayUnit = matchedMaterial.unit;
         let unitCost = Number(matchedMaterial.unit_price || 0);
 
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter') {
-          displayUnit = 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        } else if (matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = 'gram';
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
           unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
         }
 
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;
-        
         const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
         updatedRows[index].cost = Math.round(currentQty * unitCost);
       }
@@ -395,16 +314,14 @@ export default function MenuManagement({ onNavigateView }) {
     setRecipeRows(updatedRows);
   };
 
-  // 🛠️ SUNTIKAN BARU: Fungsi penghapus baris draf resep di modal edit biar ga crash
   const handleRemoveRecipeRow = (index) => {
-    const filteredRows = recipeRows.filter((_, i) => i !== index);
-    setRecipeRows(filteredRows);
+    setRecipeRows(recipeRows.filter((_, i) => i !== index));
   };
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
-      {/* ================= 1. SIDEBAR KIRI COLLAPSIBLE ================= */}
+      {/* ================= SIDEBAR KIRI ================= */}
       <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -448,8 +365,8 @@ export default function MenuManagement({ onNavigateView }) {
             {isMainSidebarOpen && <div style={{ transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}><ChevronDown size={14} /></div>}
           </div>
 
-          {isMainSidebarOpen && (
-            <div style={{ maxHeight: isSettingsOpen ? '200px' : '0px', opacity: isSettingsOpen ? 1 : 0, overflow: 'hidden', transition: 'max-height 0.4s, opacity 0.3s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
+          {isMainSidebarOpen && isSettingsOpen && (
+            <div style={{ maxHeight: '200px', opacity: 1, overflow: 'hidden', transition: 'all 0.4s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
@@ -473,7 +390,7 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= 2. MAIN WORKSPACE KANAN ================= */}
+      {/* ================= MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* TOPBAR AREA */}
@@ -493,7 +410,7 @@ export default function MenuManagement({ onNavigateView }) {
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Alex Graham</p>
                 <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>OWNER</span>
               </div>
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100" alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
           </div>
         </div>
@@ -553,7 +470,10 @@ export default function MenuManagement({ onNavigateView }) {
                           <td style={{ padding: '16px 24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <img src={item.image_url} alt={item.menu_name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
-                              <div><p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p><span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {item.id.substring(0, 8).toUpperCase()}</span></div>
+                              <div>
+                                <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p>
+                                <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {String(item.id).substring(0, 8).toUpperCase()}</span>
+                              </div>
                             </div>
                           </td>
                           <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>{item.category}</span></td>
@@ -627,7 +547,7 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
-                {/* 🛠️ SUNTIKAN KONVERSI: PEMETAAN RESEP UNTUK KATEGORI ADD NEW ITEM BARU */}
+                {/* PEMETAAN RESEP UNTUK KATEGORI ADD NEW ITEM BARU */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Mentah</h4>
@@ -650,7 +570,6 @@ export default function MenuManagement({ onNavigateView }) {
                             <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                           </div>
                           <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
-                          {/* 💡 FIXED: Pemicu fungsi hapus draf resep tambah menu baru dikoneksikan ke pembantu yang valid */}
                           <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveNewMenuRecipeRow(index)} />
                         </div>
                       ))
@@ -661,7 +580,6 @@ export default function MenuManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* AREA KANAN ANALISIS PROFIT MODAL ADD */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Foto Menu</label>
@@ -694,7 +612,6 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
       )}
 
-      {/* ================= WINDOW POPUP OVERLAY EDIT MENU ITEM ================= */}
       {editingMenu && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleUpdateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -723,10 +640,9 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
-                {/* 🛠️ SUNTIKAN KONVERSI: PEMETAAN RESEP UNTUK MODAL EDIT */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Buku</h4>
                     <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={handleAddRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
                   
@@ -745,7 +661,6 @@ export default function MenuManagement({ onNavigateView }) {
                           <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                         </div>
                         <span style={{ fontWeight: 'bold' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
-                        {/* 💡 FIXED: Pemicu fungsi hapus draf resep modal edit dikoneksikan ke pembantu yang valid */}
                         <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveRecipeRow(index)} />
                       </div>
                     ))}
@@ -753,7 +668,6 @@ export default function MenuManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {/* KOLOM KANAN MODAL EDIT */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Gambar Produk</label>
@@ -785,7 +699,6 @@ export default function MenuManagement({ onNavigateView }) {
           </form>
         </div>
       )}
-
     </div>
   );
 }
