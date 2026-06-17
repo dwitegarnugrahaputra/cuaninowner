@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, Settings, 
   Search, Bell, HelpCircle, Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet,
   Trash, Save, LogOut, ChevronDown, ChevronUp, Store, Sliders, ShieldCheck, User, Key, Globe, Shield,
-  MessageSquare // ⚡ FIXED: Sudah diimport lengkap agar halaman tidak blank putih!
+  MessageSquare 
 } from 'lucide-react';
 
 // Koneksi murni client Supabase proyek cuanin.id
@@ -71,7 +71,6 @@ export default function MenuManagement({ onNavigateView }) {
 
   // 📥 READ PIPELINE 2: Ambil Katalog Menu Terkini dari Supabase Cloud
   const fetchMenuCatalog = async () => {
-    if (activeSubView !== 'menu-table') return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -97,7 +96,9 @@ export default function MenuManagement({ onNavigateView }) {
 
   // Trigger Re-fetch Data Otomatis saat SubView Berubah
   useEffect(() => {
-    fetchMenuCatalog();
+    if (activeSubView === 'menu-table') {
+      fetchMenuCatalog();
+    }
     fetchStockIngredients(); 
   }, [activeSubView]);
 
@@ -125,7 +126,6 @@ export default function MenuManagement({ onNavigateView }) {
       return;
     }
 
-    // ⚡ FORM VALIDATION CONSTRAINT: Intersepsi draf jika list resep masih kosong murni
     if (newMenuRecipe.length === 0) {
       alert('Mohon isi resep produk.');
       return;
@@ -145,38 +145,56 @@ export default function MenuManagement({ onNavigateView }) {
 
       if (error) throw error;
       
-      // Reset Form & Tutup Modal jika Sukses Meluncur ke Cloud
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
       setNewMenuRecipe([]);
       setIsModalOpen(false);
       await fetchMenuCatalog();
+      alert('Menu berhasil disimpan!');
     } catch (err) {
-      alert('Gagal menyisipkan menu baru ke database: ' + err.message);
+      alert('Gagal menyisipkan menu baru: ' + err.message);
     }
   };
 
-  // 📝 UPDATE PIPELINE 1: Perbarui Seluruh Atribut & Draf Komposisi Resep
+  // 📝 ⚡ DYNAMIC BINDING UPDATE PIPELINE (Mirip StaffManagement)
   const handleUpdateMenu = async (e) => {
     e.preventDefault();
+    if (!editingMenu?.id) {
+      alert('ID menu tidak ditemukan, gagal melakukan update, Gar!');
+      return;
+    }
     if (!editingMenu.menu_name.trim() || !editingMenu.price || Number(editingMenu.price) <= 0) {
       alert('Form edit nama menu dan harga tidak boleh kosong, Gar!');
       return;
     }
     try {
-      const { error } = await supabase
+      // 🔍 DEBUG TEMPORARY: cek persis value & tipe id yang dikirim ke query
+      console.log('DEBUG update -> editingMenu.id:', JSON.stringify(editingMenu.id), '| typeof:', typeof editingMenu.id);
+
+      // .select() ditambahkan agar Supabase mengembalikan baris yang benar-benar terupdate.
+      // Tanpa ini, update ke 0 baris (misal id tidak match) tetap dianggap "sukses" tanpa error.
+      const { data, error } = await supabase
         .from('menus')
         .update({
           menu_name: editingMenu.menu_name,
           category: editingMenu.category,
           price: Number(editingMenu.price),
           image_url: editingMenu.image_url,
-          recipe: recipeRows
+          recipe: recipeRows // Mengikat draf komposisi recipeRows yang reaktif
         })
-        .eq('id', editingMenu.id);
+        .eq('id', editingMenu.id)
+        .select();
+
+      console.log('DEBUG update -> hasil data:', data, '| error:', error);
 
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada baris yang diperbarui. Cek apakah ID menu valid atau RLS memblokir update.');
+      }
+
       setEditingMenu(null); 
-      await fetchMenuCatalog();   
+      await fetchMenuCatalog(); // Paksa re-fetch data murni biar kesimpan permanen ke cloud
+      alert('Data menu berhasil diperbarui!');
     } catch (err) {
       alert('Gagal memperbarui rekaman data menu: ' + err.message);
     }
@@ -185,37 +203,46 @@ export default function MenuManagement({ onNavigateView }) {
   // 🔄 UPDATE PIPELINE 2: Quick Toggle Tombol Ketersediaan Stok Menu
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('menus')
         .update({ is_available: !currentStatus })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        console.error('⚠️ Toggle availabilitas tidak match baris manapun untuk id:', id);
+        alert('Gagal mengubah status: tidak ada baris yang cocok di database.');
+        return;
+      }
       await fetchMenuCatalog();
     } catch (err) {
       console.error('⚠️ Gagal mengubah status availabilitas:', err.message);
     }
   };
 
-  // ❌ DELETE PIPELINE: Hapus Data Absolut Menggunakan Pencocokan UUID Murni 36 Karakter
+  // ❌ ⚡ FIXED ABSOLUTE DELETE PIPELINE (Mirip StaffManagement)
   const handleDeleteMenu = async (id) => {
+    if (!id) {
+      alert('ID menu tidak valid, gagal menghapus, Gar!');
+      return;
+    }
     if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
     try {
-      const { error } = await supabase
+      // .select() dipakai agar kita tahu pasti baris mana yang benar-benar terhapus.
+      // Tanpa ini, delete ke 0 baris (id tidak match / RLS diam-diam menolak) tetap "sukses" tanpa error.
+      const { data, error } = await supabase
         .from('menus')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
       if (error) throw error;
-      
-      // SYNC HANDLE: Update UI lokal HANYA jika query database berhasil dieksekusi tanpa error
-      setMenus(prev => {
-        const filtered = prev.filter(item => item.id !== id);
-        const uniqueCategories = new Set(filtered.map(item => item.category)).size;
-        const outOfStockItems = filtered.filter(item => item.is_available === false).length;
-        setMenuSummary({ totalItems: filtered.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
-        return filtered;
-      });
 
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada baris yang terhapus. Cek apakah ID menu valid atau RLS memblokir delete.');
+      }
+
+      await fetchMenuCatalog(); // Paksa sinkronisasi ulang database secara murni dari cloud server
       alert('Produk resmi terhapus selamanya dari database cloud!');
     } catch (err) {
       alert('Supabase menolak aksi delete! Eror: ' + err.message);
@@ -321,7 +348,7 @@ export default function MenuManagement({ onNavigateView }) {
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', backgroundColor: '#F8F9FA', fontFamily: 'sans-serif', overflow: 'hidden', margin: 0, padding: 0, position: 'relative' }}>
       
-      {/* ================= SIDEBAR KIRI ================= */}
+      {/* SIDEBAR KIRI */}
       <div style={{ width: isMainSidebarOpen ? '260px' : '80px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, transition: 'width 0.3s ease-in-out', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMainSidebarOpen ? 'space-between' : 'center', padding: '0 20px', marginBottom: '32px', height: '40px' }}>
           <div onClick={() => !isMainSidebarOpen && setIsMainSidebarOpen(true)} style={{ cursor: !isMainSidebarOpen ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -366,7 +393,7 @@ export default function MenuManagement({ onNavigateView }) {
           </div>
 
           {isMainSidebarOpen && isSettingsOpen && (
-            <div style={{ maxHeight: '200px', opacity: 1, overflow: 'hidden', transition: 'all 0.4s', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
+            <div style={{ maxHeight: '200px', opacity: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '14px', marginBottom: '4px' }}>
               {[
                 { name: 'Info Outlet', icon: <Store size={14} />, target: 'info-outlet' }, 
                 { name: 'Konfigurasi AI', icon: <Sliders size={14} />, target: 'konfigurasi-ai' }, 
@@ -390,7 +417,7 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= MAIN WORKSPACE KANAN ================= */}
+      {/* MAIN WORKSPACE KANAN */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* TOPBAR AREA */}
@@ -452,7 +479,9 @@ export default function MenuManagement({ onNavigateView }) {
                 </div>
               </div>
 
-              {menus.length > 0 ? (
+              {isLoading ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>Memuat katalog menu cuanin.id...</div>
+              ) : menus.length > 0 ? (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
@@ -506,7 +535,7 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
       </div>
 
-      {/* ================= WINDOW POPUP OVERLAY ADD NEW ITEM ================= */}
+      {/* WINDOW POPUP OVERLAY ADD NEW ITEM */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleCreateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -532,7 +561,7 @@ export default function MenuManagement({ onNavigateView }) {
                         <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual (Rp)</label>
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                           <span style={{ position: 'absolute', left: '12px', fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Rp</span>
-                          <input type="text" required placeholder="0" value={newMenu.price} onChange={(e) => setNewMenu({...newMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
+                          <input type="text" required placeholder="0" value={newMenu.price} onChange={(e) => setNewMenu({...newMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
                         </div>
                       </div>
                       <div>
@@ -547,7 +576,6 @@ export default function MenuManagement({ onNavigateView }) {
                   </div>
                 </div>
 
-                {/* PEMETAAN RESEP UNTUK KATEGORI ADD NEW ITEM BARU */}
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563' }}><FileSpreadsheet size={14}/> Pemetaan Resep produk</h4>
@@ -612,6 +640,7 @@ export default function MenuManagement({ onNavigateView }) {
         </div>
       )}
 
+      {/* ================= WINDOW POPUP OVERLAY EDIT ITEM (⚡ FIXED REACTIVE BINDING) ================= */}
       {editingMenu && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleUpdateMenu} style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -657,6 +686,7 @@ export default function MenuManagement({ onNavigateView }) {
                           {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
                         </select>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                          {/* ⚡ FIXED BINDING: Input takaran resep diikat langsung ke recipeRows[index].qty */}
                           <input type="text" value={row.qty} onChange={(e) => handleUpdateRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
                           <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
                         </div>
