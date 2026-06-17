@@ -5,11 +5,10 @@ import { supabase } from '../../config/supabaseClient';
 import { 
   Send, Bot, ArrowLeft, MessageSquare, Sparkles, Loader2,
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, Settings, LogOut, ChevronDown, Plus,
-  Bell, HelpCircle, Search, TrendingUp, BarChart3, LineChart
+  Bell, HelpCircle, Search, TrendingUp, BarChart3, LineChart, AlertTriangle, ArrowRight, Truck, Percent, Calendar, Clock
 } from 'lucide-react';
 
-// Inisialisasi Engine Gemini dengan API Key murni milik Tegar
-const ai = new GoogleGenAI({ apiKey: 'AIzaSyADXX9AkMETb7hcYCbWImyeFutbrkc3vrA' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 function CuaninLogoMini() {
   return (
@@ -39,8 +38,6 @@ function CuaninLogoMini() {
 
 export default function BrainyChat({ onNavigateView }) {
   const { logout } = useAuth();
-  
-  // ⚡ SUB-TAB CONTROLLER BAR: 'ask-brainy' VS 'insights' VS 'forecast'
   const [activeSubTab, setActiveSubTab] = useState('ask-brainy');
 
   // State Manajemen Chat & Integritas AI
@@ -52,15 +49,21 @@ export default function BrainyChat({ onNavigateView }) {
   const [dbSnapshot, setDbSnapshot] = useState('');
   const messagesEndRef = useRef(null);
 
-  // State Kontrol Dropdown Sidebar Internal
+  // ⚡ DYNAMIC MENU ARRAYS & DROPDOWN SELECTION STATE
+  const [menuList, setMenuList] = useState([]);
+  const [selectedMenu, setSelectedMenu] = useState('Caffe Latte');
+
+  // State Otomatisasi Generator Tab Insights & Forecast Berbasis Live AI
+  const [aiInsightText, setAiInsightsText] = useState('Sedang menganalisis struktur pengadaan bahan baku...');
+  const [aiForecastText, setAiForecastText] = useState('Sedang memproyeksikan tren permintaan pasar...');
+  const [isTabAnalyzing, setIsTabAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Auto-scroll ke chat paling bawah biar UX mulus
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
 
-  // 📥 AUTOMATIC CONTEXT INJECTION PIPELINE (Makanan Otak Gemini)
+  // 📥 AUTOMATIC CONTEXT INJECTION PIPELINE (Ambil katalog menu asli & transaksi)
   useEffect(() => {
     async function compileBusinessContext() {
       try {
@@ -68,11 +71,19 @@ export default function BrainyChat({ onNavigateView }) {
         const { data: staff } = await supabase.from('staff').select('name, role, status');
         const { data: sales } = await supabase.from('sales_transactions').select('total_amount, status, payment_method').limit(15);
 
-        const menuStr = menus ? menus.map(m => `- ${m.menu_name}: Rp ${m.price} (${m.is_available ? 'Tersedia' : 'Habis'})`).join('\n') : 'Kosong';
-        const staffStr = staff ? staff.map(s => `- ${s.name}: Role ${s.role} (${s.status})`).join('\n') : 'Kosong';
+        // Jika ada data menu asli, masukkan ke list dropdown
+        if (menus && menus.length > 0) {
+          setMenuList(menus);
+          setSelectedMenu(menus[0].menu_name); // Set default pilihan ke item pertama database
+        } else {
+          setMenuList([]); // Kosong
+        }
+
+        const menuStr = menus && menus.length > 0 ? menus.map(m => `- ${m.menu_name}: Rp ${m.price} (${m.is_available ? 'Tersedia' : 'Habis'})`).join('\n') : 'KOSONG / BELUM ADA DATA MENU DI MENU MANAGEMENT';
+        const staffStr = staff && staff.length > 0 ? staff.map(s => `- ${s.name}: Role ${s.role} (${s.status})`).join('\n') : 'KOSONG / BELUM ADA DATA STAFF';
         
         let totalRevenue = 0;
-        if (sales) {
+        if (sales && sales.length > 0) {
           totalRevenue = sales.filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS').reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
         }
 
@@ -96,6 +107,56 @@ ${staffStr}
     compileBusinessContext();
   }, []);
 
+  // 🚀 INTERCEPTOR TRIGGER: Otomatis nembak AI pas sub-tab insights / forecast dibuka atau menu dropdown diubah
+  useEffect(() => {
+    if (activeSubTab === 'ask-brainy' || !dbSnapshot) return;
+
+    async function generateTabAnalytics() {
+      setIsTabAnalyzing(true);
+      try {
+        let customPrompt = '';
+        if (activeSubTab === 'insights') {
+          customPrompt = `
+            Berdasarkan Snapshot data cafe saat ini:
+            ${dbSnapshot}
+
+            Gua saat ini sedang memilih menu "${selectedMenu}" pada opsi dropdown BI analitik gua.
+            Tolong buatkan analisis pengadaan bahan baku sepanjang 2 paragraf menggunakan panggilan 'lu' 'gua' santai layaknya anak Jakarta/Surabaya yang kritis.
+            
+            Kondisi Aturan:
+            1. Jika katalog menu produk tertulis 'KOSONG / BELUM ADA DATA MENU...', tegur gua (Tegar) secara santai di paragraf pertama kalau database menu managemen gua masih kosong melompong sehingga lu terpaksa ngerender simulasi data "Caffe Latte" sebagai blueprint pengujian presentasi.
+            2. Di paragraf kedua, berikan simulasi analisis HPP cerdas: Katakan jika menu "${selectedMenu}" ini dibuat, komponen utamanya (seperti Susu atau sediaan pelengkap) rentan terkena lonjakan inflasi 15.5% dari vendor utama, sehingga berisiko menekan target margin keuntungan bersih hingga ke angka 20%. Berikan rekomendasi bagaimana gua harus bersiap mengantisipasinya.
+          `;
+        } else if (activeSubTab === 'forecast') {
+          customPrompt = `
+            Berdasarkan Snapshot data cafe berikut ini:
+            ${dbSnapshot}
+
+            Tolong buatkan analisis singkat sepanjang 2 paragraf mengenai "Proyeksi Finansial & Inventory Masa Depan".
+            Catatan Penting: Jika data transaksi dan finansial jualan gua masih kosong (Rp 0), ulas secara santai dan kritis bahwa karena data transaksi jualan lu masih kosong melompong di database Supabase, grafik di bawah ini merupakan estimasi awal (initial model prediction). Berikan rekomendasi taktis bahwa kedepannya Warung Kopi Jaya harus bersiap menghadapi lonjakan +20% konsumsi bahan baku saat musim liburan, dan ingatkan gua untuk mulai mengisi shift staff kasir weekend jam 09:30 AM karena itu titik peak hour paling rawan penumpukan struk.
+          `;
+        }
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [{ role: 'user', parts: [{ text: customPrompt }] }]
+        });
+
+        if (activeSubTab === 'insights') {
+          setAiInsightsText(response.text || 'Gagal memuat analisis insight.');
+        } else {
+          setAiForecastText(response.text || 'Gagal memuat analisis forecast.');
+        }
+      } catch (err) {
+        console.error('⚠️ Gagal memproses analitik sub-tab AI:', err);
+      } finally {
+        setIsTabAnalyzing(false);
+      }
+    }
+
+    generateTabAnalytics();
+  }, [activeSubTab, dbSnapshot, selectedMenu]);
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
@@ -107,14 +168,14 @@ ${staffStr}
 
     try {
       const systemInstruction = `
-Lu adalah "Brainy", asisten bisnis, CFO virtual, dan analis kecerdasan buatan (AI) handal yang terintegrasi di dalam sistem POS cuanin.id. 
-Tugas utama lu adalah membantu owner cafe (bernama Tegar) menganalisis performa cafe-nya yang bernama "Warung Kopi Jaya".
-Gunakan gaya bahasa yang santai, humanis, akrab seperti memakai panggilan 'lu' dan 'gua', layaknya gaya bicara anak tongkrongan Jakarta/Surabaya, tapi isi analisis lu harus tetap kritis, tajam, logis, dan berbasis data. Jangan kaku!
+        Lu adalah "Brainy", asisten bisnis, CFO virtual, dan analis kecerdasan buatan (AI) handal yang terintegrasi di dalam sistem POS cuanin.id. 
+        Tugas utama lu adalah membantu owner cafe (bernama Tegar) menganalisis performa cafe-nya yang bernama "Warung Kopi Jaya".
+        Gunakan gaya bahasa yang santai, humanis, akrab seperti memakai panggilan 'lu' dan 'gua', layaknya gaya bicara anak tongkrongan Jakarta/Surabaya, tapi isi analisis lu harus tetap kritis, tajam, logis, dan berbasis data. Jangan kaku!
 
-Berikut adalah data kondisi live database cafe saat ini yang wajib lu jadikan acuan mutlak untuk menjawab pertanyaan user jika relevan:
-${dbSnapshot}
+        Berikut adalah data kondisi live database cafe saat ini yang wajib lu jadikan acuan mutlak untuk menjawab pertanyaan user jika relevan:
+        ${dbSnapshot}
 
-Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan menggunakan bullet points bold agar mudah dibaca. Jika ditanya hal di luar bisnis atau cafe, ingatkan user secara santai untuk fokus ngomongin cuan cafe aja.
+        Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan menggunakan bullet points bold agar mudah dibaca. Jika ditanya hal di luar bisnis atau cafe, ingatkan user secara santai untuk fokus ngomongin cuan cafe aja.
       `;
 
       const response = await ai.models.generateContent({
@@ -169,7 +230,7 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
           <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer' }}><LogOut size={18} /> <span style={{ fontSize: '14px' }}>Logout</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '4px' }}>
             <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>WJ</div>
-            <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM</span></div>
+            <div style={{ flex: 1, textAlign: 'left' }}><p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p><span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM PLAN</span></div>
           </div>
         </div>
       </div>
@@ -184,7 +245,15 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '12px', backgroundColor: '#E6F4EA', border: '1px solid #10B981', borderRadius: '10px', cursor: 'pointer' }}>
             <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#006847', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={14}/> Analisis Profit Oct</p>
-            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px', display: 'block' }}>Active Stream</span>
+            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px', display: 'block' }}>2 hours ago</span>
+          </div>
+          <div style={{ padding: '12px', backgroundColor: 'transparent', borderRadius: '10px', cursor: 'pointer' }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: '500', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={14}/> Efektivitas Promo Beli 2 Gratis 1</p>
+            <span style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', display: 'block' }}>Yesterday</span>
+          </div>
+          <div style={{ padding: '12px', backgroundColor: 'transparent', borderRadius: '10px', cursor: 'pointer' }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: '500', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={14}/> Prediksi Stok Susu</p>
+            <span style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', display: 'block' }}>Oct 24, 2023</span>
           </div>
         </div>
       </div>
@@ -192,10 +261,10 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
       {/* ================= MAIN WORKSPACE KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         
-        {/* ⚡ INTEGRATED UNIFIED TOP BAR LAYOUT (Persis Seperti Screenshot Lu) */}
+        {/* TOP BAR LAYOUT */}
         <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', padding: '0 32px', justifyContent: 'space-between', flexShrink: 0 }}>
           
-          {/* SUB-TABS NAVIGATION INDICATORS */}
+          {/* SUB-TABS NAVIGATION */}
           <div style={{ display: 'flex', gap: '24px', alignItems: 'center', height: '100%' }}>
             {['ask-brainy', 'insights', 'forecast'].map((tab) => {
               const isActive = activeSubTab === tab;
@@ -224,7 +293,7 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
             })}
           </div>
 
-          {/* SEARCH COMPONENT & ACCOUNT PROFILE METRICS */}
+          {/* UTILITIES & PROFILE */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '300px' }}>
               <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px' }} />
@@ -242,7 +311,7 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
           </div>
         </div>
 
-        {/* SUB-VIEW AREA WRAPPER */}
+        {/* SUB-VIEW AREA CONTENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
           
           {/* VIEW A: CHAT CORE TAB */}
@@ -297,28 +366,201 @@ Aturan: Jika ditanya rumus matematika atau kalkulasi keuangan, jawab dengan meng
             </div>
           )}
 
-          {/* ⚡ VIEW B: INSIGHTS LOG DATA TEMPLATE */}
+          {/* ⚡ VIEW B: INSIGHTS DASHBOARD DINAMIS */}
           {activeSubTab === 'insights' && (
-            <div style={{ padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><BarChart3 size={18} color="#10B981" /> AI Business Insights Log</h3>
-                <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>Deteksi tren penjualan otomatis berbasis historikal algoritma.</p>
-                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #E5E7EB', borderRadius: '12px', marginTop: '20px', color: '#9CA3AF', fontStyle: 'italic' }}>
-                  Pipeline visual grafik tren margin profit susu vs COGS sedang disinkronisasikan.
+            <div style={{ padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', height: '100%' }}>
+              
+              {/* Header section dengan Dropdown Dinamis Terkoneksi Supabase */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Business Intelligence Insights</h2>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time analysis and strategic recommendations for your business.</p>
                 </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  
+                  {/* ⚡ DROPDOWN SELECTION HUB */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', padding: '4px 12px', borderRadius: '10px' }}>
+                    <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Pilih Menu:</span>
+                    <select 
+                      value={selectedMenu}
+                      onChange={(e) => setSelectedMenu(e.target.value)}
+                      style={{ border: 'none', outline: 'none', fontSize: '13px', fontWeight: 'bold', color: '#006847', backgroundColor: 'transparent', cursor: 'pointer', padding: '6px' }}
+                    >
+                      {menuList.length > 0 ? (
+                        menuList.map((m, idx) => (
+                          <option key={idx} value={m.menu_name}>{m.menu_name}</option>
+                        ))
+                      ) : (
+                        <option value="Caffe Latte">Caffe Latte (Simulasi - Data Kosong)</option>
+                      )}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '13px', color: '#4B5563', fontWeight: 'bold' }}>
+                    <Calendar size={14}/> <span>Oct 1 - Oct 30, 2023</span>
+                  </div>
+                  <button style={{ padding: '10px 18px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Export Report</button>
+                </div>
+              </div>
+
+              {/* Graphic Chart Box */}
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Ingredient Cost Distribution ({selectedMenu})</h3>
+                <span style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px', display: 'block' }}>Comparing ingredient procurement costs against category profitability</span>
+                
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '80px', marginTop: '32px', padding: '0 40px' }}>
+                  <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: 'conic-gradient(#006847 0% 35%, #0284c7 35% 60%, #34d399 60% 80%, #a7f3d0 80% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '130px', height: '130px', backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>Total Cost</span>
+                      <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', marginTop: '2px' }}>100%</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+                    {[
+                      { label: 'Bahan Utama / Susu', percent: '35.0%', desc: 'Rp 21,350/Unit', color: '#006847' },
+                      { label: 'Bahan Baku Kopi', percent: '25.0%', desc: 'Premium Blend', color: '#0284c7' },
+                      { label: 'Packaging / Cups', percent: '20.0%', desc: 'Cups, Sugar, Sleeve', color: '#34d399' },
+                      { label: 'Target Margin Bersih', percent: '20.0%', desc: 'Calculated Net Profit', color: '#a7f3d0' }
+                    ].map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ width: '14px', height: '14px', backgroundColor: item.color, borderRadius: '4px', marginTop: '2px', flexShrink: 0 }} />
+                        <div>
+                          <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{item.label} <span style={{ color: '#6B7280', marginLeft: '6px', fontWeight: '500' }}>{item.percent}</span></p>
+                          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>({item.desc})</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Brainy's Analysis Connected to Live Gemini */}
+              <div style={{ backgroundColor: '#E6F4EA', borderRadius: '16px', border: '1px solid #10B981', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}>
+                  {isTabAnalyzing ? <Loader2 size={22} className="animate-spin"/> : <Bot size={22}/>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#006847', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Brainy's Analysis {isTabAnalyzing && <span style={{ fontSize: '11px', color: '#059669', fontStyle: 'italic', fontWeight: 'normal' }}>(Brainy lagi menghitung database...)</span>}
+                  </h4>
+                  <div style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#065f46', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                    {aiInsightText}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '16px' }}>
+                {[
+                  { icon: <Truck size={18} color="#006847"/>, title: 'Review Vendor Prices', desc: 'Compare current material costs with alternative local suppliers in the Tegal area.', action: 'View Alternatives' },
+                  { icon: <Percent size={18} color="#006847"/>, title: 'Adjust Menu Pricing', desc: `Recommended: Review pricing strategy for ${selectedMenu} to secure a stable 12% profit cushion.`, action: 'Update Pricing' },
+                  { icon: <BarChart3 size={18} color="#006847"/>, title: 'Cost Breakdown', desc: `Deep dive into the per-ingredient cost analysis for all items inside this category.`, action: 'View Details' }
+                ].map((card, idx) => (
+                  <div key={idx} style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{card.icon}</div>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>{card.title}</h4>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', lineHeight: '1.5', flex: 1 }}>{card.desc}</p>
+                    <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                      {card.action} <ArrowRight size={14}/>
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ⚡ VIEW C: FORECAST PREDICTIVE NODE TEMPLATE */}
+          {/* ⚡ VIEW C: FORECAST PREDICTIVE DASHBOARD LENGKAP */}
           {activeSubTab === 'forecast' && (
-            <div style={{ padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}><LineChart size={18} color="#1E3A8A" /> AI Predictive Stock Forecast</h3>
-                <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>Proyeksi ketahanan stok bahan baku Warung Kopi Jaya untuk 7 hari ke depan.</p>
-                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #E5E7EB', borderRadius: '12px', marginTop: '20px', color: '#9CA3AF', fontStyle: 'italic' }}>
-                  Kalkulator matriks estimasi pemakaian komoditas biji kopi/susu aktif.
+            <div style={{ padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', height: '100%' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Future Forecast</h2>
+                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>AI-powered revenue projections and strategic growth insights for your business.</p>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Revenue Forecast</h4>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>Projected revenue trend for the next 90 days</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px', fontWeight: 'bold', color: '#4B5563' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', backgroundColor: '#006847', borderRadius: '50%' }}/> Current Trend</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', border: '2px dashed #10B981', borderRadius: '50%' }}/> Projected Growth</div>
+                    <div style={{ padding: '6px 12px', backgroundColor: '#F3F4F6', borderRadius: '6px', fontSize: '11px', color: '#111827' }}>Next 3 Months <ChevronDown size={12}/></div>
+                  </div>
                 </div>
+
+                <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 40px 20px 40px', position: 'relative', marginTop: '10px' }}>
+                  <div style={{ position: 'absolute', bottom: '65px', left: '100px', right: '100px', height: '80px', borderTop: '3px dashed #10B981', transform: 'rotate(-11deg)', zIndex: 1 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '70px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>Current (Oct)</span></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '85px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>November</span></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '75px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>December</span></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '110px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>January 2024</span></div>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#EFF6FF', borderRadius: '16px', border: '1px solid #3B82F6', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#1E3A8A', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}>
+                  {isTabAnalyzing ? <Loader2 size={22} className="animate-spin"/> : <Sparkles size={22}/>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#1E3A8A' }}>AI Predictive Forecast Log</h4>
+                  <div style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#1E40AF', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                    {aiForecastText}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A' }}><Archive size={16}/> <span>Inventory Demand Forecast</span></div>
+                    <span style={{ backgroundColor: '#E1F5FE', color: '#0284c7', fontSize: '9px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '12px' }}>HIGH ACCURACY</span>
+                  </div>
+                  <div style={{ backgroundColor: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #F3F4F6' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>Coffee bean consumption is expected to spike during the holiday season.</p>
+                    <h3 style={{ margin: '12px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#006847' }}>+20% <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'normal' }}>Stock increase recommended</span></h3>
+                  </div>
+                  <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Adjust Purchase Order →</button>
+                </div>
+
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 'bold', color: '#1E3A8A' }}><Clock size={16}/> <span>Peak Hour Prediction</span></div>
+                    <span style={{ backgroundColor: '#EEEFEE', color: '#4B5563', fontSize: '9px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '12px' }}>NEXT WEEKEND</span>
+                  </div>
+                  <div style={{ backgroundColor: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #F3F4F6', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>Significant traffic increase predicted for Saturday morning brunch.</p>
+                    <div style={{ display: 'flex', gap: '24px', marginTop: '4px' }}>
+                      <div><span style={{ fontSize: '10px', color: '#9CA3AF', display: 'block' }}>START TIME</span><span style={{ fontSize: '15px', fontWeight: 'bold', color: '#1E3A8A' }}>09:30 AM</span></div>
+                      <div><span style={{ fontSize: '10px', color: '#9CA3AF', display: 'block' }}>INTENSITY</span><span style={{ fontSize: '15px', fontWeight: 'bold', color: '#DC2626' }}>Very High</span></div>
+                    </div>
+                  </div>
+                  <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Optimize Staff Guide →</button>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: 'bold', color: '#111827' }}>Strategic Opportunities</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    { title: 'Launch a seasonal promotion', subtitle: 'Predicted 15% revenue lift by bundling winter specials.', type: 'execute', label: 'Execute' },
+                    { title: 'Negotiate bulk discount for milk supplier', subtitle: 'Your current volume qualifies for a 5% tier reduction.', type: 'review', label: 'Review Contract' },
+                    { title: 'Reduce evening operating hours', subtitle: 'Low traffic between 9PM-10PM results in net loss for utilities.', type: 'adjust', label: 'Adjust Hours' }
+                  ].map((row, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', border: '1px solid #F3F4F6', borderRadius: '12px', backgroundColor: '#FAFAFA' }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{row.title}</p>
+                        <span style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', display: 'block' }}>{row.subtitle}</span>
+                      </div>
+                      <button style={{ 
+                        padding: '10px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', border: row.type === 'execute' ? 'none' : '1px solid #D1D5DB',
+                        backgroundColor: row.type === 'execute' ? '#006847' : '#ffffff', color: row.type === 'execute' ? '#ffffff' : '#374151'
+                      }}>{row.label}</button>
+                    </div>
+                  ))}
+                </div>
+                <button style={{ display: 'block', margin: '16px auto 0 auto', background: 'none', border: 'none', color: '#6B7280', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View all 12 opportunities</button>
               </div>
             </div>
           )}
