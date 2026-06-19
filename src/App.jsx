@@ -5,12 +5,13 @@ import Register from './views/auth/Register';
 import Sidebar from './components/shared/Sidebar';
 import TopBar from './components/shared/TopBar';
 
-// Import views asli lu
-import Dashboard from './views/dashboard/MainDashboard';
+// 📂 IMPORT VIEWS ASLI LU (Sesuaikan nama file riil di folder lu, Gar)
+import Dashboard from './views/dashboard/MainDashboard'; // Sesuai file baru yang kita bersihin tadi
 import Sales from './views/sales/SalesMonitoring';
 import Stock from './views/stock/StockIntelligence';
 import MenuManagement from './views/menu/MenuManagement';
 import StaffManagement from './views/staff/StaffManagement';
+import BrainyChat from './views/ai-chat/BrainyChat'; // Pastikan path foldernya bener
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -58,7 +59,7 @@ export default function App() {
       <Login 
         onNavigate={(target) => setCurrentView(target)} 
         onLoginSuccess={() => {
-          // Kosongkan aja gak apa-apa, karena useEffect di atas yang bakal otomatis ngebuka gerbang begitu deteksi session sukses!
+          // Otomatis dihandle oleh listener useEffect di atas
         }} 
       />
     );
@@ -74,8 +75,8 @@ export default function App() {
       {/* CONTAINER UTAMA KANAN */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* 2. SHARED TOPBAR ATAS */}
-        <TopBar />
+        {/* 2. SHARED TOPBAR ATAS (🔥 FIXED: Kirim props navigasi ke TopBar agar button Ask Brainy aktif!) */}
+        <TopBar onNavigateView={setCurrentView} activeView={currentView} />
 
         {/* 3. RUANG KONTEN DINAMIS */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#FAFAFA' }}>
@@ -84,6 +85,9 @@ export default function App() {
           {currentView === 'stock' && <Stock />}
           {currentView === 'menu' && <MenuManagement />}
           {currentView === 'staff' && <StaffManagement />}
+          
+          {/* 🔥 FIXED: Tampilkan halaman pilar AI Brainy lu di sini saat tombol dipicu */}
+          {currentView === 'brainy' && <BrainyChat />}
         </div>
 
       </div>
