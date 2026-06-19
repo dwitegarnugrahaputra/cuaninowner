@@ -1,80 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import MainDashboard from './views/dashboard/MainDashboard.jsx';
-import BrainyChat from './views/ai-chat/BrainyChat.jsx';
-import SalesMonitoring from './views/sales/SalesMonitoring.jsx';
-import StockIntelligence from './views/stock/StockIntelligence.jsx';
-import MenuManagement from './views/menu/MenuManagement.jsx';
-import StaffManagement from './views/staff/StaffManagement.jsx';
-import Login from './views/auth/Login.jsx';
-import Register from './views/auth/Register.jsx';
+import { supabase } from './config/supabaseClient'; // Pastikan path client lu bener
+import Login from './views/auth/Login';
+import Register from './views/auth/Register';
+import Sidebar from './components/shared/Sidebar';
+import TopBar from './components/shared/TopBar';
 
-function MainRouter() {
-  const { user, loading, loginUser } = useAuth(); // Asumsi ada loginUser / setAuth dari context lu
-  
-  {/* KUNCI UTAMA FORCE LOGIN PAGE: 
-    Kita set initial state screen ke 'login' dan pastikan isAuthenticated diset false di awal 
-    setiap kali npm run dev dijalankan (aplikasi cold start).
-  */}
-  const [screen, setScreen] = useState('login'); 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentView, setCurrentView] = useState('dashboard'); 
+// Import views asli lu
+import Dashboard from './views/dashboard/MainDashboard';
+import Sales from './views/sales/SalesMonitoring';
+import Stock from './views/stock/StockIntelligence';
+import MenuManagement from './views/menu/MenuManagement';
+import StaffManagement from './views/staff/StaffManagement';
 
-  // Efek pengaman: Pastikan setiap kali browser di-reload/cold start, state dikunci ke login
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentView, setCurrentView] = useState('login'); // Kontrol sub-view internal
+
+  // 👁️ RADAR DETEKTIF: Memantau status login secara reaktif (Email & Google OAuth tembus semua)
   useEffect(() => {
-    setIsAuthenticated(false);
-    setScreen('login');
+    // 1. Cek session awal pas web pertama kali dibuka / di-refresh
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) setCurrentView('dashboard'); // Auto set tab kalau udah login
+      setIsLoading(false);
+    });
+
+    // 2. Dengarkan perubahan auth secara real-time (efek klik login / logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        setCurrentView('dashboard');
+      } else {
+        setCurrentView('login');
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
+  // Tampilkan layar loading pelindung sementara Supabase mengambil token session
+  if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#F8F9FA' }}>
-        <div style={{ textAlign: 'center', fontFamily: 'sans-serif' }}>
-          <div style={{ width: '40px', height: '40px', border: '4px solid #E5E7EB', borderTop: '4px solid #006847', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }} />
-          <h4 style={{ color: '#374151', margin: '0' }}>Memvalidasi Kredensial Akses...</h4>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', fontFamily: 'sans-serif', color: '#006847', fontWeight: 'bold' }}>
+        Memeriksa Kredensial Keamanan cuanin.id...
       </div>
     );
   }
 
-  // Handler jembatan ketika owner sukses klik "Masuk" di halaman login
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setCurrentView('dashboard');
-  };
-
-  // --- RENDERING ROUTER CONDITIONAL ---
-  // Jika sudah sukses melewati form login, baru boleh masuk ke core views cuanin.id
-  if (user && isAuthenticated) {
-    if (currentView === 'dashboard') {
-      return <MainDashboard onNavigateView={setCurrentView} forcedSubView="main-dashboard" />;
-    } else if (currentView === 'info-outlet') {
-      return <MainDashboard onNavigateView={setCurrentView} forcedSubView="info-outlet" />;
-    } else if (currentView === 'sales') {
-      return <SalesMonitoring onNavigateView={setCurrentView} />;
-    } else if (currentView === 'stock') {
-      return <StockIntelligence onNavigateView={setCurrentView} />;
-    } else if (currentView === 'menu') {
-      return <MenuManagement onNavigateView={setCurrentView} />;
-    } else if (currentView === 'staff') {
-      return <StaffManagement onNavigateView={setCurrentView} />;
-    } else if (currentView === 'chat') {
-      return <BrainyChat onNavigateView={setCurrentView} />;
+  // 🚪 KONDISI A: JALUR AUTHENTICATION (BELUM LOGIN)
+  if (!session) {
+    if (currentView === 'register') {
+      return <Register onNavigate={(target) => setCurrentView(target)} />;
     }
+    return (
+      <Login 
+        onNavigate={(target) => setCurrentView(target)} 
+        onLoginSuccess={() => {
+          // Kosongkan aja gak apa-apa, karena useEffect di atas yang bakal otomatis ngebuka gerbang begitu deteksi session sukses!
+        }} 
+      />
+    );
   }
 
-  // Jika belum login/otentikasi false, paksa ngerender halaman Auth
-  return screen === 'login' ? (
-    <Login onNavigate={setScreen} onLoginSuccess={handleLoginSuccess} />
-  ) : (
-    <Register onNavigate={setScreen} />
-  );
-}
-
-export default function App() {
+  // 🖥️ KONDISI B: JALUR APPS UTAMA (SUDAH LOGIN - GOOGLE / MANUAL)
   return (
-    <AuthProvider>
-      <MainRouter />
-    </AuthProvider>
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#F8F9FA' }}>
+      
+      {/* 1. SHARED SIDEBAR KIRI */}
+      <Sidebar onNavigateView={setCurrentView} activeView={currentView} />
+
+      {/* CONTAINER UTAMA KANAN */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* 2. SHARED TOPBAR ATAS */}
+        <TopBar />
+
+        {/* 3. RUANG KONTEN DINAMIS */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#FAFAFA' }}>
+          {currentView === 'dashboard' && <Dashboard />}
+          {currentView === 'sales' && <Sales />}
+          {currentView === 'stock' && <Stock />}
+          {currentView === 'menu' && <MenuManagement />}
+          {currentView === 'staff' && <StaffManagement />}
+        </div>
+
+      </div>
+    </div>
   );
 }
