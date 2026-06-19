@@ -36,6 +36,93 @@ function CuaninLogoMini() {
   );
 }
 
+// 📊 HELPER: Susun rangkaian chart (aktual + proyeksi) untuk mode 7 hari (harian) atau 30 hari (per-minggu)
+function buildForecastSeries({ sortedDateKeys, dailyTotals, dailyAvg, growthRatePerDay, range }) {
+  const ID_DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+  if (range === 7) {
+    // Mode harian: 3 hari aktual terakhir (kalau ada) + 4 hari proyeksi ke depan
+    const actualDaysToShow = 3;
+    const projectedDaysToShow = 4;
+    const series = [];
+
+    const recentKeys = sortedDateKeys.slice(-actualDaysToShow);
+    recentKeys.forEach(key => {
+      const d = new Date(key);
+      series.push({
+        label: ID_DAY_SHORT[d.getDay()],
+        value: Math.round(dailyTotals[key]),
+        isProjected: false
+      });
+    });
+
+    // Titik basis untuk proyeksi: pakai rata-rata harian historis (dailyAvg), bukan hari terakhir saja,
+    // supaya tidak terlalu sensitif terhadap 1 hari yang kebetulan sepi/ramai.
+    let projectionBase = dailyAvg;
+    const lastActualDate = sortedDateKeys.length > 0 ? new Date(sortedDateKeys[sortedDateKeys.length - 1]) : new Date();
+
+    for (let i = 1; i <= projectedDaysToShow; i++) {
+      projectionBase = projectionBase * (1 + growthRatePerDay);
+      const futureDate = new Date(lastActualDate);
+      futureDate.setDate(futureDate.getDate() + i);
+      series.push({
+        label: ID_DAY_SHORT[futureDate.getDay()],
+        value: Math.round(Math.max(0, projectionBase)),
+        isProjected: true
+      });
+    }
+    return series;
+  }
+
+  // Mode 30 hari: dikelompokkan per-minggu (1 bar aktual minggu terakhir + 3 bar proyeksi minggu ke depan)
+  const series = [];
+
+  // Minggu aktual terakhir: ambil 7 hari terakhir data riil (kalau ada), dirata-ratakan jadi total mingguan
+  const last7Keys = sortedDateKeys.slice(-7);
+  const actualWeekTotal = last7Keys.reduce((sum, k) => sum + dailyTotals[k], 0);
+  series.push({
+    label: 'Minggu Ini',
+    value: Math.round(actualWeekTotal > 0 ? actualWeekTotal : dailyAvg * 7),
+    isProjected: false
+  });
+
+  // 3 minggu proyeksi ke depan, dihitung dari rata-rata harian yang tumbuh sesuai growthRatePerDay (compounding per hari)
+  let runningDailyAvg = dailyAvg;
+  for (let week = 1; week <= 3; week++) {
+    let weekTotal = 0;
+    for (let day = 1; day <= 7; day++) {
+      runningDailyAvg = runningDailyAvg * (1 + growthRatePerDay);
+      weekTotal += Math.max(0, runningDailyAvg);
+    }
+    series.push({
+      label: `Minggu ${week + 1}`,
+      value: Math.round(weekTotal),
+      isProjected: true
+    });
+  }
+
+  return series;
+}
+
+// 📊 HELPER: Fallback chart kosong saat belum ada data transaksi sukses sama sekali
+function buildEmptyFallbackChart(range) {
+  if (range === 7) {
+    const ID_DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      return { label: ID_DAY_SHORT[d.getDay()], value: 0, isProjected: i > 2 };
+    });
+  }
+  return [
+    { label: 'Minggu Ini', value: 0, isProjected: false },
+    { label: 'Minggu 2', value: 0, isProjected: true },
+    { label: 'Minggu 3', value: 0, isProjected: true },
+    { label: 'Minggu 4', value: 0, isProjected: true }
+  ];
+}
+
 export default function BrainyChat({ onNavigateView }) {
   const { logout } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('ask-brainy');
@@ -58,6 +145,13 @@ export default function BrainyChat({ onNavigateView }) {
   const [aiForecastText, setAiForecastText] = useState('Sedang memproyeksikan tren permintaan pasar...');
   const [isTabAnalyzing, setIsTabAnalyzing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // 📊 STATE CHART FORECAST OMSET (terhubung Supabase: sales_transactions)
+  const [forecastRange, setForecastRange] = useState(7); // toggle: 7 hari atau 30 hari
+  const [forecastChartData, setForecastChartData] = useState([]); // [{ label, value, isProjected }]
+  const [isForecastChartLoading, setIsForecastChartLoading] = useState(true);
+  const [forecastGrowthRate, setForecastGrowthRate] = useState(0); // growth harian (desimal, misal 0.05 = 5%/hari)
+  const [forecastDailyAvg, setForecastDailyAvg] = useState(0);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -107,6 +201,93 @@ ${staffStr}
     compileBusinessContext();
   }, []);
 
+  // 📊 PIPELINE FORECAST CHART: Hitung proyeksi omset harian dari histori sales_transactions asli
+  useEffect(() => {
+    if (activeSubTab !== 'forecast') return;
+
+    async function buildForecastChart() {
+      setIsForecastChartLoading(true);
+      try {
+        const { data: sales, error } = await supabase
+          .from('sales_transactions')
+          .select('total_amount, status, created_at')
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const completedSales = (sales || []).filter(
+          tx => tx.status === 'Completed' || tx.status === 'SUCCESS'
+        );
+
+        if (completedSales.length === 0) {
+          // Belum ada transaksi sukses sama sekali -> tidak ada basis historis untuk dihitung
+          setForecastDailyAvg(0);
+          setForecastGrowthRate(0);
+          setForecastChartData(buildEmptyFallbackChart(forecastRange));
+          setIsForecastChartLoading(false);
+          return;
+        }
+
+        // 1. Kelompokkan total omset per HARI kalender (YYYY-MM-DD) dari created_at
+        const dailyTotals = {}; // { 'YYYY-MM-DD': totalOmsetHariItu }
+        completedSales.forEach(tx => {
+          const dateKey = new Date(tx.created_at).toISOString().slice(0, 10);
+          dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + Number(tx.total_amount || 0);
+        });
+
+        const sortedDateKeys = Object.keys(dailyTotals).sort();
+        const firstDate = new Date(sortedDateKeys[0]);
+        const lastDate = new Date(sortedDateKeys[sortedDateKeys.length - 1]);
+        const totalSpanDays = Math.max(1, Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24)) + 1);
+
+        const totalRevenueAllTime = Object.values(dailyTotals).reduce((sum, v) => sum + v, 0);
+        const dailyAvg = totalRevenueAllTime / totalSpanDays;
+
+        // 2. Hitung growth rate: bandingkan rata-rata harian separuh AWAL vs separuh AKHIR periode histori
+        let growthRatePerDay = 0;
+        if (sortedDateKeys.length >= 2) {
+          const midIndex = Math.floor(sortedDateKeys.length / 2);
+          const firstHalfKeys = sortedDateKeys.slice(0, Math.max(1, midIndex));
+          const secondHalfKeys = sortedDateKeys.slice(midIndex);
+
+          const firstHalfAvg = firstHalfKeys.reduce((sum, k) => sum + dailyTotals[k], 0) / firstHalfKeys.length;
+          const secondHalfAvg = secondHalfKeys.reduce((sum, k) => sum + dailyTotals[k], 0) / secondHalfKeys.length;
+
+          if (firstHalfAvg > 0) {
+            // Growth total antar 2 periode, lalu dirubah jadi rate HARIAN (dibagi rentang hari antar titik tengah kedua periode)
+            const totalGrowth = (secondHalfAvg - firstHalfAvg) / firstHalfAvg;
+            const daysBetweenHalves = Math.max(1, Math.round(sortedDateKeys.length / 2));
+            growthRatePerDay = totalGrowth / daysBetweenHalves;
+          }
+        }
+
+        // Pengaman: clamp growth rate harian agar tidak ekstrem akibat data historis yang sangat sedikit/fluktuatif
+        growthRatePerDay = Math.max(-0.15, Math.min(0.15, growthRatePerDay));
+
+        setForecastDailyAvg(dailyAvg);
+        setForecastGrowthRate(growthRatePerDay);
+
+        // 3. Susun data chart: gabungan beberapa hari AKTUAL terakhir (solid) + proyeksi ke depan (putus-putus)
+        const chartData = buildForecastSeries({
+          sortedDateKeys,
+          dailyTotals,
+          dailyAvg,
+          growthRatePerDay,
+          range: forecastRange
+        });
+
+        setForecastChartData(chartData);
+      } catch (err) {
+        console.error('⚠️ Gagal membangun grafik forecast omset:', err.message);
+        setForecastChartData(buildEmptyFallbackChart(forecastRange));
+      } finally {
+        setIsForecastChartLoading(false);
+      }
+    }
+
+    buildForecastChart();
+  }, [activeSubTab, forecastRange]);
+
   // 🚀 INTERCEPTOR TRIGGER: Otomatis nembak AI pas sub-tab insights / forecast dibuka atau menu dropdown diubah
   useEffect(() => {
     if (activeSubTab === 'ask-brainy' || !dbSnapshot) return;
@@ -128,11 +309,16 @@ ${staffStr}
             2. Di paragraf kedua, berikan simulasi analisis HPP cerdas: Katakan jika menu "${selectedMenu}" ini dibuat, komponen utamanya (seperti Susu atau sediaan pelengkap) rentan terkena lonjakan inflasi 15.5% dari vendor utama, sehingga berisiko menekan target margin keuntungan bersih hingga ke angka 20%. Berikan rekomendasi bagaimana gua harus bersiap mengantisipasinya.
           `;
         } else if (activeSubTab === 'forecast') {
+          const growthPercentText = (forecastGrowthRate * 100).toFixed(2);
           customPrompt = `
             Berdasarkan Snapshot data cafe berikut ini:
             ${dbSnapshot}
 
-            Tolong buatkan analisis singkat sepanjang 2 paragraf mengenai "Proyeksi Finansial & Inventory Masa Depan".
+            Data tambahan hasil kalkulasi grafik forecast omset (dihitung dari histori asli sales_transactions):
+            - Rata-rata omset harian historis: Rp ${Math.round(forecastDailyAvg).toLocaleString('id-ID')}
+            - Growth rate harian terhitung: ${growthPercentText}% per hari
+
+            Tolong buatkan analisis singkat sepanjang 2 paragraf mengenai "Proyeksi Finansial & Inventory Masa Depan", dengan mengacu pada angka rata-rata omset harian dan growth rate di atas sebagai dasar argumen lu (sebut angkanya secara natural, jangan kaku).
             Catatan Penting: Jika data transaksi dan finansial jualan gua masih kosong (Rp 0), ulas secara santai dan kritis bahwa karena data transaksi jualan lu masih kosong melompong di database Supabase, grafik di bawah ini merupakan estimasi awal (initial model prediction). Berikan rekomendasi taktis bahwa kedepannya Warung Kopi Jaya harus bersiap menghadapi lonjakan +20% konsumsi bahan baku saat musim liburan, dan ingatkan gua untuk mulai mengisi shift staff kasir weekend jam 09:30 AM karena itu titik peak hour paling rawan penumpukan struk.
           `;
         }
@@ -155,7 +341,7 @@ ${staffStr}
     }
 
     generateTabAnalytics();
-  }, [activeSubTab, dbSnapshot, selectedMenu]);
+  }, [activeSubTab, dbSnapshot, selectedMenu, forecastDailyAvg, forecastGrowthRate]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -481,22 +667,68 @@ ${staffStr}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Revenue Forecast</h4>
-                    <span style={{ fontSize: '12px', color: '#6B7280' }}>Projected revenue trend for the next 90 days</span>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {forecastRange === 7
+                        ? 'Proyeksi omset harian untuk minggu ini berdasarkan data transaksi asli'
+                        : 'Proyeksi omset mingguan untuk 30 hari ke depan berdasarkan data transaksi asli'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px', fontWeight: 'bold', color: '#4B5563' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', backgroundColor: '#006847', borderRadius: '50%' }}/> Current Trend</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', border: '2px dashed #10B981', borderRadius: '50%' }}/> Projected Growth</div>
-                    <div style={{ padding: '6px 12px', backgroundColor: '#F3F4F6', borderRadius: '6px', fontSize: '11px', color: '#111827' }}>Next 3 Months <ChevronDown size={12}/></div>
+                    <div style={{ display: 'flex', backgroundColor: '#F3F4F6', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                      <button
+                        onClick={() => setForecastRange(7)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: forecastRange === 7 ? '#006847' : 'transparent', color: forecastRange === 7 ? '#ffffff' : '#4B5563', transition: 'all 0.15s' }}
+                      >
+                        7 Hari
+                      </button>
+                      <button
+                        onClick={() => setForecastRange(30)}
+                        style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', border: 'none', backgroundColor: forecastRange === 30 ? '#006847' : 'transparent', color: forecastRange === 30 ? '#ffffff' : '#4B5563', transition: 'all 0.15s' }}
+                      >
+                        30 Hari
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 40px 20px 40px', position: 'relative', marginTop: '10px' }}>
-                  <div style={{ position: 'absolute', bottom: '65px', left: '100px', right: '100px', height: '80px', borderTop: '3px dashed #10B981', transform: 'rotate(-11deg)', zIndex: 1 }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '70px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>Current (Oct)</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '85px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>November</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '75px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>December</span></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2 }}><div style={{ width: '36px', height: '110px', backgroundColor: '#006847', borderRadius: '6px 6px 0 0' }} /><span style={{ fontSize: '11px', color: '#9CA3AF' }}>January 2024</span></div>
-                </div>
+                {isForecastChartLoading ? (
+                  <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: '13px', gap: '8px' }}>
+                    <Loader2 size={16} className="animate-spin" /> Menghitung proyeksi dari data transaksi...
+                  </div>
+                ) : (
+                  (() => {
+                    const maxValue = Math.max(1, ...forecastChartData.map(d => d.value));
+                    const maxBarHeightPx = 130;
+
+                    return (
+                      <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', padding: '0 24px 20px 24px', position: 'relative', marginTop: '10px' }}>
+                        {forecastChartData.map((point, idx) => {
+                          const barHeightPx = Math.max(6, Math.round((point.value / maxValue) * maxBarHeightPx));
+                          return (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2, flex: 1 }}>
+                              <span style={{ fontSize: '10px', color: point.isProjected ? '#059669' : '#374151', fontWeight: 'bold' }}>
+                                {point.value >= 1000000
+                                  ? `Rp ${(point.value / 1000000).toFixed(1)}jt`
+                                  : `Rp ${(point.value / 1000).toFixed(0)}rb`}
+                              </span>
+                              <div style={{
+                                width: '32px',
+                                height: `${barHeightPx}px`,
+                                backgroundColor: point.isProjected ? '#34D399' : '#006847',
+                                borderRadius: '6px 6px 0 0',
+                                border: point.isProjected ? '2px dashed #10B981' : 'none',
+                                boxSizing: 'border-box'
+                              }} />
+                              <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: point.isProjected ? 'normal' : '600' }}>{point.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
               </div>
 
               <div style={{ backgroundColor: '#EFF6FF', borderRadius: '16px', border: '1px solid #3B82F6', padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
