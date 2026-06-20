@@ -1,272 +1,276 @@
-import React, { useState } from 'react';
-import { FileText, MapPin, Phone, Mail, Clock, Save, Plus, Trash2, Shield, X, CheckSquare, Square } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Store, Mail, User, Phone, Plus, Trash2, Save, Loader2, ShieldAlert } from 'lucide-react';
+import { supabase } from '../../config/supabaseClient';
 
-export default function InfoOutlet({ onSaveSuccess }) {
-  // State utama untuk mengelola daftar peran (role)
-  const [roles, setRoles] = useState(['Manager', 'Barista', 'Kasir']);
-  
-  // State untuk kendali modal popup
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [newRoleName, setNewRoleName] = useState('');
-  
-  // State mockup untuk permissions di dalam modal
-  const [permissions, setPermissions] = useState({
-    viewSales: true,
-    manageStock: false,
-    manageMenu: false,
+export default function InfoOutlet() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaveLoading] = useState(false);
+  const [currentUid, setCurrentUserId] = useState(null);
+
+  // ⚡ FIXED: State awal dikosongkan (bukan hardcode "Warung Kopi Jaya" dkk).
+  // Nilai asli akan diisi setelah fetchUserDataPipeline selesai, baik dari
+  // outlet_config (kalau sudah pernah disimpan) atau dari data Google OAuth (kalau belum).
+  const [outletProfile, setOutletProfile] = useState({
+    outlet_name: '',
+    company_email: '',
+    owner_name: '',
+    company_phone: ''
   });
 
-  // Fungsi menambahkan role baru dari modal
-  const handleAddRoleSubmit = (e) => {
+  // State Manajemen Struktur Peran/Role
+  const [rolesList, setRolesList] = useState([]);
+  const [newRoleName, setNewRoleName] = useState('');
+
+  // 📥 READ PIPELINE: Ambil data spesifik berdasarkan User ID yang sedang login
+  const fetchUserDataPipeline = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        console.warn('Sesi pengguna tidak ditemukan.');
+        setIsLoading(false);
+        return;
+      }
+
+      const uid = session.user.id;
+      setCurrentUserId(uid);
+
+      // 1. Ambil data profil outlet berdasarkan user_id
+      const { data: outletData, error: outletError } = await supabase
+        .from('outlet_config')
+        .select('*')
+        .eq('user_id', uid)
+        .maybeSingle();
+
+      if (outletError) throw outletError;
+
+      if (outletData) {
+        // Row sudah pernah disimpan sebelumnya -> pakai data asli dari Supabase
+        setOutletProfile(outletData);
+      } else {
+        // ⚡ FIXED: Row belum pernah dibuat. Fallback ke data akun Google OAuth asli
+        // (bukan teks hardcode "Owner Cuanin" / "Warung Kopi Jaya"), supaya form
+        // langsung terisi dengan identitas user yang sedang login sebagai starting point.
+        const meta = session.user.user_metadata || {};
+        const fallbackOwnerName = meta.full_name || meta.name || (session.user.email ? session.user.email.split('@')[0] : '');
+        setOutletProfile({
+          outlet_name: '',
+          owner_name: fallbackOwnerName,
+          company_email: session.user.email || '',
+          company_phone: ''
+        });
+      }
+
+      // 2. Ambil master data peran kerja karyawan berdasarkan user_id
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('company_roles')
+        .select('*')
+        .eq('user_id', uid)
+        .order('role_name', { ascending: true });
+
+      if (rolesError) throw rolesError;
+
+      // ⚡ FIXED: Kalau belum ada role tersimpan, list dibiarkan kosong (bukan
+      // dummy d1-d4) supaya tidak terlihat seperti row asli yang bisa "dihapus"
+      // padahal sebenarnya tidak pernah tersimpan di Supabase.
+      setRolesList(rolesData || []);
+
+    } catch (err) {
+      console.error('⚠️ Gagal menyinkronkan data info outlet:', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserDataPipeline();
+  }, []);
+
+  // 📤 UPDATE PIPELINE: Simpan data terikat user_id menggunakan strategi Upsert
+  // Catatan: outlet_config.user_id sudah punya UNIQUE constraint (outlet_config_user_id_key),
+  // jadi onConflict: 'user_id' di bawah ini valid dan aman dipakai.
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!newRoleName.trim()) return;
-    
-    // Validasi duplikat nama peran
-    if (roles.some(role => role.toLowerCase() === newRoleName.trim().toLowerCase())) {
-      alert('Peran ini sudah terdaftar, Gar!');
-      return;
-    }
+    if (!currentUid) return;
+    setIsSaveLoading(true);
 
-    setRoles([...roles, newRoleName.trim()]);
-    
-    // Reset state dan tutup modal
-    setNewRoleName('');
-    setPermissions({ viewSales: true, manageStock: false, manageMenu: false });
-    setIsRoleModalOpen(false);
+    try {
+      const payload = {
+        user_id: currentUid,
+        outlet_name: outletProfile.outlet_name,
+        owner_name: outletProfile.owner_name,
+        company_email: outletProfile.company_email,
+        company_phone: outletProfile.company_phone
+      };
+
+      // Gunakan upsert: jika user_id sudah ada maka update, jika belum ada maka insert baru
+      const { error } = await supabase
+        .from('outlet_config')
+        .upsert(payload, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      alert('Informasi profil outlet Anda berhasil diperbarui di cloud database!');
+      await fetchUserDataPipeline();
+    } catch (err) {
+      alert('Gagal memperbarui profil: ' + err.message);
+    } finally {
+      setIsSaveLoading(false);
+    }
   };
 
-  // Fungsi mengurangi atau menghapus role
-  const handleDecreaseRole = (roleToDelete) => {
-    if (roles.length <= 1) {
-      alert('Minimal harus ada satu peran aktif tersisa untuk operasional gerai, Gar!');
-      return;
-    }
-    
-    if (window.confirm(`Yakin mau menghapus peran "${roleToDelete}" dari sistem outlet, Gar?`)) {
-      setRoles(roles.filter(role => role !== roleToDelete));
+  // ➕ CRUD ROLE - CREATE (Terikat user_id)
+  const handleAddRole = async (e) => {
+    e.preventDefault();
+    if (!newRoleName.trim() || !currentUid) return;
+
+    try {
+      const { error } = await supabase
+        .from('company_roles')
+        .insert([{ user_id: currentUid, role_name: newRoleName.trim() }]);
+
+      if (error) throw error;
+      setNewRoleName('');
+
+      const { data } = await supabase
+        .from('company_roles')
+        .select('*')
+        .eq('user_id', currentUid)
+        .order('role_name', { ascending: true });
+
+      if (data) setRolesList(data);
+    } catch (err) {
+      alert('Gagal menambahkan peran baru: ' + err.message);
     }
   };
 
-  // Toggle state permission mockup
-  const togglePermission = (key) => {
-    setPermissions({ ...permissions, [key]: !permissions[key] });
+  // ❌ CRUD ROLE - DELETE (Terikat user_id)
+  // ⚡ FIXED: Tidak ada lagi pengecekan id dummy 'd1'/'d2' karena rolesList sekarang
+  // selalu berisi baris asli dari Supabase (atau kosong) -- setiap delete di sini
+  // memang menghapus baris nyata di database.
+  const handleDeleteRole = async (id, name) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus peran "${name}"? Karyawan yang masih memakai peran ini di Staff Management perlu diperbarui rolenya secara manual.`)) return;
+    try {
+      const { error } = await supabase
+        .from('company_roles')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUid);
+
+      if (error) throw error;
+      setRolesList(rolesList.filter(role => role.id !== id));
+    } catch (err) {
+      alert('Gagal menghapus peran: ' + err.message);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#6B7280', fontSize: '14px' }}>
+        <Loader2 size={16} className="animate-spin" />
+        <span>Menyinkronkan data outlet pengguna...</span>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.2s ease-out', textAlign: 'left', position: 'relative' }}>
-      
-      {/* Header Title Section */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Info Outlet</h1>
-        <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Kelola profil hukum, alamat fisik, peran staf, dan parameter operasional gerai aktif lu.</p>
+        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>Informasi Outlet</h1>
+        <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#6B7280' }}>Kelola legalitas identitas usaha, kontak korporat, serta struktur ekspansi peran operasional.</p>
       </div>
 
-      {/* Main Split Layout Grid Forms (Sesuai image_311c58.png) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', alignItems: 'start' }}>
         
-        {/* BLOK KIRI: PROFIL, LOKASI, DAN MANAJEMEN ROLE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          {/* Card 1: Identitas & Legalitas Gerai */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>
-              Identitas & Legalitas Gerai
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Outlet / Cabang</label>
-                <input type="text" defaultValue="Warung Kopi Jaya" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
+        {/* FORM PROFIL UTAMA */}
+        <form onSubmit={handleSaveProfile} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Store size={16} color="#006847" /> Parameter Profil Legalitas
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#4B5563', display: 'block', marginBottom: '6px' }}>Nama Outlet Resmi</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Store size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                <input type="text" required placeholder="Contoh: Warung Kopi Jaya" value={outletProfile.outlet_name} onChange={(e) => setOutletProfile({...outletProfile, outlet_name: e.target.value})} style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13.5px', outline: 'none', fontWeight: 'bold' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor Induk Berusaha (NIB)</label>
-                  <input type="text" defaultValue="1209849201948" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#4B5563', display: 'block', marginBottom: '6px' }}>Nama Pemilik (Owner)</label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <User size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                <input type="text" required placeholder="Nama lengkap pemilik outlet" value={outletProfile.owner_name} onChange={(e) => setOutletProfile({...outletProfile, owner_name: e.target.value})} style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13.5px', outline: 'none' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#4B5563', display: 'block', marginBottom: '6px' }}>Email Perusahaan</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Mail size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                  <input type="email" required placeholder="email@perusahaan.com" value={outletProfile.company_email} onChange={(e) => setOutletProfile({...outletProfile, company_email: e.target.value})} style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none' }} />
                 </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori Bisnis</label>
-                  <select style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', backgroundColor: '#fff' }}>
-                    <option>Food & Beverages (Coffee Shop)</option>
-                    <option>Retail / Kelontong</option>
-                  </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#4B5563', display: 'block', marginBottom: '6px' }}>Nomor Telepon Korporat</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Phone size={14} color="#9CA3AF" style={{ position: 'absolute', left: '12px' }} />
+                  <input type="text" required placeholder="+62..." value={outletProfile.company_phone} onChange={(e) => setOutletProfile({...outletProfile, company_phone: e.target.value})} style={{ width: '100%', padding: '10px 12px 10px 36px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', fontWeight: '600' }} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Card 2: Kontak & Lokasi Fisik */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>
-              Lokasi & Kontak Cabang
+          <button type="submit" disabled={isSaving} style={{ padding: '11px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13.5px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', alignSelf: 'flex-end', marginTop: '8px' }}>
+            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} <span>Simpan Konfigurasi</span>
+          </button>
+        </form>
+
+        {/* STRUKTUR ROLE EKSPANSI */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E5E7EB', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={16} color="#006847" /> Struktur Akses Ekspansi
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Nomor Telepon Outlet</label>
-                  <input type="text" defaultValue="08123456789" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Email Resmi Cabang</label>
-                  <input type="email" defaultValue="kopijaya.selatan@cuanin.id" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Alamat Fisik Lengkap</label>
-                <textarea rows="3" defaultValue="Jl. Teuku Umar No.42, Kota Tegal, Jawa Tengah, 52123" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontFamily: 'sans-serif', resize: 'none' }}></textarea>
-              </div>
-            </div>
+            <span style={{ fontSize: '11.5px', color: '#6B7280', marginTop: '2px', display: 'block' }}>Tambahkan atau kurangi peran kerja resmi untuk cabang bisnis Anda.</span>
           </div>
 
-          {/* CARD 3: MANAJEMEN PERAN KERJA (Sesuai Letak Grid image_311c58.png) */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Shield size={18} color="#006847" />
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>
-                  Manajemen Peran Kerja (Role)
-                </h3>
-              </div>
-              {/* Tombol Pemicu Modal Popup Baru */}
-              <button 
-                type="button" 
-                onClick={() => setIsRoleModalOpen(true)}
-                style={{ padding: '8px 14px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Plus size={14} /> Tambah Peran Baru
-              </button>
-            </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input type="text" placeholder="Nama peran (Contoh: Supervisor)" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} style={{ flex: 1, padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none' }} />
+            <button type="button" onClick={handleAddRole} style={{ padding: '9px 14px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={16}/></button>
+          </div>
 
-            {/* List Render Peran Aktif */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', display: 'block', letterSpacing: '0.5px' }}>DAFTAR PERAN AKTIF SAAT INI</span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {roles.map((role, idx) => (
-                  <div 
-                    key={idx} 
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px' }}
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{role}</span>
-                    <button 
-                      type="button"
-                      onClick={() => handleDecreaseRole(role)}
-                      style={{ border: 'none', backgroundColor: 'transparent', color: '#9CA3AF', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.backgroundColor = '#FEE2E2'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                    >
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '13px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 50px', backgroundColor: '#F9FAFB', padding: '10px 14px', fontWeight: 'bold', color: '#4B5563', borderBottom: '1px solid #E5E7EB' }}>
+              <span>NAMA JABATAN / ROLE</span>
+              <span style={{ textAlign: 'right' }}>AKSI</span>
+            </div>
+            <div style={{ maxHeight: '180px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+              {rolesList.length > 0 ? (
+                rolesList.map((role, idx) => (
+                  <div key={role.id || idx} style={{ display: 'grid', gridTemplateColumns: '1fr 50px', padding: '12px 14px', alignItems: 'center', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontWeight: '600', color: '#111827' }}>{role.role_name}</span>
+                    <button type="button" onClick={() => handleDeleteRole(role.id, role.role_name)} style={{ background: 'none', border: 'none', padding: 0, color: '#EF4444', cursor: 'pointer', justifySelf: 'end', display: 'flex', alignItems: 'center' }}>
                       <Trash2 size={14} />
                     </button>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <div style={{ padding: '20px 14px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
+                  Belum ada peran kerja yang dibuat. Tambahkan peran pertama Anda di atas.
+                </div>
+              )}
             </div>
           </div>
 
-        </div>
-
-        {/* BLOK KANAN: PARAMETER OPERASIONAL & PAJAK */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>
-              Aturan Operasional & Pajak
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Buka Toko</label>
-                  <input type="time" defaultValue="08:00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Jam Tutup Toko</label>
-                  <input type="time" defaultValue="23:00" style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-              
-              <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Pajak Restoran / PB1 (%)</label>
-                  <input type="number" defaultValue="10" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '6px' }}>Biaya Layanan (Rp)</label>
-                  <input type="number" defaultValue="2000" style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-            </div>
+          <div style={{ display: 'flex', gap: '8px', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '10px 12px', borderRadius: '8px', fontSize: '11.5px', color: '#C2410C', lineHeight: '1.4' }}>
+            <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+            <span>Perubahan pada daftar peran ini akan langsung terintegrasi secara dinamis ke dalam pilihan menu dropdown formulir di halaman <strong>Staff Management</strong>.</span>
           </div>
-
-          <button 
-            onClick={onSaveSuccess}
-            style={{ width: '100%', padding: '14px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0, 104, 71, 0.2)' }}
-          >
-            <Save size={16} /> Simpan Perubahan Outlet
-          </button>
         </div>
 
       </div>
-
-      {/* ================= WINDOW POPUP OVERLAY: TAMBAH ROLE BARU ================= */}
-      {isRoleModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ width: '440px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadeIn 0.2s ease-out' }}>
-            
-            {/* Header Modal */}
-            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#111827' }}>
-                <Shield size={16} color="#006847" />
-                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>Buat Peran Baru</h2>
-              </div>
-              <X size={18} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsRoleModalOpen(false)} />
-            </div>
-
-            {/* Body Form Modal */}
-            <form onSubmit={handleAddRoleSubmit}>
-              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                
-                {/* Input Nama Peran */}
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Peran (Role Name)</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newRoleName}
-                    onChange={(e) => setNewRoleName(e.target.value)}
-                    placeholder="Contoh: Supervisor, Kitchen Staff..." 
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} 
-                  />
-                </div>
-
-                {/* Checklist Otoritas Mockup */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block' }}>Hak Akses Fitur (Permissions)</label>
-                  
-                  <div onClick={() => togglePermission('viewSales')} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#374151', cursor: 'pointer', padding: '6px 0' }}>
-                    {permissions.viewSales ? <CheckSquare size={16} color="#006847" /> : <Square size={16} color="#9CA3AF" />}
-                    <span>Dapat Melihat Analytics & Omzet Sales</span>
-                  </div>
-
-                  <div onClick={() => togglePermission('manageStock')} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#374151', cursor: 'pointer', padding: '6px 0' }}>
-                    {permissions.manageStock ? <CheckSquare size={16} color="#006847" /> : <Square size={16} color="#9CA3AF" />}
-                    <span>Dapat Mengelola & Mengedit Stok Bahan Baku</span>
-                  </div>
-
-                  <div onClick={() => togglePermission('manageMenu')} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#374151', cursor: 'pointer', padding: '6px 0' }}>
-                    {permissions.manageMenu ? <CheckSquare size={16} color="#006847" /> : <Square size={16} color="#9CA3AF" />}
-                    <span>Dapat Mengubah Harga & Katalog Menu</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Footer Modal Action Buttons */}
-              <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setIsRoleModalOpen(false)} style={{ padding: '8px 16px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
-                <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Buat Peran</button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

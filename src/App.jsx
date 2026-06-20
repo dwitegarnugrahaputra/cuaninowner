@@ -5,13 +5,17 @@ import Register from './views/auth/Register';
 import Sidebar from './components/shared/Sidebar';
 import TopBar from './components/shared/TopBar';
 
-// 📂 IMPORT VIEWS ASLI LU (Sesuaikan nama file riil di folder lu, Gar)
-import Dashboard from './views/dashboard/MainDashboard'; // Sesuai file baru yang kita bersihin tadi
+// 📂 IMPORT VIEWS ASLI LU
+import Dashboard from './views/dashboard/MainDashboard'; 
 import Sales from './views/sales/SalesMonitoring';
 import Stock from './views/stock/StockIntelligence';
 import MenuManagement from './views/menu/MenuManagement';
 import StaffManagement from './views/staff/StaffManagement';
 import BrainyChat from './views/ai-chat/BrainyChat'; // Pastikan path foldernya bener
+import InfoOutlet from './views/settings/InfoOutlet'; // Impor sub-view info outlet korporat
+import KonfigurasiAI from './views/settings/KonfigurasiAI';
+import Keamanan from './views/settings/Keamanan';
+import Bahasa from './views/settings/Bahasa';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -75,7 +79,7 @@ export default function App() {
       {/* CONTAINER UTAMA KANAN */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        {/* 2. SHARED TOPBAR ATAS (🔥 FIXED: Kirim props navigasi ke TopBar agar button Ask Brainy aktif!) */}
+        {/* 2. SHARED TOPBAR ATAS */}
         <TopBar onNavigateView={setCurrentView} activeView={currentView} />
 
         {/* 3. RUANG KONTEN DINAMIS */}
@@ -85,9 +89,15 @@ export default function App() {
           {currentView === 'stock' && <Stock />}
           {currentView === 'menu' && <MenuManagement />}
           {currentView === 'staff' && <StaffManagement />}
-          
-          {/* 🔥 FIXED: Tampilkan halaman pilar AI Brainy lu di sini saat tombol dipicu */}
           {currentView === 'brainy' && <BrainyChat />}
+
+          {/* ⚡ FIXED: ID disamakan dengan settingsSubTabs di Sidebar.jsx
+              (sebelumnya 'info-outlet' tidak pernah cocok dengan 'settings-info' yang dikirim Sidebar,
+              sehingga halaman Info Outlet & 3 sub-tab Settings lain tampil blank) */}
+          {currentView === 'settings-info' && <InfoOutlet />}
+          {currentView === 'settings-ai' && <KonfigurasiAI onSaveSuccess={() => setCurrentView('settings-ai')} />}
+          {currentView === 'settings-security' && <Keamanan onSaveSuccess={() => setCurrentView('settings-security')} />}
+          {currentView === 'settings-lang' && <Bahasa onSaveSuccess={() => setCurrentView('settings-lang')} />}
         </div>
 
       </div>
