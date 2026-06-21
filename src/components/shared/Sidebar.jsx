@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { supabase } from '../../config/supabaseClient'; // Amankan fallback clearing token
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, 
   Settings, LogOut, ChevronDown, ChevronUp, Store, Bot, ShieldCheck, Languages 
@@ -45,13 +46,39 @@ export default function Sidebar({ onNavigateView, activeView }) {
     { id: 'staff', label: 'Staff Management', icon: <Users size={18} /> },
   ];
 
-  // Daftar anak menu (subtabs) dari menu Settings
+  // 🔥 FIXED ID: Daftar anak menu (subtabs) sudah diselaraskan dengan routing pintu masuk App.jsx!
   const settingsSubTabs = [
-    { id: 'settings-info', label: 'Info Outlet', icon: <Store size={14} /> },
-    { id: 'settings-ai', label: 'Konfigurasi AI', icon: <Bot size={14} /> },
-    { id: 'settings-security', label: 'Keamanan', icon: <ShieldCheck size={14} /> },
-    { id: 'settings-lang', label: 'Bahasa', icon: <Languages size={14} /> },
+    { id: 'info-outlet', label: 'Info Outlet', icon: <Store size={14} /> },
+    { id: 'konfigurasi-ai', label: 'Konfigurasi AI', icon: <Bot size={14} /> },
+    { id: 'keamanan', label: 'Keamanan', icon: <ShieldCheck size={14} /> },
+    { id: 'bahasa', label: 'Bahasa', icon: <Languages size={14} /> },
   ];
+
+  // 🔥 ACTION HANDLING LOGOUT PIPELINE
+  const handleClientLogout = async () => {
+    const confirmLogout = window.confirm('Apakah Anda yakin ingin keluar dari sistem manajemen cuanin.id?');
+    if (!confirmLogout) return;
+
+    try {
+      // 1. Eksekusi fungsi logout dari Context
+      if (logout) {
+        await logout();
+      }
+      
+      // 2. Tambahkan pengaman (Safety Catch) murni dengan nembak langsung client auth Supabase
+      await supabase.auth.signOut();
+      
+      // 3. Clear sisa token lokal storage jika masih tersangkut di cache browser
+      localStorage.clear();
+      sessionStorage.clear();
+      
+    } catch (err) {
+      console.error('Gagal memproses pemutusan sesi keamanan:', err.message);
+    }
+  };
+
+  // Cek apakah view aktif merupakan bagian dari subtabs settings
+  const isSettingsActive = settingsSubTabs.some(sub => sub.id === activeView);
 
   return (
     <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, height: '100vh', boxSizing: 'border-box' }}>
@@ -74,7 +101,6 @@ export default function Sidebar({ onNavigateView, activeView }) {
               key={item.id} 
               onClick={() => {
                 onNavigateView(item.id);
-                // Otomatis tutup dropdown settings jika pindah ke menu utama biasa
                 setIsSettingsOpen(false); 
               }} 
               style={{ 
@@ -91,7 +117,7 @@ export default function Sidebar({ onNavigateView, activeView }) {
         })}
       </div>
 
-      {/* CONTROLLER AREA BAWAH (SETTINGS, LOGOUT, & IDENTITAS CAFE) */}
+      {/* CONTROLLER AREA BAWAH */}
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         
         {/* 🛠️ INDUK MENU DROPDOWN: SETTINGS */}
@@ -99,19 +125,19 @@ export default function Sidebar({ onNavigateView, activeView }) {
           onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
           style={{ 
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', 
-            color: activeView.startsWith('settings-') ? '#ffffff' : '#93C5FD', 
-            backgroundColor: activeView.startsWith('settings-') ? 'rgba(255,255,255,0.05)' : 'transparent',
+            color: isSettingsActive ? '#ffffff' : '#93C5FD', 
+            backgroundColor: isSettingsActive ? 'rgba(255,255,255,0.05)' : 'transparent',
             borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Settings size={18} /> 
-            <span style={{ fontSize: '14px', fontWeight: activeView.startsWith('settings-') ? 'bold' : 'normal' }}>Settings</span>
+            <span style={{ fontSize: '14px', fontWeight: isSettingsActive ? 'bold' : 'normal' }}>Settings</span>
           </div>
           {isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
 
-        {/* 📉 SLIDER ELEMENT: SUBTABS DARI SETTINGS */}
+        {/* 📉 SLIDER ELEMENT: SUBTABS SETTINGS */}
         {isSettingsOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '24px', marginTop: '2px', transition: 'all 0.3s' }}>
             {settingsSubTabs.map((subTab) => {
@@ -122,7 +148,7 @@ export default function Sidebar({ onNavigateView, activeView }) {
                   onClick={() => onNavigateView(subTab.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer',
-                    backgroundColor: isSubActive ? 'rgba(16, 185, 129, 0.2)' : 'transparent', // Kasih aura ijo cuanin dikit kalau aktif
+                    backgroundColor: isSubActive ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
                     color: isSubActive ? '#10B981' : '#93C5FD',
                     fontWeight: isSubActive ? 'bold' : 'normal',
                     transition: 'all 0.15s'
@@ -136,8 +162,8 @@ export default function Sidebar({ onNavigateView, activeView }) {
           </div>
         )}
 
-        {/* TOMBOL LOGOUT */}
-        <div onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', marginTop: '4px' }}>
+        {/* 🔥 FIXED TOMBOL LOGOUT: Mengikat fungsi eksekutor multi-layer clearing */}
+        <div onClick={handleClientLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', marginTop: '4px', transition: 'all 0.15s' }}>
           <LogOut size={18} /> <span style={{ fontSize: '14px' }}>Logout</span>
         </div>
 

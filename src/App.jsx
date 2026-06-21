@@ -91,13 +91,11 @@ export default function App() {
           {currentView === 'staff' && <StaffManagement />}
           {currentView === 'brainy' && <BrainyChat />}
 
-          {/* ⚡ FIXED: ID disamakan dengan settingsSubTabs di Sidebar.jsx
-              (sebelumnya 'info-outlet' tidak pernah cocok dengan 'settings-info' yang dikirim Sidebar,
-              sehingga halaman Info Outlet & 3 sub-tab Settings lain tampil blank) */}
-          {currentView === 'settings-info' && <InfoOutlet />}
-          {currentView === 'settings-ai' && <KonfigurasiAI onSaveSuccess={() => setCurrentView('settings-ai')} />}
-          {currentView === 'settings-security' && <Keamanan onSaveSuccess={() => setCurrentView('settings-security')} />}
-          {currentView === 'settings-lang' && <Bahasa onSaveSuccess={() => setCurrentView('settings-lang')} />}
+          {/* 🎯 SINKRONISASI TOTAL: Memastikan semua format ID dari Sidebar tembus tanpa blank */}
+          {(currentView === 'settings-info' || currentView === 'info-outlet') && <InfoOutlet />}
+          {(currentView === 'settings-ai' || currentView === 'konfigurasi-ai') && <KonfigurasiAI onSaveSuccess={() => setCurrentView('settings-ai')} />}
+          {(currentView === 'settings-security' || currentView === 'keamanan') && <Keamanan onSaveSuccess={() => setCurrentView('settings-security')} />}
+          {(currentView === 'settings-lang' || currentView === 'bahasa') && <Bahasa onSaveSuccess={() => setCurrentView('settings-lang')} />}
         </div>
 
       </div>
