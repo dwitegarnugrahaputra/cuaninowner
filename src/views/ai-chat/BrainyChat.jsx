@@ -4,12 +4,12 @@ import { GoogleGenAI } from '@google/genai';
 import { supabase } from '../../config/supabaseClient';
 import { 
   Send, Bot, MessageSquare, Sparkles, Loader2, Plus, 
-  BarChart3, Truck, Percent, Calendar, Archive, Clock, ArrowRight
+  Truck, Percent, Calendar, Archive, Clock, ArrowRight, Trash2
 } from 'lucide-react';
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-// 📊 HELPER: Susun rangkaian chart (aktual + proyeksi) untuk mode 7 hari (harian) atau 30 hari (per-minggu)
+// 📊 HELPER: Susun rangkaian chart (aktual + proyeksi)
 function buildForecastSeries({ sortedDateKeys, dailyTotals, dailyAvg, growthRatePerDay, range }) {
   const ID_DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
@@ -70,7 +70,6 @@ function buildForecastSeries({ sortedDateKeys, dailyTotals, dailyAvg, growthRate
   return series;
 }
 
-// 📊 HELPER: Fallback chart kosong saat belum ada data transaksi sukses sama sekali
 function buildEmptyFallbackChart(range) {
   if (range === 7) {
     const ID_DAY_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -91,8 +90,6 @@ function buildEmptyFallbackChart(range) {
 
 export default function BrainyChat() {
   const [activeSubTab, setActiveSubTab] = useState('ask-brainy');
-
-  // 👤 State Nama Pengguna Dinamis
   const [userName, setUserName] = useState('Bapak/Ibu Owner');
 
   // State Manajemen Chat & Integritas AI
@@ -102,11 +99,15 @@ export default function BrainyChat() {
   const [dbSnapshot, setDbSnapshot] = useState('');
   const messagesEndRef = useRef(null);
 
-  // ⚡ Dropdown Selection State
+  // STATE PERSISTENCE HISTORY CHAT BOT REAKTIF
+  const [chatSessions, setChatSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+
+  // Dropdown Selection State
   const [menuList, setMenuList] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState('Caffe Latte');
 
-  // State Otomatisasi Generator Tab Insights & Forecast Berbasis Live AI
+  // State Otomatisasi Generator Tab Insights & Forecast
   const [aiInsightText, setAiInsightsText] = useState('Sedang menganalisis struktur pengadaan bahan baku...');
   const [aiForecastText, setAiForecastText] = useState('Sedang memproyeksikan tren permintaan pasar...');
   const [isTabAnalyzing, setIsTabAnalyzing] = useState(false);
@@ -122,7 +123,20 @@ export default function BrainyChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
 
-  // 📥 AUTOMATIC PROFILE & CONTEXT INJECTION PIPELINE
+  // 📥 1. PIPELINE: Muat Daftar Sesi Chat dari LocalStorage pas pertama kali masuk
+  useEffect(() => {
+    const savedSessions = localStorage.getItem('cuanin_brainy_sessions');
+    if (savedSessions) {
+      const parsed = JSON.parse(savedSessions);
+      setChatSessions(parsed);
+      if (parsed.length > 0) {
+        setActiveSessionId(parsed[0].id);
+        setMessages(parsed[0].history);
+      }
+    }
+  }, []);
+
+  // 📥 2. AUTOMATIC BUSINESS CONTEXT & DEFAULT MESSAGES INJECTION
   useEffect(() => {
     async function compileBusinessContext() {
       try {
@@ -133,23 +147,31 @@ export default function BrainyChat() {
           setUserName(currentOwnerName);
         }
 
-        setMessages([
-          { role: 'brainy', text: `Selamat datang, Bapak/Ibu ${currentOwnerName}. Saya adalah Brainy, asisten finansial virtual internal Anda di cuanin.id. Apakah ada indikator performa operasional Warung Kopi Jaya yang ingin Anda evaluasi hari ini?` }
-        ]);
+        const savedSessions = localStorage.getItem('cuanin_brainy_sessions');
+        if (!savedSessions || JSON.parse(savedSessions).length === 0) {
+          const initialId = 'sess_' + Date.now();
+          const initialHistory = [
+            { role: 'brainy', text: `Selamat datang, Bapak/Ibu ${currentOwnerName}. Saya adalah Brainy, asisten finansial virtual internal Anda di cuanin.id. Apakah ada indikator performa operasional Warung Kopi Jaya yang ingin Anda evaluasi hari ini?` }
+          ];
+          const defaultSession = [{ id: initialId, title: 'Evaluasi Performa Awal', timeLabel: 'Baru Saja', history: initialHistory }];
+          
+          setChatSessions(defaultSession);
+          setActiveSessionId(initialId);
+          setMessages(initialHistory);
+          localStorage.setItem('cuanin_brainy_sessions', JSON.stringify(defaultSession));
+        }
 
         const { data: menus } = await supabase.from('menus').select('menu_name, price, is_available');
-        const { data: staff } = await supabase.from('staff').select('name, role, status');
+        const { data: staff } = await supabase.from('staff').select('name, role_id, status');
         const { data: sales } = await supabase.from('sales_transactions').select('total_amount, status, payment_method').limit(15);
 
         if (menus && menus.length > 0) {
           setMenuList(menus);
           setSelectedMenu(menus[0].menu_name); 
-        } else {
-          setMenuList([]); 
         }
 
         const menuStr = menus && menus.length > 0 ? menus.map(m => `- ${m.menu_name}: Rp ${m.price} (${m.is_available ? 'Tersedia' : 'Habis'})`).join('\n') : 'BELUM ADA REKAMAN DATA PRODUK PADA SISTEM.';
-        const staffStr = staff && staff.length > 0 ? staff.map(s => `- ${s.name}: Peran ${s.role} (${s.status})`).join('\n') : 'BELUM ADA REKAMAN DATA SUMBER DAYA MANUSIA.';
+        const staffStr = staff && staff.length > 0 ? staff.map(s => `- ${s.name}: Peran ID ${s.role_id} (${s.status})`).join('\n') : 'BELUM ADA REKAMAN DATA SUMBER DAYA MANUSIA.';
         
         let totalRevenue = 0;
         if (sales && sales.length > 0) {
@@ -174,7 +196,7 @@ ${staffStr}
       }
     }
     compileBusinessContext();
-  }, []);
+  }, [userName]);
 
   // 📊 PIPELINE FORECAST CHART
   useEffect(() => {
@@ -257,7 +279,7 @@ ${staffStr}
     buildForecastChart();
   }, [activeSubTab, forecastRange]);
 
-  // 🚀 INTERCEPTOR TRIGGER FORMAL ANALYTICS GENERATOR
+  // 🚀 TAB ANALYTICS GENERATOR VIA LIVE AI
   useEffect(() => {
     if (activeSubTab === 'ask-brainy' || !dbSnapshot) return;
 
@@ -271,7 +293,7 @@ ${staffStr}
             ${dbSnapshot}
 
             Pengguna saat ini sedang mengevaluasi menu "${selectedMenu}" pada opsi dropdown Business Intelligence.
-            Tolong buatkan analisis pengadaan bahan baku sepanjang 2 paragraf secara formal, objektif, taktis, dan sopan kepada pengguna bernama ${userName}. Gunakan sapaan Bapak/Ibu.
+            Tolah buatkan analisis pengadaan bahan baku sepanjang 2 paragraf secara formal, objektif, taktis, dan sopan kepada pengguna bernama ${userName}. Gunakan sapaan Bapak/Ibu.
             
             Kondisi Aturan:
             1. Jika katalog menu produk tertulis 'BELUM ADA REKAMAN DATA PRODUK...', berikan catatan formal di paragraf pertama bahwa basis data menu management masih memerlukan sinkronisasi entri data awal, sehingga sistem memuat data "Caffe Latte" sebagai model visualisasi blueprint presentasi.
@@ -287,7 +309,7 @@ ${staffStr}
             - Rata-rata omset harian historis: Rp ${Math.round(forecastDailyAvg).toLocaleString('id-ID')}
             - Tingkat pertumbuhan harian (growth rate): ${growthPercentText}% per hari
 
-            Tolong buatkan analisis komprehensif sepanjang 2 paragraf mengenai "Proyeksi Finansial & Manajemen Inventaris Masa Depan" ditujukan kepada manajemen outlet atas nama ${userName}. Gunakan gaya bahasa formal, sopan, dan profesional.
+            Tolong buatkan analisis komprehensif sepanjang 2 paragraf mengenai "Proyeksi Finansial & Manajemen Inventaris Masa Depan" ditujukan kepada manajemen outlet atas nama ${userName}. Gunayan gaya bahasa formal, sopan, dan profesional.
             Catatan Penting: Jika data transaksi finansial masih bernilai kosong (Rp 0), sampaikan secara objektif dan sopan bahwa grafik di bawah ini merupakan estimasi pemodelan awal (initial model prediction). Berikan rekomendasi manajemen operasional bahwa entitas bisnis harus mempersiapkan buffer stock komoditas sebesar +20% untuk mengantisipasi lonjakan permintaan musim liburan, dan ingatkan manajemen untuk melakukan optimalisasi penugasan staf kasir di akhir pekan (weekend) mulai pukul 09:30 AM guna memitigasi antrean struk transaksi pada peak hour.
           `;
         }
@@ -325,14 +347,10 @@ ${staffStr}
       const systemInstruction = `
         Anda adalah "Brainy", penasihat bisnis virtual, CFO virtual, dan analis kecerdasan buatan (AI) profesional yang terintegrasi penuh di dalam sistem POS manajemen cuanin.id. 
         Tugas utama Anda adalah membantu manajemen outlet (atas nama Bapak/Ibu ${userName}) dalam menganalisis kinerja operasional bisnis Warung Kopi Jaya.
-        Wajib menggunakan gaya bahasa Indonesia yang formal, sopan, objektif, dan berbasis data keuangan. Hindari bahasa gaul, santai, atau kasual.
+        Wajib menggunakan gaya bahasa Indonesia yang formal, sopan, whitespace: pre-wrap, objektif, dan berbasis data keuangan.
 
         Berikut adalah ringkasan data kondisi database aktual saat ini yang harus Anda jadikan sebagai parameter mutlak dalam menjawab instruksi pengguna jika relevan:
         ${dbSnapshot}
-
-        Aturan Khusus:
-        1. Apabila pengguna menanyakan rumus matematika akuntansi atau formulas keekonomian, sajikan jawaban terstruktur menggunakan bullet points bercetak tebal agar mudah dipahami secara manajerial.
-        2. Apabila pengguna menanyakan perihal di luar koridor bisnis, keuangan, atau manajemen kafe, ingatkan pengguna secara sopan untuk kembali fokus pada optimasi profitabilitas operasional outlet.
       `;
 
       const response = await ai.models.generateContent({
@@ -342,41 +360,140 @@ ${staffStr}
         ]
       });
 
-      const aiText = response.text || `Mohon maaf Bapak/Ibu ${userName}, terjadi kendala teknis dalam pemrosesan data saya. Mohon ajukan kembali pertanyaan Anda beberapa saat lagi.`;
-      setMessages(prev => [...prev, { role: 'brainy', text: aiText }]);
+      const aiText = response.text || `Mohon maaf Bapak/Ibu ${userName}, terjadi kendala teknis dalam pemrosesan data saya.`;
+      const finalMessages = [...updatedMessages, { role: 'brainy', text: aiText }];
+      
+      setMessages(finalMessages);
+      updateSessionHistoryInStorage(activeSessionId, finalMessages);
+
     } catch (err) {
       console.error('Gemini API Error:', err);
-      setMessages(prev => [...prev, { role: 'brainy', text: 'Terjadi kegagalan komunikasi dengan API Intelligence Server. Mohon pastikan kredensial parameter kunci Anda valid.' }]);
+      const errMessages = [...updatedMessages, { role: 'brainy', text: 'Terjadi kegagalan komunikasi dengan API Intelligence Server.' }];
+      setMessages(errMessages);
+      updateSessionHistoryInStorage(activeSessionId, errMessages);
     } finally {
       setIsGenerating(false);
     }
   };
 
+  const updateSessionHistoryInStorage = (sessionId, freshHistory) => {
+    const updated = chatSessions.map(sess => {
+      if (sess.id === sessionId) {
+        let dynamicTitle = sess.title;
+        if (sess.title === 'Sesi Baru...' && freshHistory.length > 1) {
+          dynamicTitle = freshHistory[1].text.substring(0, 18) + '...';
+        }
+        return { ...sess, title: dynamicTitle, history: freshHistory };
+      }
+      return sess;
+    });
+    setChatSessions(updated);
+    localStorage.setItem('cuanin_brainy_sessions', JSON.stringify(updated));
+  };
+
   const handleNewConversation = () => {
-    setMessages([
-      { role: 'brainy', text: `Sesi analisis telah diperbarui. Silakan ajukan parameter evaluasi performa operasional Warung Kopi Jaya yang baru, Bapak/Ibu ${userName}.` }
-    ]);
+    if (messages.length > 1 && activeSessionId) {
+      updateSessionHistoryInStorage(activeSessionId, messages);
+    }
+
+    const newId = 'sess_' + Date.now();
+    const cleanHistory = [
+      { role: 'brainy', text: `Sesi analisis baru telah dimulai. Silakan ajukan parameter evaluasi performa operasional Warung Kopi Jaya yang baru, Bapak/Ibu ${userName}.` }
+    ];
+    
+    const newSessionObj = {
+      id: newId,
+      title: 'Sesi Baru...',
+      timeLabel: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      history: cleanHistory
+    };
+
+    const updatedSessions = [newSessionObj, ...chatSessions];
+    setChatSessions(updatedSessions);
+    setActiveSessionId(newId);
+    setMessages(cleanHistory);
+    localStorage.setItem('cuanin_brainy_sessions', JSON.stringify(updatedSessions));
+    setActiveSubTab('ask-brainy');
+  };
+
+  const handleSelectSession = (sess) => {
+    setActiveSessionId(sess.id);
+    setMessages(sess.history);
+    setActiveSubTab('ask-brainy');
+  };
+
+  const handleDeleteSession = (e, sessionId) => {
+    e.stopPropagation();
+    if (!window.confirm('Hapus riwayat percakapan sesi analisis ini, Gar?')) return;
+    
+    const filtered = chatSessions.filter(s => s.id !== sessionId);
+    setChatSessions(filtered);
+    localStorage.setItem('cuanin_brainy_sessions', JSON.stringify(filtered));
+
+    if (activeSessionId === sessionId) {
+      if (filtered.length > 0) {
+        setActiveSessionId(filtered[0].id);
+        setMessages(filtered[0].history);
+      } else {
+        setMessages([]);
+        setActiveSessionId(null);
+      }
+    }
   };
 
   return (
     <div style={{ display: 'flex', width: '100%', height: 'calc(100vh - 120px)', backgroundColor: '#ffffff', overflow: 'hidden' }}>
       
       {/* ================= RECENT CHATS SUB-SIDEBAR ================= */}
-      <div style={{ width: '240px', backgroundColor: '#ffffff', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0 }}>
+      <div style={{ width: '250px', backgroundColor: '#ffffff', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0 }}>
         <button onClick={handleNewConversation} style={{ width: '100%', padding: '12px', backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginBottom: '24px' }}>
           <Plus size={16} /> Sesi Analisis Baru
         </button>
         
-        <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', letterSpacing: '0.5px', marginBottom: '12px', display: 'block' }}>RIWAYAT EVALUASI</span>
+        <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', letterSpacing: '0.5px', marginBottom: '12px', display: 'block' }}>RIWAYAT EVALUASI VIA STORAGE</span>
+        
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ padding: '12px', backgroundColor: '#E6F4EA', border: '1px solid #10B981', borderRadius: '10px', cursor: 'pointer' }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#006847', display: 'flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={14}/> Analisis Profit Okt</p>
-            <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px', display: 'block' }}>2 jam yang lalu</span>
-          </div>
+          {chatSessions.length > 0 ? (
+            chatSessions.map((sess) => {
+              const isSelected = sess.id === activeSessionId;
+              return (
+                <div 
+                  key={sess.id}
+                  onClick={() => handleSelectSession(sess)}
+                  style={{ 
+                    padding: '12px', 
+                    backgroundColor: isSelected ? '#E6F4EA' : 'transparent', 
+                    border: isSelected ? '1px solid #10B981' : '1px solid #F3F4F6', 
+                    borderRadius: '10px', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MessageSquare size={16} color={isSelected ? '#006847' : '#9CA3AF'} />
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{sess.title}</p>
+                      <span style={{ fontSize: '10px', color: '#6B7280' }}>{sess.timeLabel}</span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteSession(e, sess.id); }} style={{ background: 'none', border: 'none', padding: 0, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', fontSize: '12px' }}>Belum ada histori obrolan.</div>
+          )}
         </div>
       </div>
 
-      {/* ================= WORKSPACE INTERKONEKSI DATA UTAMA KANAN ================= */}
+      {/* ================= WORKSPACE UTAMA KANAN ================= */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         
         {/* SUB-TABS INTERFACE LAYER HEADER */}
@@ -403,10 +520,10 @@ ${staffStr}
           })}
         </div>
 
-        {/* SUB-VIEW AREA CONTENT SUBTAB DYNAMIC VIEW RE-RENDERER */}
+        {/* SUB-VIEW AREA CONTENT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
           
-          {/* TAB A: CORE INTERACTIVE LIVE CHAT */}
+          {/* TAB A: INTERACTIVE CHAT WORKSPACE */}
           {activeSubTab === 'ask-brainy' && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -435,12 +552,12 @@ ${staffStr}
               <div style={{ padding: '24px 40px', backgroundColor: '#ffffff', borderTop: '1px solid #E5E7EB' }}>
                 <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px', position: 'relative', alignItems: 'center' }}>
                   <input 
-                    type="text" disabled={isGenerating} value={input} 
+                    type="text" disabled={isGenerating || !activeSessionId} value={input} 
                     onChange={(e) => setInput(e.target.value)} 
-                    placeholder={`Ajukan parameter analisis operasional, Bapak/Ibu ${userName}...`} 
+                    placeholder={activeSessionId ? `Ajukan parameter analisis operasional, Bapak/Ibu ${userName}...` : "Silakan klik 'Sesi Analisis Baru' untuk memulai percakapan, Gar."} 
                     style={{ flex: 1, padding: '14px 60px 14px 20px', border: '1px solid #E5E7EB', borderRadius: '12px', fontSize: '14px', outline: 'none' }} 
                   />
-                  <button type="submit" disabled={isGenerating || !input.trim()} style={{ position: 'absolute', right: '12px', width: '38px', height: '38px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <button type="submit" disabled={isGenerating || !input.trim() || !activeSessionId} style={{ position: 'absolute', right: '12px', width: '38px', height: '38px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <Send size={16} />
                   </button>
                 </form>
@@ -448,7 +565,7 @@ ${staffStr}
             </div>
           )}
 
-          {/* TAB B: INSIGHTS DASHBOARD DINAMIS */}
+          {/* TAB B: INSIGHTS DASHBOARD */}
           {activeSubTab === 'insights' && (
             <div style={{ padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -463,18 +580,11 @@ ${staffStr}
                       {menuList.length > 0 ? menuList.map((m, idx) => <option key={idx} value={m.menu_name}>{m.menu_name}</option>) : <option value="Caffe Latte">Caffe Latte (Data Kosong)</option>}
                     </select>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '13px', color: '#4B5563', fontWeight: 'bold' }}>
-                    <Calendar size={14}/> <span>Oct 1 - Oct 30, 2023</span>
-                  </div>
-                  <button style={{ padding: '10px 18px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Export Report</button>
                 </div>
               </div>
 
-              {/* Graphic Chart Box */}
               <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Ingredient Cost Distribution ({selectedMenu})</h3>
-                <span style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px', display: 'block' }}>Comparing ingredient procurement costs against category profitability</span>
-                
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '80px', marginTop: '32px', padding: '0 40px' }}>
                   <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: 'conic-gradient(#006847 0% 35%, #0284c7 35% 60%, #34d399 60% 80%, #a7f3d0 80% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: '130px', height: '130px', backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -498,67 +608,19 @@ ${staffStr}
                 </div>
               </div>
 
-              {/* Brainy's Analysis Connected to Live Gemini */}
               <div style={{ backgroundColor: '#E6F4EA', borderRadius: '16px', border: '1px solid #10B981', padding: '24px', display: 'flex', gap: '16px' }}>
                 <div style={{ width: '40px', height: '40px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}>
                   {isTabAnalyzing ? <Loader2 size={22} className="animate-spin"/> : <Bot size={22}/>}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#006847' }}>Brainy's Analysis {isTabAnalyzing && <span style={{ fontSize: '11px', color: '#059669', fontStyle: 'italic', fontWeight: 'normal' }}>(Brainy lagi menghitung database...)</span>}</h4>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#006847' }}>Brainy's Analysis</h4>
                   <div style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#065f46', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{aiInsightText}</div>
                 </div>
-              </div>
-
-              {/* 🔥 FIXED OPTIMIZATION GRID: Implementasi 3 Kartu Mengambang Aksi BI Strategis Berbasis Data Sesuai Mockup figma image_be9424.png */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '4px', marginBottom: '16px' }}>
-                
-                {/* CARD 1: REVIEW VENDOR PRICES */}
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' }}>
-                  <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justify: 'center', justifyContent: 'center' }}>
-                    <Truck size={18} color="#006847" />
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Review Vendor Prices</h4>
-                  <p style={{ margin: 0, fontSize: '12.5px', color: '#6B7280', lineHeight: '1.5', flex: 1 }}>
-                    Bandingkan pengadaan harga susu atau komoditas utama saat ini dengan alternatif supplier lokal terpercaya di area Kota Tegal.
-                  </p>
-                  <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '12.5px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                    <span>View Alternatives</span> <ArrowRight size={14} />
-                  </button>
-                </div>
-
-                {/* CARD 2: ADJUST MENU PRICING */}
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' }}>
-                  <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justify: 'center', justifyContent: 'center' }}>
-                    <Percent size={18} color="#006847" />
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Adjust Menu Pricing</h4>
-                  <p style={{ margin: 0, fontSize: '12.5px', color: '#6B7280', lineHeight: '1.5', flex: 1 }}>
-                    Rekomendasi: Naikkan harga dasar varian {selectedMenu} sebesar Rp 2.000 guna memulihkan batas aman cushion margin profit 12%.
-                  </p>
-                  <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '12.5px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                    <span>Update Pricing</span> <ArrowRight size={14} />
-                  </button>
-                </div>
-
-                {/* CARD 3: COST BREAKDOWN */}
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01)' }}>
-                  <div style={{ width: '36px', height: '36px', backgroundColor: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justify: 'center', justifyContent: 'center' }}>
-                    <BarChart3 size={18} color="#006847" />
-                  </div>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cost Breakdown</h4>
-                  <p style={{ margin: 0, fontSize: '12.5px', color: '#6B7280', lineHeight: '1.5', flex: 1 }}>
-                    Analisis mendalam komponen HPP per bahan baku terikat untuk seluruh item di dalam kategori produk kafe saat ini.
-                  </p>
-                  <button style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, color: '#006847', fontSize: '12.5px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-                    <span>View Details</span> <ArrowRight size={14} />
-                  </button>
-                </div>
-
               </div>
             </div>
           )}
 
-          {/* TAB C: FORECAST PREDICTIVE DASHBOARD LENGKAP */}
+          {/* TAB C: FORECAST PREDICTIVE (SINKRONISASI VISUAL KONDENSASI BATANG - ANTI RENGGANG) */}
           {activeSubTab === 'forecast' && (
             <div style={{ padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', height: '100%' }}>
               <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
@@ -573,15 +635,18 @@ ${staffStr}
                 {isForecastChartLoading ? (
                   <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}><Loader2 size={16} className="animate-spin" /> Menghitung peramalan tren finansial...</div>
                 ) : (
-                  <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', padding: '0 24px 20px 24px' }}>
+                  /* 🔥 FIXED OPTIMIZATION: Membatasi max-width kontainer serta mengunci susunan flex agar pilar diagram merapat padat */
+                  <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '28px', padding: '0 24px 20px 24px', width: '100%', maxWidth: '650px', margin: '0 auto' }}>
                     {forecastChartData.map((point, idx) => {
                       const maxValue = Math.max(1, ...forecastChartData.map(d => d.value));
                       const barHeightPx = Math.max(6, Math.round((point.value / maxValue) * 130));
                       return (
-                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
-                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#374151' }}>{point.value >= 1000000 ? `Rp ${(point.value / 1000000).toFixed(1)}jt` : `Rp ${(point.value / 1000).toFixed(0)}rb`}</span>
-                          <div style={{ width: '32px', height: `${barHeightPx}px`, backgroundColor: point.isProjected ? '#34D399' : '#006847', borderRadius: '6px 6px 0 0', border: point.isProjected ? '2px dashed #10B981' : 'none', boxSizing: 'border-box' }} />
-                          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{point.label}</span>
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '60px', flexShrink: 0 }}>
+                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#374151', whiteSpace: 'nowrap' }}>
+                            {point.value >= 1000000 ? `Rp ${(point.value / 1000000).toFixed(1)}jt` : `Rp ${(point.value / 1000).toFixed(0)}rb`}
+                          </span>
+                          <div style={{ width: '36px', height: `${barHeightPx}px`, backgroundColor: point.isProjected ? '#34D399' : '#006847', borderRadius: '6px 6px 0 0', border: point.isProjected ? '2px dashed #10B981' : 'none', boxSizing: 'border-box', transition: 'height 0.3s ease' }} />
+                          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600' }}>{point.label}</span>
                         </div>
                       );
                     })}
@@ -591,7 +656,7 @@ ${staffStr}
 
               <div style={{ backgroundColor: '#EFF6FF', borderRadius: '16px', border: '1px solid #3B82F6', padding: '24px', display: 'flex', gap: '16px' }}>
                 <div style={{ width: '40px', height: '40px', backgroundColor: '#1E3A8A', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', flexShrink: 0 }}><Sparkles size={22}/></div>
-                <div style={{ flex: 1 }}><h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#1E3A8A' }}>Log Prediktif Peramalan Bisnis</h4>
+                <div style={{ flex: 1 }}><h4 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Log Prediktif Peramalan Bisnis</h4>
                   <div style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#1E40AF', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{aiForecastText}</div>
                 </div>
               </div>

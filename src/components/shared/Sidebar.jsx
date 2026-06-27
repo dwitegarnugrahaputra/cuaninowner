@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { supabase } from '../../config/supabaseClient'; // Amankan fallback clearing token
+import { supabase } from '../../config/supabaseClient'; 
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, 
   Settings, LogOut, ChevronDown, ChevronUp, Store, Bot, ShieldCheck, Languages 
 } from 'lucide-react';
 
-// 🟩 LOGO REFIX: Menyesuaikan standar branding cuanin.id dengan ukuran mini proporsional
 function CuaninLogoSidebar() {
   return (
     <div style={{ width: '40px', height: '40px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '7px', flexShrink: 0 }}>
@@ -33,11 +32,43 @@ function CuaninLogoSidebar() {
 
 export default function Sidebar({ onNavigateView, activeView }) {
   const { logout } = useAuth();
-  
-  // State untuk mengontrol buka-tutup dropdown menu Settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // 🔥 STATE DINAMIS: Penampung nama outlet interaktif relasional database
+  const [outletName, setOutletName] = useState('Memuat Toko...');
 
-  // Daftar menu utama atas (non-dropdown)
+  // 📥 STREAM PIPELINE: Tarik profil nama outlet riil dari Supabase
+  const fetchLiveOutletName = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data, error } = await supabase
+          .from('outlet_config')
+          .select('outlet_name')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        if (data && data.outlet_name) {
+          setOutletName(data.outlet_name);
+        } else {
+          setOutletName('Nama Toko Belum Set');
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Gagal memuat nama outlet di sidebar:', err.message);
+      setOutletName('Cuanin Outlet');
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveOutletName();
+
+    // 🔥 REAL-TIME BROADCAST LISTENER: Menangkap sinyal simpan dari InfoOutlet.jsx secara instan
+    window.addEventListener('cuanin_outlet_updated', fetchLiveOutletName);
+    return () => window.removeEventListener('cuanin_outlet_updated', fetchLiveOutletName);
+  }, []);
+
   const mainMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { id: 'sales', label: 'Sales', icon: <ShoppingBag size={18} /> },
@@ -46,7 +77,6 @@ export default function Sidebar({ onNavigateView, activeView }) {
     { id: 'staff', label: 'Staff Management', icon: <Users size={18} /> },
   ];
 
-  // 🔥 FIXED ID: Daftar anak menu (subtabs) sudah diselaraskan dengan routing pintu masuk App.jsx!
   const settingsSubTabs = [
     { id: 'info-outlet', label: 'Info Outlet', icon: <Store size={14} /> },
     { id: 'konfigurasi-ai', label: 'Konfigurasi AI', icon: <Bot size={14} /> },
@@ -54,31 +84,28 @@ export default function Sidebar({ onNavigateView, activeView }) {
     { id: 'bahasa', label: 'Bahasa', icon: <Languages size={14} /> },
   ];
 
-  // 🔥 ACTION HANDLING LOGOUT PIPELINE
   const handleClientLogout = async () => {
     const confirmLogout = window.confirm('Apakah Anda yakin ingin keluar dari sistem manajemen cuanin.id?');
     if (!confirmLogout) return;
 
     try {
-      // 1. Eksekusi fungsi logout dari Context
       if (logout) {
         await logout();
       }
-      
-      // 2. Tambahkan pengaman (Safety Catch) murni dengan nembak langsung client auth Supabase
       await supabase.auth.signOut();
-      
-      // 3. Clear sisa token lokal storage jika masih tersangkut di cache browser
       localStorage.clear();
       sessionStorage.clear();
-      
     } catch (err) {
       console.error('Gagal memproses pemutusan sesi keamanan:', err.message);
     }
   };
 
-  // Cek apakah view aktif merupakan bagian dari subtabs settings
   const isSettingsActive = settingsSubTabs.some(sub => sub.id === activeView);
+
+  // Auto-generate inisial logo dua huruf kapital (misal: "Aroma Latte" -> "AR")
+  const logoInisial = outletName && outletName !== 'Memuat Toko...'
+    ? outletName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+    : 'CN';
 
   return (
     <div style={{ width: '260px', backgroundColor: '#1E3A8A', color: '#ffffff', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, height: '100vh', boxSizing: 'border-box' }}>
@@ -120,7 +147,7 @@ export default function Sidebar({ onNavigateView, activeView }) {
       {/* CONTROLLER AREA BAWAH */}
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         
-        {/* 🛠️ INDUK MENU DROPDOWN: SETTINGS */}
+        {/* INDUK MENU SETTINGS */}
         <div 
           onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
           style={{ 
@@ -137,7 +164,7 @@ export default function Sidebar({ onNavigateView, activeView }) {
           {isSettingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
 
-        {/* 📉 SLIDER ELEMENT: SUBTABS SETTINGS */}
+        {/* SUBTABS SETTINGS */}
         {isSettingsOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '24px', marginTop: '2px', transition: 'all 0.3s' }}>
             {settingsSubTabs.map((subTab) => {
@@ -162,18 +189,20 @@ export default function Sidebar({ onNavigateView, activeView }) {
           </div>
         )}
 
-        {/* 🔥 FIXED TOMBOL LOGOUT: Mengikat fungsi eksekutor multi-layer clearing */}
+        {/* TOMBOL LOGOUT */}
         <div onClick={handleClientLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: '#FFCACA', borderRadius: '10px', cursor: 'pointer', marginTop: '4px', transition: 'all 0.15s' }}>
           <LogOut size={18} /> <span style={{ fontSize: '14px' }}>Logout</span>
         </div>
 
-        {/* WIDGET IDENTITAS CAFE BISNIS */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '8px' }}>
-          <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px' }}>
-            WJ
+        {/* 🔥 FIXED: WIDGET IDENTITAS BUSINESS PROFILE REAKTIF KONEKSI UTUH */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', backgroundColor: '#111827', borderRadius: '12px', marginTop: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ width: '32px', height: '32px', backgroundColor: '#ffffff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#1E3A8A', fontSize: '12px', flexShrink: 0 }}>
+            {logoInisial}
           </div>
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>Warung Kopi Jaya</p>
+          <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
+            <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {outletName}
+            </p>
             <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>PREMIUM PLAN</span>
           </div>
         </div>

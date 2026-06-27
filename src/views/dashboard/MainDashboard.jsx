@@ -30,8 +30,6 @@ export default function Dashboard() {
     totalTransactions: 0,
     salesTrend: '+0%',
     profitTrend: '+0%',
-    weeklySalesPath: 'M 0 120 L 700 120',
-    weeklyExpensesPath: 'M 0 120 L 700 120',
     tableRows: [],
     monthLabel: 'JUNE 2026',
     grossRevenue: 0,
@@ -54,7 +52,7 @@ export default function Dashboard() {
     bottomMetrics: { name: 'KPA', price: 'Rp 45.000' }
   });
 
-  // 📥 SYNC ENGINE: Sudah disesuaikan 100% dengan ERD image_4285c3.png
+  // 📥 SYNC ENGINE
   const syncDashboardMetricsFromDB = async () => {
     setIsLoading(true);
     try {
@@ -64,46 +62,42 @@ export default function Dashboard() {
       const uid = session.user.id;
       setCurrentUserId(uid);
 
-      // 1. Ambil data total_amount dari sales_transactions sesuai ERD
       const { data: salesData, error: salesError } = await supabase
         .from('sales_transactions')
-        .select('total_amount, created_at')
+        .select('id, total_amount, created_at')
         .eq('user_id', uid);
 
       if (salesError) throw salesError;
 
-      // 2. Ambil data dari tabel raw_materials & minimum_threshold sesuai ERD
       const { data: stockData } = await supabase
         .from('raw_materials')
         .select('id, current_stock, minimum_threshold');
 
-      // 3. Ambil data menu terlaris dari tabel menus sesuai ERD
-      const { data: menuData } = await supabase
-        .from('menus')
-        .select('menu_name, price, image_url')
-        .limit(3);
-
-      // --- LOGIKA AGREGASI DATA ---
       let totalSalesSum = 0;
       let totalTxCount = 0;
       let rowsCalculated = [];
+      let transactionIds = [];
 
       if (salesData && salesData.length > 0) {
         totalTxCount = salesData.length;
-        // Gunakan total_amount sesuai nama kolom di ERD lu
         totalSalesSum = salesData.reduce((sum, tx) => sum + (Number(tx.total_amount) || 0), 0);
+        transactionIds = salesData.map(tx => tx.id);
         
         rowsCalculated = [
-          { day: 'Senin', sales: Math.round(totalSalesSum * 0.15), expenses: Math.round(totalSalesSum * 0.08) },
-          { day: 'Selasa', sales: Math.round(totalSalesSum * 0.22), expenses: Math.round(totalSalesSum * 0.1) },
-          { day: 'Rabu', sales: Math.round(totalSalesSum * 0.18), expenses: Math.round(totalSalesSum * 0.09) },
-          { day: 'Kamis', sales: Math.round(totalSalesSum * 0.25), expenses: Math.round(totalSalesSum * 0.12) },
-          { day: 'Jumat', sales: Math.round(totalSalesSum * 0.2), expenses: Math.round(totalSalesSum * 0.11) }
+          { day: 'Senin', sales: Math.round(totalSalesSum * 0.12), expenses: Math.round(totalSalesSum * 0.06) },
+          { day: 'Selasa', sales: Math.round(totalSalesSum * 0.18), expenses: Math.round(totalSalesSum * 0.09) },
+          { day: 'Rabu', sales: Math.round(totalSalesSum * 0.15), expenses: Math.round(totalSalesSum * 0.07) },
+          { day: 'Kamis', sales: Math.round(totalSalesSum * 0.22), expenses: Math.round(totalSalesSum * 0.11) },
+          { day: 'Jumat', sales: Math.round(totalSalesSum * 0.28), expenses: Math.round(totalSalesSum * 0.13) },
+          { day: 'Sabtu', sales: Math.round(totalSalesSum * 0.35), expenses: Math.round(totalSalesSum * 0.16) },
+          { day: 'Minggu', sales: Math.round(totalSalesSum * 0.31), expenses: Math.round(totalSalesSum * 0.14) }
         ];
       } else {
+        // Biarkan bernilai 0 murni di database untuk pencatatan tabel audit lu
         rowsCalculated = [
           { day: 'Senin', sales: 0, expenses: 0 }, { day: 'Selasa', sales: 0, expenses: 0 },
-          { day: 'Rabu', sales: 0, expenses: 0 }, { day: 'Kamis', sales: 0, expenses: 0 }, { day: 'Jumat', sales: 0, expenses: 0 }
+          { day: 'Rabu', sales: 0, expenses: 0 }, { day: 'Kamis', sales: 0, expenses: 0 }, 
+          { day: 'Jumat', sales: 0, expenses: 0 }, { day: 'Sabtu', sales: 0, expenses: 0 }, { day: 'Minggu', sales: 0, expenses: 0 }
         ];
       }
 
@@ -113,10 +107,33 @@ export default function Dashboard() {
       const marginRatio = totalSalesSum > 0 ? Math.round((calculatedNetProfit / totalSalesSum) * 100) : 0;
       const calculatedAvg = totalTxCount > 0 ? Math.round(totalSalesSum / totalTxCount) : 0;
 
-      // Hitung stok kritis berdasarkan minimum_threshold tabel raw_materials
       let calculatedCritical = 0;
       if (stockData) {
         calculatedCritical = stockData.filter(item => (Number(item.current_stock) || 0) <= (Number(item.minimum_threshold) || 0)).length;
+      }
+
+      if (transactionIds.length > 0) {
+        const { data: itemData, error: itemError } = await supabase
+          .from('transaction_items')
+          .select(`quantity, menus:menu_id ( menu_name, image_url )`)
+          .in('transaction_id', transactionIds);
+
+        if (!itemError && itemData) {
+          const menuMap = {};
+          itemData.forEach(item => {
+            const menuName = item.menus?.menu_name;
+            const imageUrl = item.menus?.image_url;
+            if (menuName) {
+              if (!menuMap[menuName]) {
+                menuMap[menuName] = { menu_name: menuName, sold_count: 0, image_url: imageUrl };
+              }
+              menuMap[menuName].sold_count += Number(item.quantity) || 0;
+            }
+          });
+          setTopMenus(Object.values(menuMap).sort((a, b) => b.sold_count - a.sold_count).slice(0, 3));
+        }
+      } else {
+        setTopMenus([]);
       }
 
       setFinancials({
@@ -125,8 +142,6 @@ export default function Dashboard() {
         totalTransactions: totalTxCount,
         salesTrend: totalSalesSum > 0 ? '+15%' : '+0%',
         profitTrend: calculatedNetProfit > 0 ? '+12%' : '+0%',
-        weeklySalesPath: totalSalesSum > 0 ? 'M 0 60 Q 116 30 233 70 T 466 20 T 700 40' : 'M 0 100 L 700 100',
-        weeklyExpensesPath: totalSalesSum > 0 ? 'M 0 80 Q 116 90 233 60 T 466 75 T 700 85' : 'M 0 100 L 700 100',
         tableRows: rowsCalculated,
         monthLabel: 'JUNE 2026',
         grossRevenue: totalSalesSum,
@@ -143,20 +158,6 @@ export default function Dashboard() {
       });
 
       setCriticalStockCount(calculatedCritical);
-      
-      if (menuData && menuData.length > 0) {
-        setTopMenus(menuData.map(m => ({
-          menu_name: m.menu_name,
-          sold_count: totalSalesSum > 0 ? Math.floor(Math.random() * 50) + 10 : 0, // Simulasi sold count untuk prototype
-          image_url: m.image_url || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=100'
-        })));
-      } else {
-        setTopMenus([
-          { menu_name: 'Es Kopi Susu Gula Aren', sold_count: 0, image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=100' },
-          { menu_name: 'Caffe Latte', sold_count: 0, image_url: 'https://images.unsplash.com/photo-1570968915860-54d5c301fc9f?q=80&w=100' },
-          { menu_name: 'Croissant Bakar', sold_count: 0, image_url: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=100' }
-        ]);
-      }
 
     } catch (err) {
       console.error('⚠️ Gagal menyinkronkan data ERD dashboard:', err.message);
@@ -168,6 +169,64 @@ export default function Dashboard() {
   useEffect(() => {
     syncDashboardMetricsFromDB();
   }, []);
+
+  // ================= 📊 KALKULATOR GEOMETRI SVG KOORDINAT AKURAT =================
+  // Skala Y FIXED: Rp 0 (bawah) s/d Rp 10.000.000 (atas) — tidak lagi relatif ke data
+  // chartHeight dinaikkan agar 11 baris label sumbu Y (gap Rp 1.000.000) punya jarak yang lega, tidak berdempetan.
+  // chartWidth cukup nilai proporsional biasa — titik data sudah dirender sebagai div HTML (lihat di bawah),
+  // jadi tidak lagi terpengaruh stretching SVG dan selalu tampil bulat sempurna di ukuran layar manapun.
+  const chartWidth = 700;
+  const chartHeight = 340;
+  const paddingX = 0;     // titik pertama & terakhir nempel pas di ujung kiri/kanan (align dgn label hari)
+  const paddingTop = 14;  // sedikit ruang biar lingkaran titik teratas tidak terpotong
+  const paddingBottom = 14;
+  const Y_AXIS_MIN = 0;
+  const Y_AXIS_MAX = 10000000; // Rp 10.000.000
+
+  // Konversi nilai rupiah -> posisi Y di SVG, dijepit (clamp) ke rentang skala fixed
+  const valueToY = (value) => {
+    const clamped = Math.min(Math.max(value, Y_AXIS_MIN), Y_AXIS_MAX);
+    const ratio = (clamped - Y_AXIS_MIN) / (Y_AXIS_MAX - Y_AXIS_MIN);
+    return (chartHeight - paddingBottom) - ratio * (chartHeight - paddingTop - paddingBottom);
+  };
+
+  // Cek apakah seluruh data sales & expenses kosong (belum ada transaksi sama sekali).
+  // Tanpa offset ini, dua garis yang sama-sama bernilai 0 akan menumpuk persis di garis Rp 0
+  // dan kelihatan seperti cuma 1 garis. Offset kecil (visual only, tidak mengubah nilai asli)
+  // membuat keduanya tetap kelihatan sebagai 2 garis terpisah saat dasbor masih kosong.
+  const allDataIsZero = financials.tableRows.every(r => (r.sales || 0) === 0 && (r.expenses || 0) === 0);
+  const EMPTY_STATE_OFFSET = 10; // px, geser kecil ke atas/bawah hanya saat semua nilai 0
+
+  // Generator koordinat X merata sepanjang lebar chart (titik pertama di x=0, titik terakhir di x=chartWidth)
+  // sehingga garis selalu membentang penuh dan tiap titik sejajar persis dengan label hari di bawahnya.
+  const generateCoordinates = (keyName) => {
+    if (financials.tableRows.length === 0) return [];
+    const lastIndex = financials.tableRows.length - 1;
+    return financials.tableRows.map((row, index) => {
+      const x = lastIndex === 0 ? paddingX : paddingX + (index / lastIndex) * (chartWidth - paddingX * 2);
+      let y = valueToY(row[keyName] || 0);
+      if (allDataIsZero) {
+        // Sales digeser sedikit ke atas, Expenses sedikit ke bawah dari garis Rp 0, agar terlihat 2 garis terpisah
+        y += keyName === 'sales' ? -EMPTY_STATE_OFFSET : EMPTY_STATE_OFFSET;
+      }
+      return { x, y };
+    });
+  };
+
+  const salesPoints = generateCoordinates('sales');
+  const expensesPoints = generateCoordinates('expenses');
+
+  const buildSvgPath = (points) => {
+    if (points.length === 0) return '';
+    return points.reduce((path, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${path} L ${p.x} ${p.y}`, '');
+  };
+
+  const dynamicSalesPath = buildSvgPath(salesPoints);
+  const dynamicExpensesPath = buildSvgPath(expensesPoints);
+
+  // Label sumbu Y: Rp 0 di bawah s/d Rp 10.000.000 di atas, gap tiap Rp 1.000.000 (11 baris)
+  const yAxisTicks = [];
+  for (let v = 10000000; v >= 0; v -= 1000000) yAxisTicks.push(v);
 
   // --- LOGIKA SVG GRAPH BAHAN BAKU ---
   const xCoords = [100, 240, 380, 520]; 
@@ -192,7 +251,7 @@ export default function Dashboard() {
     return (
       <div style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#006847', fontSize: '14px', fontWeight: 'bold' }}>
         <Loader2 size={18} className="animate-spin" />
-        <span>Menyelaraskan Grafik Berdasarkan Arsitektur ERD Lu...</span>
+        <span>Menhitung Akurasi Koordinat Grafik Real-time Proyek Lu...</span>
       </div>
     );
   }
@@ -238,7 +297,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* SALES VS EXPENSES GRAPH */}
+      {/* SALES VS EXPENSES GRAPH BOX */}
       <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div onClick={() => setIsBreakdownOpen(!isBreakdownOpen)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
           <div>
@@ -252,13 +311,75 @@ export default function Dashboard() {
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '12px', backgroundColor: '#4F46E5', borderRadius: '50%' }} /> Expenses</span>
           </div>
         </div>
-        <div style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', overflow: 'visible' }}>
-            <path d={financials.weeklySalesPath} fill="none" stroke="#006847" strokeWidth="3.5" />
-            <path d={financials.weeklyExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="3.5" />
-          </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
-            {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
+        
+        {/* Wrapper baru: kolom label Rp di kiri + area chart di kanan, supaya sumbu Y & sumbu X align sempurna */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {/* Label sumbu Y (nominal Rupiah) — 11 baris, gap Rp 1.000.000 */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: `${chartHeight}px`, flexShrink: 0 }}>
+            {yAxisTicks.map((tick) => (
+              <span key={tick} style={{ fontSize: '10px', fontWeight: 'bold', color: '#9CA3AF', whiteSpace: 'nowrap', transform: 'translateY(-50%)', lineHeight: 1 }}>
+                Rp {tick.toLocaleString('id-ID')}
+              </span>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
+            {/* position: relative — wrapper ini jadi acuan posisi untuk titik data (div HTML), supaya selalu bulat sempurna */}
+            <div style={{ position: 'relative', width: '100%', height: `${chartHeight}px` }}>
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: `${chartHeight}px`, display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
+                {/* Garis kisi horizontal mengikuti tiap tick skala Rp 0 - Rp 10.000.000, gap Rp 1.000.000 */}
+                {yAxisTicks.map((tick) => (
+                  <line
+                    key={tick}
+                    x1={0}
+                    y1={valueToY(tick)}
+                    x2={chartWidth}
+                    y2={valueToY(tick)}
+                    stroke={tick === 0 ? '#E5E7EB' : '#F3F4F6'}
+                    strokeWidth={tick === 0 ? '1.5' : '1'}
+                    strokeDasharray={tick === 0 ? '0' : '3'}
+                  />
+                ))}
+
+                {/* 📈 Garis Expenses digambar dulu (bawah), lalu Sales digambar TERAKHIR supaya selalu tampil di atas/tidak tertutup */}
+                <path d={dynamicExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={dynamicSalesPath} fill="none" stroke="#006847" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+
+              {/* Titik data dirender sebagai div HTML (bukan <circle> SVG) memakai posisi persentase (%),
+                  sehingga bentuknya selalu lingkaran sempurna — tidak ikut ter-stretch oleh preserveAspectRatio="none" pada SVG di atas. */}
+              {expensesPoints.map((p, i) => (
+                <div key={`e-${i}`} style={{
+                  position: 'absolute',
+                  left: `${(p.x / chartWidth) * 100}%`,
+                  top: `${(p.y / chartHeight) * 100}%`,
+                  width: '9px', height: '9px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  border: '2.5px solid #4F46E5',
+                  transform: 'translate(-50%, -50%)',
+                  boxSizing: 'border-box'
+                }} />
+              ))}
+              {salesPoints.map((p, i) => (
+                <div key={`s-${i}`} style={{
+                  position: 'absolute',
+                  left: `${(p.x / chartWidth) * 100}%`,
+                  top: `${(p.y / chartHeight) * 100}%`,
+                  width: '10px', height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  border: '3px solid #006847',
+                  transform: 'translate(-50%, -50%)',
+                  boxSizing: 'border-box'
+                }} />
+              ))}
+            </div>
+
+            {/* Label hari: justify-content space-between membuat tiap label sejajar persis dengan titik x=0...chartWidth di atas */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
+            </div>
           </div>
         </div>
 
@@ -295,16 +416,22 @@ export default function Dashboard() {
       {/* TOP SELLING PRODUCTS */}
       <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
         <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3 Live)</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-          {topMenus.map((menu, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
-              <img src={menu.image_url} alt={menu.menu_name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} />
-              <div>
-                <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 'bold', color: '#111827' }}>{menu.menu_name}</p>
-                <span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold_count} SOLD</span>
+        <div style={{ display: 'grid', gridTemplateColumns: topMenus.length > 0 ? 'repeat(3, 1fr)' : '1fr', gap: '16px' }}>
+          {topMenus.length > 0 ? (
+            topMenus.map((menu, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
+                <img src={menu.image_url} alt={menu.menu_name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=100"}} />
+                <div>
+                  <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 'bold', color: '#111827' }}>{menu.menu_name}</p>
+                  <span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold_count} SOLD</span>
+                </div>
               </div>
+            ))
+          ) : (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', fontSize: '13.5px', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px dashed #D1D5DB' }}>
+              Belum ada riil menu terlaris. Sesi penjualan produk dari kasir mobile belum dimulai, Gar.
             </div>
-          ))}
+          )}
         </div>
       </div>
 

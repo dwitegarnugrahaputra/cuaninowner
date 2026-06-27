@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Download, TrendingUp, TrendingDown, AlertTriangle, 
-  Shield, ArrowRight, Loader2
+  ArrowRight, Loader2, ChevronDown
 } from 'lucide-react';
 
-// Impor koneksi client Supabase
+// Impor koneksi client Supabase resmi proyek cuanin.id
 import { supabase } from '../../config/supabaseClient';
 
 export default function SalesMonitoring() {
-  // ================= STATE INTEGRASI DATABASE SUPABASE REALTIME =================
+  // ================= STATE INTEGRASI DATABASE SUPABASE =================
   const [transactions, setTransactions] = useState([]);
   const [cashierPerformance, setCashierPerformance] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [summary, setSummary] = useState({
     todayRevenue: 0,
     totalTransactions: 0,
     voidAlerts: 0
   });
 
-  // 🚀 ENGINE INTEGRASI CORE: PIPELINE AGREGASI DATA SALES & STAFF LIVE INTERACTIVE
+  // 🚀 LIVE STREAM FEEDS: Sinkronisasi data transaksi penjualan
   useEffect(() => {
     async function fetchSalesAndStaffData() {
       setIsLoading(true);
       try {
-        // 1. Tarik Data Master Transaksi Penjualan Beserta Objek Join Kasir & Detail Item
+        // 1. Tarik Data Master Transaksi Penjualan - SINKRONISASI KOLOM JABATAN RELASIONAL (ANTI-ERROR)
         const { data: salesData, error: salesError } = await supabase
           .from('sales_transactions')
           .select(`
@@ -34,8 +35,7 @@ export default function SalesMonitoring() {
             payment_method,
             status,
             created_at,
-            staff:served_by ( id, name, image_url, role ),
-            transaction_items ( id, quantity, price_at_sale, menus:menu_id ( id, menu_name ) )
+            staff:served_by ( id, name, image_url, role_id )
           `)
           .order('created_at', { ascending: false });
 
@@ -44,7 +44,7 @@ export default function SalesMonitoring() {
         if (salesData) {
           setTransactions(salesData);
 
-          // 2. Kalkulasi Matematika Smart Cards Row Induk Operasional
+          // 2. Kalkulasi Matematika Akuntansi Cards Induk
           const completedSales = salesData.filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS');
           const revenue = completedSales.reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
           const voids = salesData.filter(tx => tx.status === 'VOID' || tx.status === 'Critical').length;
@@ -55,7 +55,7 @@ export default function SalesMonitoring() {
             voidAlerts: voids
           });
 
-          // 3. LOGIKA AGREGASI CASHIER PERFORMANCE DARI DATA RELASI LIVE DATABASE
+          // 3. AGREGASI CASHIER PERFORMANCE
           const performanceMap = {};
 
           salesData.forEach(tx => {
@@ -83,7 +83,7 @@ export default function SalesMonitoring() {
           setCashierPerformance(sortedRank);
         }
       } catch (err) {
-        console.error('⚠️ Gagal mensinkronisasikan multi-table data jualan di frontend:', err.message);
+        console.error('⚠️ Gagal mensinkronisasikan data jualan di frontend:', err.message);
       } finally {
         setIsLoading(false);
       }
@@ -92,35 +92,121 @@ export default function SalesMonitoring() {
     fetchSalesAndStaffData();
   }, []);
 
+  // 📥 CORE EXPORT SPREADSHEET ENGINE (CSV & EXCEL BINARY BLOB)
+  const handleExportDataStream = (formatType) => {
+    if (transactions.length === 0) {
+      alert('Katalog riwayat transaksi masih kosong, data apa yang mau diekspor, Gar?');
+      return;
+    }
+
+    // Susun susunan baris header spreadsheet tabel
+    const headers = ['Waktu', 'Nomor Invoice', 'Nama Kasir', 'Metode Pembayaran', 'Total Transaksi', 'Status Keamanan'];
+    
+    // Petakan baris data objek dari database Supabase
+    const rows = transactions.map(tx => [
+      new Date(tx.created_at).toLocaleString('id-ID'),
+      tx.invoice_number,
+      tx.staff ? tx.staff.name : 'General Staff',
+      tx.payment_method || 'Cash',
+      tx.total_amount,
+      tx.status
+    ]);
+
+    const filename = `cuanin_sales_report_${new Date().toISOString().slice(0,10)}`;
+
+    if (formatType === 'csv') {
+      // === JALUR CSV GENERATOR ===
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(e => e.join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${filename}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (formatType === 'excel') {
+      // === JALUR COMPATIBLE EXCEL SPREADSHEET (.XLS) GENERATOR VIA HTML TEMPLATE ===
+      let excelTemplate = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">`;
+      excelTemplate += `<head><meta charset="utf-8"></head><body>`;
+      excelTemplate += `<table border="1"><tr style="background-color: #006847; color: #ffffff; font-weight: bold;">`;
+      
+      headers.forEach(h => { excelTemplate += `<th>${h}</th>`; });
+      excelTemplate += `</tr>`;
+      
+      rows.forEach(row => {
+        excelTemplate += `<tr>`;
+        row.forEach(cell => { excelTemplate += `<td>${cell}</td>`; });
+        excelTemplate += `</tr>`;
+      });
+      
+      excelTemplate += `</table></body></html>`;
+
+      const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${filename}.xls`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    setIsExportDropdownOpen(false); // Tutup dropdown otomatis
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', width: '100%', position: 'relative' }}>
       
-      {/* SCREEN COVER LOADING ELEMENT OVERLAY */}
+      {/* SCREEN COVER LOADING */}
       {isLoading && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#006847', gap: '8px' }}>
           <Loader2 size={18} className="animate-spin" /> <span>Sinkronisasi Live Feed Penjualan...</span>
         </div>
       )}
 
-      {/* TITLE BAR ARSITEKTUR KLOP */}
+      {/* TITLE BAR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Sales Monitoring</h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Real-time business insights for Warung Kopi Jaya</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '13px', color: '#4B5563', fontWeight: 'bold' }}>
             <Calendar size={16} /> <span>Live Feed Stream</span>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)' }}>
-            <Download size={16} /> Export CSV
-          </button>
+          
+          {/* 🔥 DOUBLE CHOICE SELECTION DROPDOWN EXPORT BUTTON */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', backgroundColor: '#10B981', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1)' }}
+            >
+              <Download size={16} /> <span>Export Report</span> <ChevronDown size={14} />
+            </button>
+
+            {isExportDropdownOpen && (
+              <div style={{ position: 'absolute', right: 0, marginTop: '6px', width: '160px', backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div onClick={() => handleExportDataStream('csv')} style={{ padding: '10px 16px', fontSize: '13px', color: '#374151', cursor: 'pointer', backgroundColor: '#fff', transition: 'background 0.2s', fontWeight: '600' }} onMouseEnter={(e)=>e.target.style.backgroundColor='#F3F4F6'} onMouseLeave={(e)=>e.target.style.backgroundColor='#fff'}>
+                  📄 Format .CSV
+                </div>
+                <div onClick={() => handleExportDataStream('excel')} style={{ padding: '10px 16px', fontSize: '13px', color: '#006847', cursor: 'pointer', backgroundColor: '#fff', transition: 'background 0.2s', borderTop: '1px solid #F3F4F6', fontWeight: 'bold' }} onMouseEnter={(e)=>e.target.style.backgroundColor='#E6F4EA'} onMouseLeave={(e)=>e.target.style.backgroundColor='#fff'}>
+                  📊 Format Excel (.XLS)
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* THREE REACTIVE SMART CARDS ROW */}
+      {/* METRIKS CARDS ROW */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: '#E6F4EA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>💵</div>
             <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}><TrendingUp size={12}/> Live</div>
@@ -131,7 +217,7 @@ export default function SalesMonitoring() {
           </h2>
         </div>
 
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
           <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '18px' }}>🧾</div>
           <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: '500' }}>Total Live Volume</span>
           <h2 style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: '#111827' }}>
@@ -139,10 +225,10 @@ export default function SalesMonitoring() {
           </h2>
         </div>
 
-        <div style={{ backgroundColor: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', padding: '24px', borderRadius: '16px', color: '#ffffff', position: 'relative', transition: 'background-color 0.3s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <div style={{ backgroundColor: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', padding: '24px', borderRadius: '16px', color: '#ffffff', transition: 'all 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={20} color="#fff" /></div>
-            <span style={{ backgroundColor: '#ffffff', color: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px', letterSpacing: '0.5px' }}>
+            <span style={{ backgroundColor: '#ffffff', color: summary.voidAlerts > 0 ? '#991B1B' : '#0B1530', fontSize: '9px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px' }}>
               {summary.voidAlerts > 0 ? 'CRITICAL' : 'SECURE'}
             </span>
           </div>
@@ -154,8 +240,8 @@ export default function SalesMonitoring() {
       {/* LOWER WORKSPACE GRID MIX LAYOUT */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
         
-        {/* 1. COMPONENT LIVE TRANSACTION FEED */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        {/* LIVE TRANSACTION FEED */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>Live Transaction Feed</h3>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>
@@ -203,8 +289,8 @@ export default function SalesMonitoring() {
           </table>
         </div>
 
-        {/* 2. COMPONENT CASHIER PERFORMANCE BOARD */}
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        {/* CASHIER PERFORMANCE BOARD */}
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Cashier Performance Board</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {cashierPerformance.length > 0 ? (
@@ -233,9 +319,9 @@ export default function SalesMonitoring() {
 
       </div>
 
-      {/* 🛡️ FRAUD PATTERN DETECTION WARNING CONTAINER */}
+      {/* FRAUD PATTERN DETECTION WARNING */}
       {summary.voidAlerts > 0 && (
-        <div style={{ backgroundColor: '#0B1530', borderRadius: '20px', padding: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ffffff', marginTop: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+        <div style={{ backgroundColor: '#0B1530', borderRadius: '20px', padding: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ffffff', marginTop: '4px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               ⚠️ FRAUD ANALYTICS ALERT
@@ -253,7 +339,7 @@ export default function SalesMonitoring() {
               <span style={{ fontSize: '10px', color: '#9CA3AF' }}>Risk Score</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: 'bold' }}>● Status: High Danger</span>
+              <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: 'bold' }}>• Status: High Danger</span>
               <button style={{ backgroundColor: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <span>Investigate Pattern</span> <ArrowRight size={14} />
               </button>

@@ -24,8 +24,10 @@ export default function TopBar({ onNavigateView, activeView }) {
     getActiveUser();
   }, []);
 
-  // Deteksi apakah user saat ini sedang aktif di workspace AI Brainy
+  // Deteksi status keaktifan view internal utility
   const isBrainyActive = activeView === 'brainy';
+  const isNotificationsActive = activeView === 'notifications';
+  const isHelpActive = activeView === 'help-center';
 
   return (
     <div style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', padding: '0 32px', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -43,7 +45,7 @@ export default function TopBar({ onNavigateView, activeView }) {
       {/* UTILITY UTAMA & AKUN METADATA */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         
-        {/* 🔥 INTEGRASI PINTASAN TOMBOL ASK BRAINY (COCOK DENGAN MOCKUP image_3d4845.png) */}
+        {/* PINTASAN TOMBOL ASK BRAINY */}
         <button 
           type="button"
           onClick={() => onNavigateView && onNavigateView('brainy')}
@@ -60,9 +62,51 @@ export default function TopBar({ onNavigateView, activeView }) {
           <span>Ask Brainy</span>
         </button>
 
-        {/* UTILITY NOTIFIKASI */}
-        <Bell size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
-        <HelpCircle size={20} color="#4B5563" style={{ cursor: 'pointer' }} />
+        {/* 🔥 FIXED: UTILITY NOTIFIKASI UTK PUSAT LOG KASIR/STOK */}
+        <button
+          type="button"
+          onClick={() => onNavigateView && onNavigateView('notifications')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isNotificationsActive ? '#006847' : '#4B5563',
+            backgroundColor: isNotificationsActive ? '#E6F4EA' : 'transparent',
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          title="Notifications"
+        >
+          <Bell size={20} />
+        </button>
+
+        {/* 🔥 FIXED: UTILITY HELP & DOKUMENTASI CENTER */}
+        <button
+          type="button"
+          onClick={() => onNavigateView && onNavigateView('help-center')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isHelpActive ? '#006847' : '#4B5563',
+            backgroundColor: isHelpActive ? '#E6F4EA' : 'transparent',
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          title="Help Center"
+        >
+          <HelpCircle size={20} />
+        </button>
         
         {/* DETAIL PROFILE REAKTIF SINKRON EMAIL GOOGLE */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: '1px solid #E5E7EB', paddingLeft: '20px' }}>
