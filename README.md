@@ -1,71 +1,326 @@
-# cuanin.id - Owner Command Center 🚀
-> **Business Assistance & Smart POS Management Platform**
+# 🚀 CUANIN Owner Dashboard
 
-cuanin.id adalah platform Point of Sales (POS) modern yang diintegrasikan dengan kecerdasan buatan (AI) untuk membantu digitalisasi, otomatisasi inventori, serta pengawasan keamanan finansial bagi para pelaku usaha (Merchant PREMIUM). Repository **cuaninowner** ini merupakan modul khusus ring pusat kendali (Command Center) yang dirancang eksklusif untuk level hak akses **OWNER**.
+> **The Intelligent Business Command Center for Modern Merchants**
 
----
+CUANIN Owner Dashboard merupakan pusat kendali utama dari ekosistem **CUANIN POS**, sebuah platform Point of Sales modern yang menggabungkan teknologi digital dengan Artificial Intelligence (AI) untuk membantu pemilik usaha mengelola operasional bisnis secara efisien, aman, dan berbasis data.
 
-## 🛠️ Main Features (Fitur Utama)
-
-Aplikasi dashboard owner ini menggunakan arsitektur desentralisasi berbasis *Workspace Sub-View Changer* internal, sehingga owner dapat mengelola seluruh konfigurasi bisnis secara langsung tanpa interupsi navigasi:
-
-*   📊 **Sales Monitoring & Real-time Live Feed:** Pantau metrik pendapatan harian, total transaksi, jam sibuk (*peak hours*), serta live feed transaksi kasir (Success vs Void) secara instan.
-*   🧠 **AI Fraud Analytics Engine:** Proteksi otomatis bermesin AI untuk mendeteksi anomali pola transaksi kasir, tindakan *double voids*, dan indikasi kecurangan di lapangan secara real-time.
-*   📦 **Stock Intelligence Hub & OCR Supplies Log:** Manajemen inventori cerdas mendeteksi bahan menipis, spend belanja bulanan, log restok otomatis berbasis pemindaian nota otomatis (OCR Scan), serta rekomendasi *Brainy Proactive Insight*.
-*   👤 **Owner Profile Dropdown Panel:** Panel menu mengambang (*floating menu*) di hulu topbar kanan untuk akses kilat ke modul *Edit Profile* (Informasi Dasar Owner & Update Password), *Account Security*, dan *API Credentials*.
-*   ⚙️ **Decentralized Internal Settings:** Sistem pengaturan modular internal langsung di dalam satu halaman kerja (Info Outlet, Konfigurasi Parameter Brainy AI, Keamanan Sistem, dan Pengaturan Bahasa).
+Dashboard ini dirancang khusus untuk **Owner** sebagai pengambil keputusan tertinggi dalam bisnis. Seluruh aktivitas penting seperti penjualan, inventori, laporan keuangan, pengelolaan cabang, hingga analisis bisnis berbasis AI dapat diakses melalui satu dashboard terintegrasi.
 
 ---
 
-## 💻 Tech Stack (Spesifikasi Teknologi)
+# 📖 About Project
 
-*   **Frontend Library:** React.js (Functional Components & Hooks)
-*   **Build Tool & Dev Server:** Vite
-*   **Icons Framework:** Lucide React (Premium smooth vector icons)
-*   **Context & State Management:** React Context API (Auth Context Engine)
-*   **Styling Engine:** Inline JavaScript Styling object murni (Pixel-Perfect Responsive Layout)
+CUANIN bukan hanya aplikasi kasir.
 
----
+CUANIN merupakan ekosistem digital yang terdiri dari beberapa aplikasi yang saling terhubung untuk mendukung seluruh aktivitas bisnis.
 
-## ⚙️ Installation & Local Development (Cara Menjalankan)
+Owner Dashboard adalah salah satu bagian utama dari ekosistem tersebut.
 
-Ikuti langkah berikut untuk mereplikasi dan menjalankan project ini di komputer lokal lu, Gar:
-
-1.  **Clone Repository:**
-```bash
-    git clone [https://github.com/dwitegarnugrahaputra/cuaninowner.git](https://github.com/dwitegarnugrahaputra/cuaninowner.git)
-    cd cuaninowner
-    ```
-
-2.  **Install Dependencies:**
-```bash
-    npm install
-    ```
-
-3.  **Run Development Server:**
-```bash
-    npm run dev
-    ```
-    Buka browser lu dan akses URL lokal di: `http://localhost:5173`
+Melalui dashboard ini, owner dapat melakukan monitoring terhadap seluruh aktivitas bisnis secara real-time tanpa harus berada langsung di lokasi usaha.
 
 ---
 
-## 📂 Project Directory Structure
+# 🌐 CUANIN Ecosystem
+
+```text
+                 CUANIN Ecosystem
+
+                  Owner Dashboard
+                         │
+                         ▼
+                  REST API Gateway
+                         │
+      ┌──────────────────┼──────────────────┐
+      │                  │                  │
+      ▼                  ▼                  ▼
+ Cashier App      Customer App      AI Brainy Engine
+      │                  │                  │
+      └──────────────────┼──────────────────┘
+                         ▼
+                    Database Server
+```
+
+Setiap aplikasi memiliki fungsi yang berbeda namun tetap saling terintegrasi.
+
+---
+
+# 🎯 Vision
+
+Membantu UMKM Indonesia melakukan transformasi digital melalui sistem Point of Sales modern yang didukung Artificial Intelligence.
+
+---
+
+# 🎯 Mission
+
+* Digitalisasi operasional bisnis
+* Monitoring usaha secara real-time
+* Otomatisasi inventori
+* Mengurangi human error
+* Mendeteksi fraud transaksi
+* Memberikan business insight berbasis AI
+* Membantu owner mengambil keputusan lebih cepat
+
+---
+
+# ✨ Main Features
+
+## 📊 Business Dashboard
+
+Dashboard utama yang menampilkan kondisi bisnis secara real-time.
+
+### Menampilkan
+
+* Total Revenue
+* Total Transactions
+* Today's Income
+* Monthly Revenue
+* Weekly Report
+* Peak Hours
+* Best Selling Product
+* Low Stock Product
+* Customer Statistics
+
+---
+
+## 💰 Sales Monitoring
+
+Monitoring seluruh transaksi kasir.
+
+Fitur meliputi
+
+* Live Transaction Feed
+* Transaction Detail
+* Success Transaction
+* Failed Transaction
+* Void Transaction
+* Refund History
+* Sales Analytics
+
+---
+
+## 📦 Inventory Intelligence
+
+Mengelola seluruh inventori bisnis.
+
+Fitur
+
+* Product Stock
+* Low Stock Alert
+* Restock History
+* Supplier Management
+* Purchase History
+* Stock Movement
+* Inventory Analytics
+
+---
+
+## 🤖 Brainy AI
+
+Brainy merupakan AI Assistant bawaan CUANIN.
+
+Brainy membantu owner melalui:
+
+* Fraud Detection
+* Business Insight
+* Revenue Prediction
+* Product Recommendation
+* Inventory Recommendation
+* Customer Behaviour Analysis
+* Spending Analysis
+
+---
+
+## 👥 Employee Management
+
+Mengelola seluruh karyawan.
+
+* Cashier
+* Admin
+* Manager
+
+Hak akses setiap pengguna dapat diatur secara terpisah menggunakan Role Based Access Control (RBAC).
+
+---
+
+## 🏢 Branch Management
+
+Owner dapat mengelola banyak cabang sekaligus.
+
+Fitur
+
+* Multi Outlet
+* Branch Revenue
+* Branch Performance
+* Branch Inventory
+* Branch Employee
+
+---
+
+## ⚙️ Settings
+
+Konfigurasi aplikasi.
+
+Meliputi
+
+* Business Information
+* Account Settings
+* Security
+* Language
+* Theme
+* AI Configuration
+* API Credential
+
+---
+
+# 🏗️ System Architecture
+
+```text
+Presentation Layer
+        │
+        ▼
+React + Vite
+        │
+        ▼
+Business Logic Layer
+        │
+        ▼
+REST API
+        │
+        ▼
+Database
+```
+
+---
+
+# 🛠 Tech Stack
+
+| Technology   | Purpose              |
+| ------------ | -------------------- |
+| React        | Frontend Framework   |
+| Vite         | Build Tool           |
+| React Router | Routing              |
+| Context API  | Global State         |
+| Lucide React | Icons                |
+| JavaScript   | Programming Language |
+| CSS          | Styling              |
+
+---
+
+# 📂 Project Structure
 
 ```text
 src/
-├── context/
-│   └── AuthContext.jsx       # Pintu keamanan otentikasi sesi global
-├── views/
-│   ├── dashboard/
-│   │   ├── MainDashboard.jsx  # Dashboard utama rangkuman performa bisnis
-│   │   └── EditProfile.jsx    # Form kelola profil owner & ubah kata sandi
-│   ├── sales/
-│   │   └── SalesMonitoring.jsx # Feed transaksi real-time & AI Fraud Analytics
-│   ├── stock/
-│   │   └── StockIntelligence.jsx # Pusat kendali inventori & AI Proactive Insight
-│   └── settings/
-│       ├── InfoOutlet.jsx    # Form desentralisasi data fisik merchant
-│       ├── KonfigurasiAI.jsx # Setelan parameter respons AI Brainy POS
-│       ├── Keamanan.jsx      # Panel regulasi kebijakan sekuritas
-│       └── Bahasa.jsx        # Pengaturan lokalisasi bahasa sistem
+
+components/
+layouts/
+pages/
+hooks/
+services/
+context/
+assets/
+styles/
+utils/
+constants/
+```
+
+---
+
+# ⚙️ Installation
+
+```bash
+git clone https://github.com/dwitegarnugrahaputra/cuaninowner.git
+
+cd cuaninowner
+
+npm install
+
+npm run dev
+```
+
+---
+
+# 🔑 Environment Variables
+
+```env
+VITE_API_URL=
+
+VITE_APP_NAME=CUANIN
+
+VITE_AI_SERVICE=
+```
+
+---
+
+# 📷 Screenshots
+
+Coming Soon
+
+* Dashboard
+* Sales
+* Inventory
+* AI
+* Settings
+* Reports
+
+---
+
+# 🗺️ Roadmap
+
+## Version 1
+
+* Dashboard
+* Authentication
+* Sales
+* Inventory
+
+## Version 2
+
+* AI Brainy
+* OCR Receipt
+* Notification
+
+## Version 3
+
+* Multi Branch
+* Customer Loyalty
+* Mobile App
+
+---
+
+# 📈 Development Status
+
+| Module         | Status     |
+| -------------- | ---------- |
+| Authentication | ✅          |
+| Dashboard      | ✅          |
+| Sales          | 🚧         |
+| Inventory      | 🚧         |
+| Reports        | 🚧         |
+| AI             | 🚧         |
+| OCR            | 📅 Planned |
+
+---
+
+# 🤝 Contributing
+
+Saat ini repository masih bersifat private development.
+
+Contribution akan dibuka ketika project memasuki tahap public beta.
+
+---
+
+# 👨‍💻 Developer
+
+**Dwi Tegar Nugraha Putra**
+
+Informatics Student
+
+Indonesia
+
+---
+
+# 📄 License
+
+Copyright © 2026 CUANIN.
+
+All Rights Reserved.
