@@ -18,9 +18,6 @@ function CuaninLogoMini() {
   );
 }
 
-// 🔎 Fuzzy match dua arah (case-insensitive): cocok kalau salah satu nama
-// "terkandung" di nama lainnya. Contoh: "Kopi Arabica" (trends) cocok dengan
-// "Kopi Arabica Lokal" (stok owner), dan sebaliknya juga berlaku.
 function isFuzzyNameMatch(nameA, nameB) {
   if (!nameA || !nameB) return false;
   const a = nameA.toLowerCase().trim();
@@ -28,8 +25,6 @@ function isFuzzyNameMatch(nameA, nameB) {
   return a.includes(b) || b.includes(a);
 }
 
-// 🏷️ Cari baris trend yang paling cocok untuk satu nama bahan baku stok,
-// dari seluruh baris raw_material_trends yang sudah diambil.
 function findTrendMatch(stockMaterialName, trendRows) {
   if (!stockMaterialName || !trendRows || trendRows.length === 0) return null;
   return trendRows.find((trend) => isFuzzyNameMatch(stockMaterialName, trend.material_name)) || null;
@@ -62,16 +57,11 @@ export default function Dashboard() {
   const [criticalStockCount, setCriticalStockCount] = useState(0);
   const [topMenus, setTopMenus] = useState([]);
 
-  // 🌾 BAHAN BAKU TREND — sekarang sepenuhnya dinamis berdasarkan stok riil owner.
-  // stockMaterials: daftar nama unik bahan baku dari raw_materials milik owner ini.
-  // trendRowsCache: seluruh baris raw_material_trends (tabel global, sama untuk semua owner).
-  // selectedMaterial: nama bahan baku yang sedang dipilih owner di dropdown.
   const [stockMaterials, setStockMaterials] = useState([]);
   const [trendRowsCache, setTrendRowsCache] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [isTrendLoading, setIsTrendLoading] = useState(true);
 
-  // 📥 SYNC ENGINE
   const syncDashboardMetricsFromDB = async () => {
     setIsLoading(true);
     try {
@@ -112,7 +102,6 @@ export default function Dashboard() {
           { day: 'Minggu', sales: Math.round(totalSalesSum * 0.31), expenses: Math.round(totalSalesSum * 0.14) }
         ];
       } else {
-        // Biarkan bernilai 0 murni di database untuk pencatatan tabel audit lu
         rowsCalculated = [
           { day: 'Senin', sales: 0, expenses: 0 }, { day: 'Selasa', sales: 0, expenses: 0 },
           { day: 'Rabu', sales: 0, expenses: 0 }, { day: 'Kamis', sales: 0, expenses: 0 }, 
@@ -185,13 +174,9 @@ export default function Dashboard() {
     }
   };
 
-  // 🌾 PIPELINE TREN BAHAN BAKU: ambil nama bahan baku UNIK dari stok riil owner
-  // (raw_materials), lalu ambil SELURUH baris raw_material_trends (tabel global,
-  // sama untuk semua owner) sekali saja untuk dicocokkan secara fuzzy di sisi client.
   const loadMaterialTrendSources = async () => {
     setIsTrendLoading(true);
     try {
-      // 1. Ambil nama-nama bahan baku UNIK dari stok milik toko ini
       const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
         .from('raw_materials')
         .select('material_name')
@@ -199,13 +184,11 @@ export default function Dashboard() {
 
       if (rawMaterialsError) throw rawMaterialsError;
 
-      // Dedupe nama (siapa tau ada nama yang sama persis tercatat lebih dari sekali)
       const uniqueNames = Array.from(
         new Set((rawMaterialsData || []).map((row) => row.material_name).filter(Boolean))
       );
       setStockMaterials(uniqueNames);
 
-      // 2. Ambil seluruh baris trend (tabel ini global/kecil, aman ditarik semua sekaligus)
       const { data: trendData, error: trendError } = await supabase
         .from('raw_material_trends')
         .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source');
@@ -213,7 +196,6 @@ export default function Dashboard() {
       if (trendError) throw trendError;
       setTrendRowsCache(trendData || []);
 
-      // 3. Default dropdown: bahan baku PERTAMA secara alfabetis dari stok owner
       if (uniqueNames.length > 0) {
         setSelectedMaterial(uniqueNames[0]);
       }
@@ -229,12 +211,8 @@ export default function Dashboard() {
     loadMaterialTrendSources();
   }, []);
 
-  // 🔗 Cari baris trend yang cocok untuk bahan baku yang sedang dipilih di dropdown.
-  // null kalau memang belum ada data trend untuk bahan ini sama sekali.
   const matchedTrend = findTrendMatch(selectedMaterial, trendRowsCache);
 
-  // Parser "Rp 113.4k" / "Rp 78k" -> angka asli (113400 / 78000), dipakai untuk
-  // menggambar grafik SVG. Mengembalikan 0 kalau formatnya tidak terbaca.
   const parseRupiahLabelToNumber = (label) => {
     if (!label || typeof label !== 'string') return 0;
     const cleaned = label.replace(/Rp\s?/i, '').replace(',', '.').trim();
@@ -258,35 +236,23 @@ export default function Dashboard() {
         numericWeeks: [0, 0, 0, 0],
       };
 
-  // ================= 📊 KALKULATOR GEOMETRI SVG KOORDINAT AKURAT =================
-  // Skala Y FIXED: Rp 0 (bawah) s/d Rp 10.000.000 (atas) — tidak lagi relatif ke data
-  // chartHeight dinaikkan agar 11 baris label sumbu Y (gap Rp 1.000.000) punya jarak yang lega, tidak berdempetan.
-  // chartWidth cukup nilai proporsional biasa — titik data sudah dirender sebagai div HTML (lihat di bawah),
-  // jadi tidak lagi terpengaruh stretching SVG dan selalu tampil bulat sempurna di ukuran layar manapun.
   const chartWidth = 700;
   const chartHeight = 340;
-  const paddingX = 0;     // titik pertama & terakhir nempel pas di ujung kiri/kanan (align dgn label hari)
-  const paddingTop = 14;  // sedikit ruang biar lingkaran titik teratas tidak terpotong
+  const paddingX = 0;
+  const paddingTop = 14;
   const paddingBottom = 14;
   const Y_AXIS_MIN = 0;
-  const Y_AXIS_MAX = 10000000; // Rp 10.000.000
+  const Y_AXIS_MAX = 10000000;
 
-  // Konversi nilai rupiah -> posisi Y di SVG, dijepit (clamp) ke rentang skala fixed
   const valueToY = (value) => {
     const clamped = Math.min(Math.max(value, Y_AXIS_MIN), Y_AXIS_MAX);
     const ratio = (clamped - Y_AXIS_MIN) / (Y_AXIS_MAX - Y_AXIS_MIN);
     return (chartHeight - paddingBottom) - ratio * (chartHeight - paddingTop - paddingBottom);
   };
 
-  // Cek apakah seluruh data sales & expenses kosong (belum ada transaksi sama sekali).
-  // Tanpa offset ini, dua garis yang sama-sama bernilai 0 akan menumpuk persis di garis Rp 0
-  // dan kelihatan seperti cuma 1 garis. Offset kecil (visual only, tidak mengubah nilai asli)
-  // membuat keduanya tetap kelihatan sebagai 2 garis terpisah saat dasbor masih kosong.
   const allDataIsZero = financials.tableRows.every(r => (r.sales || 0) === 0 && (r.expenses || 0) === 0);
-  const EMPTY_STATE_OFFSET = 10; // px, geser kecil ke atas/bawah hanya saat semua nilai 0
+  const EMPTY_STATE_OFFSET = 10;
 
-  // Generator koordinat X merata sepanjang lebar chart (titik pertama di x=0, titik terakhir di x=chartWidth)
-  // sehingga garis selalu membentang penuh dan tiap titik sejajar persis dengan label hari di bawahnya.
   const generateCoordinates = (keyName) => {
     if (financials.tableRows.length === 0) return [];
     const lastIndex = financials.tableRows.length - 1;
@@ -294,7 +260,6 @@ export default function Dashboard() {
       const x = lastIndex === 0 ? paddingX : paddingX + (index / lastIndex) * (chartWidth - paddingX * 2);
       let y = valueToY(row[keyName] || 0);
       if (allDataIsZero) {
-        // Sales digeser sedikit ke atas, Expenses sedikit ke bawah dari garis Rp 0, agar terlihat 2 garis terpisah
         y += keyName === 'sales' ? -EMPTY_STATE_OFFSET : EMPTY_STATE_OFFSET;
       }
       return { x, y };
@@ -312,11 +277,9 @@ export default function Dashboard() {
   const dynamicSalesPath = buildSvgPath(salesPoints);
   const dynamicExpensesPath = buildSvgPath(expensesPoints);
 
-  // Label sumbu Y: Rp 0 di bawah s/d Rp 10.000.000 di atas, gap tiap Rp 1.000.000 (11 baris)
   const yAxisTicks = [];
   for (let v = 10000000; v >= 0; v -= 1000000) yAxisTicks.push(v);
 
-  // --- LOGIKA SVG GRAPH BAHAN BAKU (sekarang berbasis activeCurve dinamis dari Supabase) ---
   const xCoords = [100, 240, 380, 520]; 
   const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
   const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
@@ -334,6 +297,30 @@ export default function Dashboard() {
 
   const linePath = `M ${xCoords[0]} ${calculatedPoints[0]} L ${xCoords[1]} ${calculatedPoints[1]} L ${xCoords[2]} ${calculatedPoints[2]} L ${xCoords[3]} ${calculatedPoints[3]}`;
   const yLabels = [scaleMax, scaleMax - (scaleRange * 0.5), scaleMin].map(num => `Rp ${Math.round(num).toLocaleString('id-ID')}`);
+
+  // ── Helper: render badge berdasarkan data_source ─────────────────────────
+  const renderDataSourceBadge = (dataSource) => {
+    if (dataSource === 'AI_ESTIMATE') {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+          <Sparkles size={11} /> ESTIMASI AI
+        </span>
+      );
+    }
+    if (dataSource === 'OFFICIAL') {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+          <ShieldCheck size={11} /> DATA RESMI
+        </span>
+      );
+    }
+    // FALLBACK_UNIT_PRICE atau nilai lainnya
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+        <TrendingDown size={11} /> DATA STOK
+      </span>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -400,9 +387,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        {/* Wrapper baru: kolom label Rp di kiri + area chart di kanan, supaya sumbu Y & sumbu X align sempurna */}
         <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Label sumbu Y (nominal Rupiah) — 11 baris, gap Rp 1.000.000 */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: `${chartHeight}px`, flexShrink: 0 }}>
             {yAxisTicks.map((tick) => (
               <span key={tick} style={{ fontSize: '10px', fontWeight: 'bold', color: '#9CA3AF', whiteSpace: 'nowrap', transform: 'translateY(-50%)', lineHeight: 1 }}>
@@ -412,59 +397,21 @@ export default function Dashboard() {
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
-            {/* position: relative — wrapper ini jadi acuan posisi untuk titik data (div HTML), supaya selalu bulat sempurna */}
             <div style={{ position: 'relative', width: '100%', height: `${chartHeight}px` }}>
               <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: `${chartHeight}px`, display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
-                {/* Garis kisi horizontal mengikuti tiap tick skala Rp 0 - Rp 10.000.000, gap Rp 1.000.000 */}
                 {yAxisTicks.map((tick) => (
-                  <line
-                    key={tick}
-                    x1={0}
-                    y1={valueToY(tick)}
-                    x2={chartWidth}
-                    y2={valueToY(tick)}
-                    stroke={tick === 0 ? '#E5E7EB' : '#F3F4F6'}
-                    strokeWidth={tick === 0 ? '1.5' : '1'}
-                    strokeDasharray={tick === 0 ? '0' : '3'}
-                  />
+                  <line key={tick} x1={0} y1={valueToY(tick)} x2={chartWidth} y2={valueToY(tick)} stroke={tick === 0 ? '#E5E7EB' : '#F3F4F6'} strokeWidth={tick === 0 ? '1.5' : '1'} strokeDasharray={tick === 0 ? '0' : '3'} />
                 ))}
-
-                {/* 📈 Garis Expenses digambar dulu (bawah), lalu Sales digambar TERAKHIR supaya selalu tampil di atas/tidak tertutup */}
                 <path d={dynamicExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                 <path d={dynamicSalesPath} fill="none" stroke="#006847" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-
-              {/* Titik data dirender sebagai div HTML (bukan <circle> SVG) memakai posisi persentase (%),
-                  sehingga bentuknya selalu lingkaran sempurna — tidak ikut ter-stretch oleh preserveAspectRatio="none" pada SVG di atas. */}
               {expensesPoints.map((p, i) => (
-                <div key={`e-${i}`} style={{
-                  position: 'absolute',
-                  left: `${(p.x / chartWidth) * 100}%`,
-                  top: `${(p.y / chartHeight) * 100}%`,
-                  width: '9px', height: '9px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ffffff',
-                  border: '2.5px solid #4F46E5',
-                  transform: 'translate(-50%, -50%)',
-                  boxSizing: 'border-box'
-                }} />
+                <div key={`e-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ffffff', border: '2.5px solid #4F46E5', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
               ))}
               {salesPoints.map((p, i) => (
-                <div key={`s-${i}`} style={{
-                  position: 'absolute',
-                  left: `${(p.x / chartWidth) * 100}%`,
-                  top: `${(p.y / chartHeight) * 100}%`,
-                  width: '10px', height: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ffffff',
-                  border: '3px solid #006847',
-                  transform: 'translate(-50%, -50%)',
-                  boxSizing: 'border-box'
-                }} />
+                <div key={`s-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ffffff', border: '3px solid #006847', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
               ))}
             </div>
-
-            {/* Label hari: justify-content space-between membuat tiap label sejajar persis dengan titik x=0...chartWidth di atas */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
               {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
             </div>
@@ -546,8 +493,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* TREN BAHAN BAKU BLOCK — sekarang dinamis: dropdown dari stok riil owner,
-            data trend dicocokkan fuzzy ke raw_material_trends (tabel global) */}
+        {/* TREN BAHAN BAKU BLOCK */}
         <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>TREN HARGA BAHAN BAKU</span>
@@ -567,29 +513,19 @@ export default function Dashboard() {
           </div>
 
           {stockMaterials.length === 0 && !isTrendLoading ? (
-            // Owner belum punya bahan baku apapun di stok
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
               Belum ada bahan baku di stok. Tambahkan bahan baku dulu di menu Stock untuk melihat tren harganya di sini.
             </div>
           ) : !matchedTrend && !isTrendLoading ? (
-            // Bahan baku dipilih tapi belum ada data trend yang cocok di raw_material_trends
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
               Belum ada data tren harga untuk "{selectedMaterial}". Sistem AI Brainy akan otomatis mencari estimasi harganya secara berkala.
             </div>
           ) : (
             <>
-              {/* 🏷️ Badge sumber data: Data Resmi vs Estimasi AI */}
+              {/* 🏷️ Badge sumber data — 3 kondisi: OFFICIAL / AI_ESTIMATE / FALLBACK_UNIT_PRICE */}
               {matchedTrend && (
                 <div style={{ marginBottom: '12px' }}>
-                  {matchedTrend.data_source === 'ai_estimated' ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-                      <Sparkles size={11} /> ESTIMASI AI
-                    </span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-                      <ShieldCheck size={11} /> DATA RESMI
-                    </span>
-                  )}
+                  {renderDataSourceBadge(matchedTrend.data_source)}
                 </div>
               )}
 

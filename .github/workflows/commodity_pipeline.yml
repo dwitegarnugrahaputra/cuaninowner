@@ -19,7 +19,7 @@ jobs:
     - name: 🐍 Inisialisasi Environment Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'  
+        python-version: '3.10'
 
     - name: 📦 Instalasi Dependensi Big Data Pipeline
       run: |
@@ -33,3 +33,11 @@ jobs:
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       run: |
         python src/engineering/scrapping_pipeline.py
+
+    - name: 🤖 Eksekusi AI Fallback (Estimasi Harga Bahan Tanpa Data Resmi)
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        python src/engineering/ai_fallback.py
