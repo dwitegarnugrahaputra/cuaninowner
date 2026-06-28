@@ -25,12 +25,20 @@ GEMINI_API_KEY  = os.environ.get("GEMINI_API_KEY")
 SUPABASE_URL    = os.environ.get("SUPABASE_URL", "https://qvuvnuhksxofyyzqzdse.supabase.co")
 SUPABASE_KEY    = os.environ.get("SUPABASE_KEY")
 
-# Model Gemini yang dipakai — gemini-2.0-flash: cepat & murah, cukup untuk estimasi harga
-GEMINI_MODEL    = "gemini-2.0-flash"
+# Model Gemini yang dipakai
+# CATATAN PENTING: gemini-2.0-flash SUDAH DI-SHUTDOWN Google per 1 Juni 2026.
+# Itulah sebab error 429 sebelumnya — bukan murni rate limit, tapi request
+# diarahkan ke model yang sudah tidak aktif. gemini-2.5-flash-lite dipilih
+# karena masih gratis di free tier dan cukup untuk task estimasi harga ringan.
+GEMINI_MODEL    = "gemini-2.5-flash-lite"
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
-# Delay antar request ke Gemini (detik) — hindari rate limit
-RATE_LIMIT_DELAY = 5
+# Delay antar request ke Gemini (detik) — hindari rate limit per-menit (RPM)
+RATE_LIMIT_DELAY = 10
+
+# Retry untuk error 429 (rate limit) — exponential backoff: 30s, 60s, 90s
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE = 30  # detik
 
 # ─────────────────────────────────────────────────────────────────────────────
 # KONEKSI SUPABASE
@@ -43,13 +51,13 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def estimate_price_with_gemini(material_name: str, unit_price_fallback: int) -> dict:
     """
     Minta Gemini mengestimasi harga pasar 4 minggu terakhir untuk satu bahan baku.
-    
+
     Prompt dirancang untuk:
     - Konteks warung kopi / food & beverage Indonesia
     - Harga dalam Rupiah per satuan yang relevan
     - Output JSON ketat (tidak ada teks lain)
     - Pakai unit_price sebagai anchor jika Gemini tidak yakin
-    
+
     Return:
         {
             "success": bool,
@@ -103,10 +111,43 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
 
     url = f"{GEMINI_ENDPOINT}?key={GEMINI_API_KEY}"
 
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        response.raise_for_status()
+    # ── Retry loop untuk menangani 429 (rate limit per-menit) ───────────────
+    # CATATAN: ini HANYA membantu untuk rate limit per-menit (RPM).
+    # Jika yang habis adalah kuota harian (RPD), retry tidak akan membantu —
+    # request akan tetap gagal sampai kuota reset jam 00:00 Pacific Time.
+    response = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=15)
 
+            if response.status_code == 429:
+                wait = (attempt + 1) * RETRY_BACKOFF_BASE  # 30s, 60s, 90s
+                if attempt < MAX_RETRIES - 1:
+                    print(f"         ⏳ Rate limit (429), tunggu {wait}s sebelum retry ({attempt + 1}/{MAX_RETRIES})...")
+                    time.sleep(wait)
+                    continue
+                else:
+                    return {
+                        "success": False,
+                        "prices": None,
+                        "source_note": f"Gemini HTTP error: 429 setelah {MAX_RETRIES} retry",
+                        "raw_response": response.text[:300] if response.text else "",
+                    }
+
+            response.raise_for_status()
+            break  # sukses, keluar dari retry loop
+
+        except requests.exceptions.Timeout:
+            if attempt == MAX_RETRIES - 1:
+                return {"success": False, "prices": None, "source_note": "Gemini timeout", "raw_response": ""}
+            print(f"         ⏳ Timeout, retry ({attempt + 1}/{MAX_RETRIES})...")
+            time.sleep(10)
+            continue
+        except requests.exceptions.HTTPError as e:
+            return {"success": False, "prices": None, "source_note": f"Gemini HTTP error: {e}", "raw_response": response.text[:300] if response is not None and response.text else ""}
+
+    # ── Parse response sukses ────────────────────────────────────────────────
+    try:
         data = response.json()
         raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
@@ -135,16 +176,12 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
             "raw_response": raw_text,
         }
 
-    except requests.exceptions.Timeout:
-        return {"success": False, "prices": None, "source_note": "Gemini timeout", "raw_response": ""}
-    except requests.exceptions.HTTPError as e:
-        return {"success": False, "prices": None, "source_note": f"Gemini HTTP error: {e}", "raw_response": ""}
     except (KeyError, IndexError) as e:
-        raw = response.text if 'response' in locals() else ""
-        return {"success": False, "prices": None, "source_note": f"Gemini response malformed: {e}", "raw_response": raw}
+        raw = response.text if response is not None else ""
+        return {"success": False, "prices": None, "source_note": f"Gemini response malformed: {e}", "raw_response": raw[:300]}
     except (json.JSONDecodeError, ValueError) as e:
         raw = raw_text if 'raw_text' in locals() else ""
-        return {"success": False, "prices": None, "source_note": f"JSON parse error: {e}", "raw_response": raw}
+        return {"success": False, "prices": None, "source_note": f"JSON parse error: {e}", "raw_response": raw[:300]}
     except Exception as e:
         return {"success": False, "prices": None, "source_note": f"Error tidak terduga: {e}", "raw_response": ""}
 
@@ -180,6 +217,7 @@ def run_ai_fallback(force: bool = False, dry_run: bool = False, limit: int = Non
     """
     print("=" * 60)
     print("🤖 CUANin.id — AI Fallback Runner (Tahap 4)")
+    print(f"   Model : {GEMINI_MODEL}")
     print(f"   Mode  : {'DRY RUN (tidak update Supabase)' if dry_run else 'LIVE'}")
     print(f"   Force : {'Ya (proses ulang bahan yang sudah di-AI)' if force else 'Tidak (skip bahan yang sudah di-AI)'}")
     print(f"   Limit : {limit if limit else 'semua bahan'}")
