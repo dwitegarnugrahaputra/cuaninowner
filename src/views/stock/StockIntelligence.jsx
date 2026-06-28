@@ -43,6 +43,7 @@ export default function StockIntelligence() {
       if (matData) {
         setMaterials(matData);
         // 📐 MATEMATIKA AGREGASI: Hitung Total Nilai Aset Inventori & Jumlah Item Kritis
+        // ✅ [FIX] Menggunakan minimum_threshold dari database — konsisten dengan logika Flutter
         calculatedValue = matData.reduce((sum, item) => sum + (Number(item.current_stock) * Number(item.unit_price)), 0);
         calculatedCritical = matData.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold)).length;
       } else {
@@ -210,6 +211,7 @@ export default function StockIntelligence() {
             <tbody>
               {materials.length > 0 ? (
                 materials.map((row) => {
+                  // ✅ [FIX] Menggunakan minimum_threshold dari database — konsisten dengan logika Flutter
                   const isCritical = Number(row.current_stock) <= Number(row.minimum_threshold);
                   const isOut = Number(row.current_stock) <= 0;
                   const totalItemPrice = Number(row.current_stock) * Number(row.unit_price);
@@ -316,6 +318,7 @@ export default function StockIntelligence() {
             <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
             <button 
               onClick={() => {
+                // ✅ [FIX] Filter menggunakan minimum_threshold dari database — konsisten dengan kalkulasi di atas
                 const criticalItems = materials.filter(item => Number(item.current_stock) <= Number(item.minimum_threshold));
                 let message = `*⚠️ PEMBERITAHUAN RESTOK OTOMATIS - cuanin.id* %0A%0A`;
                 message += `Halo Admin Stok, Brainy AI mendeteksi bahwa bahan baku berikut sudah menyentuh batas minimum dan harus segera di-restok: %0A%0A`;

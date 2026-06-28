@@ -1,23 +1,198 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet, Trash, Save, Loader2 
+  Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet, Trash, Save, Loader2,
+  Link, Upload, Camera, Image
 } from 'lucide-react';
 
-// Koneksi murni client Supabase proyek cuanin.id
 import { supabase } from '../../config/supabaseClient';
 
+// ================= 🖼️ REUSABLE IMAGE PICKER PANEL =================
+// Mendukung 3 mode: URL eksternal, Upload file (galeri/file explorer), Kamera
+// currentImage  = nilai image_url saat ini (string URL atau base64)
+// onImageChange = callback(newImageUrl) dipanggil setiap kali gambar berubah
+function ImagePickerPanel({ currentImage, onImageChange }) {
+  const [activeTab, setActiveTab] = useState('url'); // 'url' | 'upload' | 'camera'
+  const [urlInput, setUrlInput] = useState(currentImage || '');
+  const [isDragging, setIsDragging] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Sync urlInput kalau currentImage berubah dari luar (misal saat modal edit dibuka)
+  useEffect(() => {
+    if (activeTab === 'url') setUrlInput(currentImage || '');
+  }, [currentImage]);
+
+  // Matikan kamera kalau pindah tab
+  useEffect(() => {
+    if (activeTab !== 'camera') stopCamera();
+    else startCamera();
+    return () => stopCamera();
+  }, [activeTab]);
+
+  // ---- Helpers ----
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const handleFileChange = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('File harus berupa gambar (JPG, PNG, WEBP, dll).'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Ukuran file maksimal 5 MB.'); return; }
+    const base64 = await fileToBase64(file);
+    onImageChange(base64);
+  };
+
+  // Drag & drop
+  const handleDrop = (e) => {
+    e.preventDefault(); setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileChange(file);
+  };
+
+  // Kamera
+  const startCamera = async () => {
+    setCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (err) {
+      setCameraError('Akses kamera ditolak atau tidak tersedia di browser ini.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    const base64 = canvas.toDataURL('image/jpeg', 0.85);
+    onImageChange(base64);
+    stopCamera();
+    setActiveTab('url'); // Tampilkan hasil di preview
+  };
+
+  const tabStyle = (tab) => ({
+    flex: 1, padding: '8px 0', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer',
+    border: 'none', borderRadius: '6px', transition: 'all 0.15s',
+    backgroundColor: activeTab === tab ? '#006847' : 'transparent',
+    color: activeTab === tab ? '#ffffff' : '#6B7280',
+  });
+
+  return (
+    <div>
+      {/* Tab selector */}
+      <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', padding: '4px', marginBottom: '10px' }}>
+        <button style={tabStyle('url')} onClick={() => setActiveTab('url')}><Link size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>URL</button>
+        <button style={tabStyle('upload')} onClick={() => setActiveTab('upload')}><Upload size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>Upload</button>
+        <button style={tabStyle('camera')} onClick={() => setActiveTab('camera')}><Camera size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>Kamera</button>
+      </div>
+
+      {/* Tab: URL */}
+      {activeTab === 'url' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input
+            type="text"
+            placeholder="https://..."
+            value={urlInput}
+            onChange={(e) => { setUrlInput(e.target.value); onImageChange(e.target.value); }}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+          />
+          <div style={{ border: '1px dashed #D1D5DB', borderRadius: '10px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA', overflow: 'hidden' }}>
+            {currentImage
+              ? <img src={currentImage} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.target.style.display='none'; }} />
+              : <div style={{ textAlign: 'center', color: '#9CA3AF' }}><Image size={28} /><p style={{ margin: '4px 0 0', fontSize: '11px' }}>Preview gambar</p></div>
+            }
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Upload */}
+      {activeTab === 'upload' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              border: `2px dashed ${isDragging ? '#006847' : '#D1D5DB'}`,
+              borderRadius: '10px', padding: '20px', textAlign: 'center',
+              cursor: 'pointer', backgroundColor: isDragging ? '#E6F4EA' : '#FAFAFA',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Upload size={24} color={isDragging ? '#006847' : '#9CA3AF'} style={{ margin: '0 auto 8px' }} />
+            <p style={{ margin: 0, fontSize: '12px', color: '#4B5563', fontWeight: '600' }}>Klik atau drag & drop gambar di sini</p>
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#9CA3AF' }}>JPG, PNG, WEBP — maks 5 MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileChange(e.target.files[0])}
+            />
+          </div>
+          {/* Preview hasil upload */}
+          {currentImage && (
+            <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', height: '80px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' }}>
+              <img src={currentImage} alt="Preview" style={{ height: '100%', objectFit: 'contain' }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Kamera */}
+      {activeTab === 'camera' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          {cameraError
+            ? <div style={{ padding: '20px', textAlign: 'center', color: '#DC2626', fontSize: '12px', border: '1px dashed #FCA5A5', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}>{cameraError}</div>
+            : (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: '100%', borderRadius: '10px', border: '1px solid #E5E7EB', backgroundColor: '#000', maxHeight: '160px', objectFit: 'cover' }}
+                />
+                <button
+                  onClick={capturePhoto}
+                  style={{ padding: '8px 24px', backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Camera size={14} /> Ambil Foto
+                </button>
+              </>
+            )
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MenuManagement() {
-  // Modal & Tab Workspace Controllers
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Coffee');
 
-  // Core Database States
   const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stockIngredients, setStockIngredients] = useState([]);
   const [menuSummary, setMenuSummary] = useState({ totalItems: 0, totalCategories: 0, outOfStockCount: 0 });
 
-  // Form Management States (Create & Update)
   const [newMenu, setNewMenu] = useState({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
   const [newMenuRecipe, setNewMenuRecipe] = useState([]);
   const [editingMenu, setEditingMenu] = useState(null);
@@ -46,9 +221,7 @@ export default function MenuManagement() {
         .select('*')
         .order('category', { ascending: true })
         .order('menu_name', { ascending: true });
-
       if (error) throw error;
-
       if (data) {
         setMenus(data);
         const uniqueCategories = new Set(data.map(item => item.category)).size;
@@ -64,17 +237,12 @@ export default function MenuManagement() {
 
   useEffect(() => {
     fetchMenuCatalog();
-    fetchStockIngredients(); 
+    fetchStockIngredients();
   }, []);
 
-  // Sync Data Resep saat Modal Edit Terbuka
   useEffect(() => {
     if (editingMenu) {
-      if (editingMenu.recipe && Array.isArray(editingMenu.recipe)) {
-        setRecipeRows(editingMenu.recipe);
-      } else {
-        setRecipeRows([]);
-      }
+      setRecipeRows(editingMenu.recipe && Array.isArray(editingMenu.recipe) ? editingMenu.recipe : []);
     } else {
       setRecipeRows([]);
     }
@@ -83,33 +251,25 @@ export default function MenuManagement() {
   const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
   const currentTotalCogs = recipeRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
 
-  // 📤 CREATE PIPELINE: Suntik Data Produk Baru ke Supabase (+ VALIDASI INTERCEPT RESEP KOSONG)
+  // 📤 CREATE PIPELINE
   const handleCreateMenu = async (e) => {
     e.preventDefault();
     if (!newMenu.menu_name.trim() || !newMenu.price || Number(newMenu.price) <= 0) {
-      alert('Isi data nama menu dan nominal harga secara valid, Gar!');
-      return;
+      alert('Isi data nama menu dan nominal harga secara valid, Gar!'); return;
     }
-
     if (newMenuRecipe.length === 0) {
-      alert('Mohon isi resep produk.');
-      return;
+      alert('Mohon isi resep produk.'); return;
     }
-
     try {
-      const { error } = await supabase
-        .from('menus')
-        .insert([{
-          menu_name: newMenu.menu_name,
-          category: selectedCategory,
-          price: Number(newMenu.price),
-          image_url: newMenu.image_url,
-          is_available: true,
-          recipe: newMenuRecipe 
-        }]);
-
+      const { error } = await supabase.from('menus').insert([{
+        menu_name: newMenu.menu_name,
+        category: selectedCategory,
+        price: Number(newMenu.price),
+        image_url: newMenu.image_url,
+        is_available: true,
+        recipe: newMenuRecipe
+      }]);
       if (error) throw error;
-      
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
       setNewMenuRecipe([]);
       setIsModalOpen(false);
@@ -120,16 +280,12 @@ export default function MenuManagement() {
     }
   };
 
-  // 📝 ⚡ DYNAMIC BINDING UPDATE PIPELINE
+  // 📝 UPDATE PIPELINE
   const handleUpdateMenu = async (e) => {
     e.preventDefault();
-    if (!editingMenu?.id) {
-      alert('ID menu tidak ditemukan, gagal melakukan update, Gar!');
-      return;
-    }
+    if (!editingMenu?.id) { alert('ID menu tidak ditemukan, gagal melakukan update, Gar!'); return; }
     if (!editingMenu.menu_name.trim() || !editingMenu.price || Number(editingMenu.price) <= 0) {
-      alert('Form edit nama menu dan harga tidak boleh kosong, Gar!');
-      return;
+      alert('Form edit nama menu dan harga tidak boleh kosong, Gar!'); return;
     }
     try {
       const { data, error } = await supabase
@@ -139,107 +295,75 @@ export default function MenuManagement() {
           category: editingMenu.category,
           price: Number(editingMenu.price),
           image_url: editingMenu.image_url,
-          recipe: recipeRows 
+          recipe: recipeRows
         })
         .eq('id', editingMenu.id)
         .select();
-
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        throw new Error('Tidak ada baris yang diperbarui.');
-      }
-
-      setEditingMenu(null); 
-      await fetchMenuCatalog(); 
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang diperbarui.');
+      setEditingMenu(null);
+      await fetchMenuCatalog();
       alert('Data menu berhasil diperbarui!');
     } catch (err) {
       alert('Gagal memperbarui rekaman data menu: ' + err.message);
     }
   };
 
-  // 🔄 UPDATE PIPELINE 2: Quick Toggle Tombol Ketersediaan Stok Menu
+  // 🔄 TOGGLE AVAILABILITY
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
-      const { data, error } = await supabase
-        .from('menus')
-        .update({ is_available: !currentStatus })
-        .eq('id', id)
-        .select();
+      const { data, error } = await supabase.from('menus').update({ is_available: !currentStatus }).eq('id', id).select();
       if (error) throw error;
-      if (!data || data.length === 0) {
-        alert('Gagal mengubah status: tidak ada baris yang cocok di database.');
-        return;
-      }
+      if (!data || data.length === 0) { alert('Gagal mengubah status: tidak ada baris yang cocok di database.'); return; }
       await fetchMenuCatalog();
     } catch (err) {
       console.error('⚠️ Gagal mengubah status availabilitas:', err.message);
     }
   };
 
-  // ❌ ⚡ FIXED ABSOLUTE DELETE PIPELINE
+  // ❌ DELETE PIPELINE
   const handleDeleteMenu = async (id) => {
-    if (!id) {
-      alert('ID menu tidak valid, gagal menghapus, Gar!');
-      return;
-    }
+    if (!id) { alert('ID menu tidak valid, gagal menghapus, Gar!'); return; }
     if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
     try {
-      const { data, error } = await supabase
-        .from('menus')
-        .delete()
-        .eq('id', id)
-        .select();
-
+      const { data, error } = await supabase.from('menus').delete().eq('id', id).select();
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        throw new Error('Tidak ada baris yang terhapus.');
-      }
-
-      await fetchMenuCatalog(); 
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang terhapus.');
+      await fetchMenuCatalog();
       alert('Produk resmi terhapus selamanya dari database cloud!');
     } catch (err) {
       alert('Supabase menolak aksi delete! Eror: ' + err.message);
     }
   };
 
-  // ================= 🛠️ ARSITEKTUR FORMULA KONVERSI TAKARAN RESEP BARU =================
+  // ================= RESEP BARU =================
   const handleAddNewMenuRecipeRow = () => {
-    if (stockIngredients.length === 0) {
-      alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.');
-      return;
-    }
+    if (stockIngredients.length === 0) { alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.'); return; }
     const firstMat = stockIngredients[0];
     let displayUnit = firstMat.unit;
     let initialQty = 10;
     let unitCost = Number(firstMat.unit_price || 0);
-
     if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
       displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
       initialQty = displayUnit === 'gram' ? 15 : 30;
       unitCost = Number(firstMat.unit_price || 0) / 1000;
     }
-
     setNewMenuRecipe([...newMenuRecipe, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
   };
 
   const handleUpdateNewMenuRecipeRow = (index, key, value) => {
     const updatedRows = [...newMenuRecipe];
     updatedRows[index][key] = value;
-
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
         let displayUnit = matchedMaterial.unit;
         let unitCost = Number(matchedMaterial.unit_price || 0);
-
         if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
           displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
           unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
         }
-
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;
@@ -250,14 +374,19 @@ export default function MenuManagement() {
     setNewMenuRecipe(updatedRows);
   };
 
-  // ================= 🛠️ ARSITEKTUR FORMULA KONVERSI TAKARAN RESEP EDIT =================
+  const handleRemoveNewMenuRecipeRow = (index) => {
+    const updatedRows = [...newMenuRecipe];
+    updatedRows.splice(index, 1);
+    setNewMenuRecipe(updatedRows);
+  };
+
+  // ================= RESEP EDIT =================
   const handleAddRecipeRow = () => {
     if (stockIngredients.length === 0) return;
     const firstMat = stockIngredients[0];
     let displayUnit = firstMat.unit;
     let initialQty = 10;
     let unitCost = Number(firstMat.unit_price || 0);
-
     if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
       displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
       initialQty = displayUnit === 'gram' ? 15 : 30;
@@ -269,19 +398,16 @@ export default function MenuManagement() {
   const handleUpdateRecipeRow = (index, key, value) => {
     const updatedRows = [...recipeRows];
     updatedRows[index][key] = value;
-
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
         let displayUnit = matchedMaterial.unit;
         let unitCost = Number(matchedMaterial.unit_price || 0);
-
         if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
           displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
           unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
         }
-
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;
@@ -289,6 +415,12 @@ export default function MenuManagement() {
         updatedRows[index].cost = Math.round(currentQty * unitCost);
       }
     }
+    setRecipeRows(updatedRows);
+  };
+
+  const handleRemoveRecipeRow = (index) => {
+    const updatedRows = [...recipeRows];
+    updatedRows.splice(index, 1);
     setRecipeRows(updatedRows);
   };
 
@@ -374,10 +506,10 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* WINDOW POPUP OVERLAY ADD NEW ITEM */}
+      {/* ================= MODAL: ADD NEW ITEM ================= */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '24px', height: '24px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></div>
@@ -387,6 +519,7 @@ export default function MenuManagement() {
             </div>
 
             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* KIRI: Form */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><Info size={14}/> Informasi Dasar</h4>
@@ -420,7 +553,6 @@ export default function MenuManagement() {
                     <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep produk</h4>
                     <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleAddNewMenuRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
-                  
                   <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
                       <span>Bahan Baku</span><span style={{ textAlign: 'center' }}>Takaran</span><span>Cost Modal</span><span></span>
@@ -447,13 +579,15 @@ export default function MenuManagement() {
                 </div>
               </div>
 
+              {/* KANAN: Image Picker + Profit Analysis */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Foto Menu</label>
-                  <input type="text" value={newMenu.image_url} onChange={(e) => setNewMenu({...newMenu, image_url: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} />
-                  <div style={{ border: '1px dashed #D1D5DB', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '110px', backgroundColor: '#FAFAFA' }}>
-                    <img src={newMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} />
-                  </div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Foto Menu</label>
+                  {/* ✅ ImagePickerPanel reusable — mendukung URL, Upload, dan Kamera */}
+                  <ImagePickerPanel
+                    currentImage={newMenu.image_url}
+                    onImageChange={(url) => setNewMenu({ ...newMenu, image_url: url })}
+                  />
                 </div>
                 <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={16}/> Instant Profit Analysis</span>
@@ -479,22 +613,22 @@ export default function MenuManagement() {
         </div>
       )}
 
-      {/* ================= WINDOW POPUP OVERLAY EDIT ITEM ================= */}
+      {/* ================= MODAL: EDIT ITEM ================= */}
       {editingMenu && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#111827' }}>Edit Detil Menu Produk & Resep</h2>
               <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setEditingMenu(null)} />
             </div>
 
             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* KIRI: Form Edit */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
                   <input type="text" required value={editingMenu.menu_name} onChange={(e) => setEditingMenu({...editingMenu, menu_name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual Baru (Rp)</label>
@@ -502,7 +636,7 @@ export default function MenuManagement() {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
-                    <select value={editingMenu.category} onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff', height: '38px', cursor: 'pointer' }} >
+                    <select value={editingMenu.category} onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff', height: '38px', cursor: 'pointer' }}>
                       <option value="Coffee">Coffee</option>
                       <option value="Non-Coffee">Non-Coffee</option>
                       <option value="Food">Food</option>
@@ -510,13 +644,11 @@ export default function MenuManagement() {
                     </select>
                   </div>
                 </div>
-
                 <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Buku</h4>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
                     <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleAddRecipeRow}><Plus size={14}/> Tambah Bahan</span>
                   </div>
-                  
                   <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
                       <span>Bahan Terikat</span><span style={{ textAlign: 'center' }}>Takaran</span><span>Cost Modal</span><span></span>
@@ -539,13 +671,15 @@ export default function MenuManagement() {
                 </div>
               </div>
 
+              {/* KANAN: Image Picker + Margin Simulator */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>URL Gambar Produk</label>
-                  <input type="text" value={editingMenu.image_url} onChange={(e) => setEditingMenu({...editingMenu, image_url: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} />
-                  <div style={{ border: '1px dashed #D1D5DB', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', backgroundColor: '#FAFAFA' }}>
-                    <img src={editingMenu.image_url} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} />
-                  </div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Foto Produk</label>
+                  {/* ✅ ImagePickerPanel reusable — mendukung URL, Upload, dan Kamera */}
+                  <ImagePickerPanel
+                    currentImage={editingMenu.image_url}
+                    onImageChange={(url) => setEditingMenu({ ...editingMenu, image_url: url })}
+                  />
                 </div>
                 <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={16}/> Brainy Live Margin Simulator</span>
