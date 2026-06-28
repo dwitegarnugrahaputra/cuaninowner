@@ -30,7 +30,7 @@ GEMINI_MODEL    = "gemini-2.0-flash"
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 # Delay antar request ke Gemini (detik) — hindari rate limit
-RATE_LIMIT_DELAY = 2
+RATE_LIMIT_DELAY = 5
 
 # ─────────────────────────────────────────────────────────────────────────────
 # KONEKSI SUPABASE
