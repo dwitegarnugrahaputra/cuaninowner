@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp, Loader2
+  TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp, Loader2, Sparkles, ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../config/supabaseClient';
 
@@ -18,9 +18,25 @@ function CuaninLogoMini() {
   );
 }
 
+// 🔎 Fuzzy match dua arah (case-insensitive): cocok kalau salah satu nama
+// "terkandung" di nama lainnya. Contoh: "Kopi Arabica" (trends) cocok dengan
+// "Kopi Arabica Lokal" (stok owner), dan sebaliknya juga berlaku.
+function isFuzzyNameMatch(nameA, nameB) {
+  if (!nameA || !nameB) return false;
+  const a = nameA.toLowerCase().trim();
+  const b = nameB.toLowerCase().trim();
+  return a.includes(b) || b.includes(a);
+}
+
+// 🏷️ Cari baris trend yang paling cocok untuk satu nama bahan baku stok,
+// dari seluruh baris raw_material_trends yang sudah diambil.
+function findTrendMatch(stockMaterialName, trendRows) {
+  if (!stockMaterialName || !trendRows || trendRows.length === 0) return null;
+  return trendRows.find((trend) => isFuzzyNameMatch(stockMaterialName, trend.material_name)) || null;
+}
+
 export default function Dashboard() {
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState('Kopi Arabica');
   const [isLoading, setIsLoading] = useState(true);
   const [currentUid, setCurrentUserId] = useState(null);
 
@@ -45,12 +61,15 @@ export default function Dashboard() {
 
   const [criticalStockCount, setCriticalStockCount] = useState(0);
   const [topMenus, setTopMenus] = useState([]);
-  const [activeCurve, setActiveCurve] = useState({
-    labelColor: '#006847',
-    weeks: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    numericWeeks: [42000, 43500, 41000, 45000], 
-    bottomMetrics: { name: 'KPA', price: 'Rp 45.000' }
-  });
+
+  // 🌾 BAHAN BAKU TREND — sekarang sepenuhnya dinamis berdasarkan stok riil owner.
+  // stockMaterials: daftar nama unik bahan baku dari raw_materials milik owner ini.
+  // trendRowsCache: seluruh baris raw_material_trends (tabel global, sama untuk semua owner).
+  // selectedMaterial: nama bahan baku yang sedang dipilih owner di dropdown.
+  const [stockMaterials, setStockMaterials] = useState([]);
+  const [trendRowsCache, setTrendRowsCache] = useState([]);
+  const [selectedMaterial, setSelectedMaterial] = useState('');
+  const [isTrendLoading, setIsTrendLoading] = useState(true);
 
   // 📥 SYNC ENGINE
   const syncDashboardMetricsFromDB = async () => {
@@ -166,9 +185,78 @@ export default function Dashboard() {
     }
   };
 
+  // 🌾 PIPELINE TREN BAHAN BAKU: ambil nama bahan baku UNIK dari stok riil owner
+  // (raw_materials), lalu ambil SELURUH baris raw_material_trends (tabel global,
+  // sama untuk semua owner) sekali saja untuk dicocokkan secara fuzzy di sisi client.
+  const loadMaterialTrendSources = async () => {
+    setIsTrendLoading(true);
+    try {
+      // 1. Ambil nama-nama bahan baku UNIK dari stok milik toko ini
+      const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
+        .from('raw_materials')
+        .select('material_name')
+        .order('material_name', { ascending: true });
+
+      if (rawMaterialsError) throw rawMaterialsError;
+
+      // Dedupe nama (siapa tau ada nama yang sama persis tercatat lebih dari sekali)
+      const uniqueNames = Array.from(
+        new Set((rawMaterialsData || []).map((row) => row.material_name).filter(Boolean))
+      );
+      setStockMaterials(uniqueNames);
+
+      // 2. Ambil seluruh baris trend (tabel ini global/kecil, aman ditarik semua sekaligus)
+      const { data: trendData, error: trendError } = await supabase
+        .from('raw_material_trends')
+        .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source');
+
+      if (trendError) throw trendError;
+      setTrendRowsCache(trendData || []);
+
+      // 3. Default dropdown: bahan baku PERTAMA secara alfabetis dari stok owner
+      if (uniqueNames.length > 0) {
+        setSelectedMaterial(uniqueNames[0]);
+      }
+    } catch (err) {
+      console.error('⚠️ Gagal memuat sumber data tren bahan baku:', err.message);
+    } finally {
+      setIsTrendLoading(false);
+    }
+  };
+
   useEffect(() => {
     syncDashboardMetricsFromDB();
+    loadMaterialTrendSources();
   }, []);
+
+  // 🔗 Cari baris trend yang cocok untuk bahan baku yang sedang dipilih di dropdown.
+  // null kalau memang belum ada data trend untuk bahan ini sama sekali.
+  const matchedTrend = findTrendMatch(selectedMaterial, trendRowsCache);
+
+  // Parser "Rp 113.4k" / "Rp 78k" -> angka asli (113400 / 78000), dipakai untuk
+  // menggambar grafik SVG. Mengembalikan 0 kalau formatnya tidak terbaca.
+  const parseRupiahLabelToNumber = (label) => {
+    if (!label || typeof label !== 'string') return 0;
+    const cleaned = label.replace(/Rp\s?/i, '').replace(',', '.').trim();
+    const multiplier = cleaned.toLowerCase().endsWith('k') ? 1000 : 1;
+    const numericPart = parseFloat(cleaned.replace(/k/i, ''));
+    return isNaN(numericPart) ? 0 : Math.round(numericPart * multiplier);
+  };
+
+  const activeCurve = matchedTrend
+    ? {
+        labelColor: matchedTrend.hex_color || '#006847',
+        numericWeeks: [
+          parseRupiahLabelToNumber(matchedTrend.week_1),
+          parseRupiahLabelToNumber(matchedTrend.week_2),
+          parseRupiahLabelToNumber(matchedTrend.week_3),
+          parseRupiahLabelToNumber(matchedTrend.week_4),
+        ],
+      }
+    : {
+        labelColor: '#9CA3AF',
+        numericWeeks: [0, 0, 0, 0],
+      };
 
   // ================= 📊 KALKULATOR GEOMETRI SVG KOORDINAT AKURAT =================
   // Skala Y FIXED: Rp 0 (bawah) s/d Rp 10.000.000 (atas) — tidak lagi relatif ke data
@@ -228,7 +316,7 @@ export default function Dashboard() {
   const yAxisTicks = [];
   for (let v = 10000000; v >= 0; v -= 1000000) yAxisTicks.push(v);
 
-  // --- LOGIKA SVG GRAPH BAHAN BAKU ---
+  // --- LOGIKA SVG GRAPH BAHAN BAKU (sekarang berbasis activeCurve dinamis dari Supabase) ---
   const xCoords = [100, 240, 380, 520]; 
   const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
   const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
@@ -458,34 +546,73 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* TREN BAHAN BAKU BLOCK */}
+        {/* TREN BAHAN BAKU BLOCK — sekarang dinamis: dropdown dari stok riil owner,
+            data trend dicocokkan fuzzy ke raw_material_trends (tabel global) */}
         <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
             <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>TREN HARGA BAHAN BAKU</span>
-            <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)} style={{ padding: '6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#FAFAFA' }}>
-              <option value="Kopi Arabica">KOPI ARABICA</option>
-              <option value="Fresh Milk">FRESH MILK</option>
-              <option value="Gula Aren">GULA AREN</option>
-            </select>
+            {isTrendLoading ? (
+              <Loader2 size={14} className="animate-spin" color="#9CA3AF" />
+            ) : stockMaterials.length > 0 ? (
+              <select
+                value={selectedMaterial}
+                onChange={(e) => setSelectedMaterial(e.target.value)}
+                style={{ padding: '6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#FAFAFA', maxWidth: '180px' }}
+              >
+                {stockMaterials.map((name) => (
+                  <option key={name} value={name}>{name.toUpperCase()}</option>
+                ))}
+              </select>
+            ) : null}
           </div>
-          <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
-            <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-              <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
-              <g>
-                <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
-                <text x="65" y="34" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
-                <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
-                <text x="65" y="154" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[2]}</text>
-              </g>
-              <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" />
-              {xCoords.map((xVal, index) => (
-                <circle key={index} cx={xVal} cy={calculatedPoints[index]} r="4" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2.5" />
-              ))}
-            </svg>
-          </div>
-          <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', paddingLeft: '75px', paddingRight: '100px', justifyContent: 'space-between' }}>
-            {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(w => <span key={w}>{w}</span>)}
-          </div>
+
+          {stockMaterials.length === 0 && !isTrendLoading ? (
+            // Owner belum punya bahan baku apapun di stok
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
+              Belum ada bahan baku di stok. Tambahkan bahan baku dulu di menu Stock untuk melihat tren harganya di sini.
+            </div>
+          ) : !matchedTrend && !isTrendLoading ? (
+            // Bahan baku dipilih tapi belum ada data trend yang cocok di raw_material_trends
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
+              Belum ada data tren harga untuk "{selectedMaterial}". Sistem AI Brainy akan otomatis mencari estimasi harganya secara berkala.
+            </div>
+          ) : (
+            <>
+              {/* 🏷️ Badge sumber data: Data Resmi vs Estimasi AI */}
+              {matchedTrend && (
+                <div style={{ marginBottom: '12px' }}>
+                  {matchedTrend.data_source === 'ai_estimated' ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+                      <Sparkles size={11} /> ESTIMASI AI
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+                      <ShieldCheck size={11} /> DATA RESMI
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
+                <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                  <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
+                  <g>
+                    <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
+                    <text x="65" y="34" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
+                    <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
+                    <text x="65" y="154" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[2]}</text>
+                  </g>
+                  <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" />
+                  {xCoords.map((xVal, index) => (
+                    <circle key={index} cx={xVal} cy={calculatedPoints[index]} r="4" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2.5" />
+                  ))}
+                </svg>
+              </div>
+              <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', paddingLeft: '75px', paddingRight: '100px', justifyContent: 'space-between' }}>
+                {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(w => <span key={w}>{w}</span>)}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

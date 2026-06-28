@@ -3,6 +3,61 @@ import { supabase } from '../../config/supabaseClient';
 import { Shield, Key, Lock, Clock, Smartphone, Save, Eye, EyeOff, Loader2, Monitor, History, UserCog } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
+// 📍 Reverse geocode koordinat GPS jadi "Kota, Provinsi" pakai OpenStreetMap Nominatim
+// (gratis, tanpa API key). Dipakai untuk mengisi location_info di activity_logs
+// secara riil, bukan hardcode lagi.
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+      {
+        headers: {
+          'Accept-Language': 'id',
+        },
+      }
+    );
+    if (!res.ok) throw new Error('Gagal reverse geocode');
+    const data = await res.json();
+    const addr = data.address || {};
+
+    // Fallback berurutan karena tiap daerah punya struktur alamat berbeda
+    const city = addr.city || addr.town || addr.county || addr.village || addr.suburb || '';
+    const province = addr.state || '';
+
+    if (city && province) return `${city}, ${province}`;
+    if (province) return province;
+    return 'Lokasi tidak diketahui';
+  } catch (err) {
+    console.error('⚠️ Gagal reverse geocode:', err.message);
+    return 'Lokasi tidak diketahui';
+  }
+}
+
+// 📍 Ambil koordinat GPS browser owner, lalu ubah jadi nama kota via reverseGeocode.
+// Tidak pernah melempar error ke pemanggil — selalu resolve, dengan fallback teks
+// kalau user menolak izin lokasi, GPS mati, atau request timeout.
+function getCurrentLocationName() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve('Lokasi tidak diketahui');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const locationName = await reverseGeocode(latitude, longitude);
+        resolve(locationName);
+      },
+      (error) => {
+        console.warn('⚠️ Izin lokasi ditolak/gagal:', error.message);
+        resolve('Lokasi tidak diketahui');
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+}
+
 export default function Keamanan({ onSaveSuccess }) {
   const { t } = useLanguage(); // 🌐 hook terjemahan — t('key') mengambil teks sesuai bahasa aktif
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +109,11 @@ export default function Keamanan({ onSaveSuccess }) {
           if (userAgent.includes('Mac')) detectedDevice = 'MacOS (Desktop)';
           if (userAgent.includes('Android') || userAgent.includes('iPhone')) detectedDevice = 'Mobile Device';
 
+          // 📍 Ambil lokasi GPS asli owner (bukan hardcode lagi). Proses ini tidak
+          // memblokir/menggagalkan insert log walau izin lokasi ditolak — tetap
+          // fallback ke teks default lewat getCurrentLocationName().
+          const locationName = await getCurrentLocationName();
+
           await supabase.from('activity_logs').insert([{
             user_id: uid,
             actor_type: 'owner',
@@ -62,7 +122,7 @@ export default function Keamanan({ onSaveSuccess }) {
             action_type: 'login',
             description: 'Owner login ke dashboard web',
             device_info: detectedDevice,
-            location_info: 'Tegal, Central Java'
+            location_info: locationName
           }]);
           sessionStorage.setItem('owner_login_logged', 'true');
         }
