@@ -25,7 +25,7 @@ GEMINI_API_KEY  = os.environ.get("GEMINI_API_KEY")
 SUPABASE_URL    = os.environ.get("SUPABASE_URL", "https://qvuvnuhksxofyyzqzdse.supabase.co")
 SUPABASE_KEY    = os.environ.get("SUPABASE_KEY")
 
-# Model Gemini yang dipakai — gemini-1.5-flash: cepat & murah, cukup untuk estimasi harga
+# Model Gemini yang dipakai — gemini-2.0-flash: cepat & murah, cukup untuk estimasi harga
 GEMINI_MODEL    = "gemini-2.0-flash"
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
