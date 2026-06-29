@@ -334,12 +334,16 @@ ${staffStr}
     generateTabAnalytics();
   }, [activeSubTab, dbSnapshot, selectedMenu, forecastDailyAvg, forecastGrowthRate]);
 
+  // ✅ FIX: handleSendMessage sekarang membuat `updatedMessages` secara eksplisit
+  // sebelum dipakai, sehingga tidak ada lagi ReferenceError yang membuat balasan
+  // Brainy gagal tampil secara diam-diam.
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
 
     const userMessage = input;
-    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    const updatedMessages = [...messages, { role: 'user', text: userMessage }]; // ✅ didefinisikan di sini
+    setMessages(updatedMessages);
     setInput('');
     setIsGenerating(true);
 
@@ -361,14 +365,14 @@ ${staffStr}
       });
 
       const aiText = response.text || `Mohon maaf Bapak/Ibu ${userName}, terjadi kendala teknis dalam pemrosesan data saya.`;
-      const finalMessages = [...updatedMessages, { role: 'brainy', text: aiText }];
-      
+      const finalMessages = [...updatedMessages, { role: 'brainy', text: aiText }]; // ✅ kini valid
+
       setMessages(finalMessages);
       updateSessionHistoryInStorage(activeSessionId, finalMessages);
 
     } catch (err) {
       console.error('Gemini API Error:', err);
-      const errMessages = [...updatedMessages, { role: 'brainy', text: 'Terjadi kegagalan komunikasi dengan API Intelligence Server.' }];
+      const errMessages = [...updatedMessages, { role: 'brainy', text: 'Terjadi kegagalan komunikasi dengan API Intelligence Server.' }]; // ✅ kini valid
       setMessages(errMessages);
       updateSessionHistoryInStorage(activeSessionId, errMessages);
     } finally {
