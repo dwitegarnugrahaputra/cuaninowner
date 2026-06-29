@@ -162,7 +162,7 @@ export default function Dashboard() {
         peakHoursPercentage: totalSalesSum > 0 ? '45%' : '0%',
         brainyInsightText: totalSalesSum > 0 
           ? `Brainy Insights: Omset Warung Kopi Jaya lu berjalan lancar di angka Rp ${totalSalesSum.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`
-          : "Brainy Insights: Belum ada transaksi masuk dari kasir mobile lu, Gar. Dasbor saat ini menampilkan performa riil bernilai nol.",
+          : "Brainy Insights: Belum ada transaksi masuk dari kasir mobile. Dasbor saat ini menampilkan performa riil bernilai nol.",
       });
 
       setCriticalStockCount(calculatedCritical);
@@ -480,7 +480,7 @@ export default function Dashboard() {
             ))
           ) : (
             <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', fontSize: '13.5px', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px dashed #D1D5DB' }}>
-              Belum ada riil menu terlaris. Sesi penjualan produk dari kasir mobile belum dimulai, Gar.
+              Belum ada riil menu terlaris. Sesi penjualan produk dari kasir mobile belum dimulai.
             </div>
           )}
         </div>

@@ -12,6 +12,7 @@ export default function StockIntelligence() {
   const [materials, setMaterials] = useState([]);
   const [supplyLogs, setSupplyLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAllLogs, setShowAllLogs] = useState(false);
   const [stockSummary, setStockSummary] = useState({
     totalValue: 0,
     criticalCount: 0,
@@ -56,8 +57,8 @@ export default function StockIntelligence() {
       const currentMonth = new Date().getMonth(); // 0 = Januari, 11 = Desember
 
       if (logData) {
-        // Ambil 5 log terakhir untuk keperluan visual list widget di UI kanan
-        setSupplyLogs(logData.slice(0, 5));
+        // Simpan SEMUA log (tidak dipotong) — pemotongan 5 teratas dilakukan saat render
+        setSupplyLogs(logData);
 
         logData.forEach(log => {
           const logDate = new Date(log.created_at);
@@ -116,6 +117,9 @@ export default function StockIntelligence() {
       supabase.removeChannel(inventorySubscription);
     };
   }, []);
+
+  // 👁️ Daftar log yang ditampilkan: 5 teratas secara default, atau semua jika showAllLogs aktif
+  const visibleLogs = showAllLogs ? supplyLogs : supplyLogs.slice(0, 5);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', width: '100%', position: 'relative' }}>
@@ -267,9 +271,20 @@ export default function StockIntelligence() {
         {/* COMPONENT RECENT SUPPLY LOG */}
         <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>Recent Supply Log</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-            {supplyLogs.length > 0 ? (
-              supplyLogs.map((log) => {
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              marginBottom: '20px',
+              // 📜 Saat expanded, batasi tinggi & aktifkan scroll biar card tidak melar tak terkendali
+              maxHeight: showAllLogs ? '420px' : 'none',
+              overflowY: showAllLogs ? 'auto' : 'visible',
+              paddingRight: showAllLogs ? '4px' : '0'
+            }}
+          >
+            {visibleLogs.length > 0 ? (
+              visibleLogs.map((log) => {
                 const isOcr = log.source_type === 'OCR Scan';
                 const timeString = new Date(log.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
                 
@@ -296,7 +311,15 @@ export default function StockIntelligence() {
               </div>
             )}
           </div>
-          <button style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>View All Logs</button>
+          {/* 🔽 Tombol expand/collapse: hanya tampil bila log lebih dari 5 */}
+          {supplyLogs.length > 5 && (
+            <button
+              onClick={() => setShowAllLogs((prev) => !prev)}
+              style={{ width: '100%', padding: '10px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              {showAllLogs ? `Show Less` : `View All Logs (${supplyLogs.length})`}
+            </button>
+          )}
         </div>
       </div>
 
