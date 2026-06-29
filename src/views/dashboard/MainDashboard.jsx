@@ -30,6 +30,24 @@ function findTrendMatch(stockMaterialName, trendRows) {
   return trendRows.find((trend) => isFuzzyNameMatch(stockMaterialName, trend.material_name)) || null;
 }
 
+// 🆕 Senin (00:00) minggu ini, di waktu LOKAL browser — dipakai sebagai titik
+// awal rentang grafik "Sales vs Expenses" maupun query expenses real.
+function getStartOfThisWeekMonday() {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Minggu, 1 = Senin, ... 6 = Sabtu
+  const diffToMonday = day === 0 ? 6 : day - 1; // Minggu dianggap akhir minggu, bukan awal
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// 🆕 Index hari (0=Senin ... 6=Minggu) dari sebuah Date, konsisten dengan
+// urutan tableRows ['Senin', 'Selasa', ..., 'Minggu'].
+function getMondayBasedDayIndex(date) {
+  const day = date.getDay(); // 0=Minggu, 1=Senin, ...
+  return day === 0 ? 6 : day - 1;
+}
+
 export default function Dashboard() {
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,12 +89,27 @@ export default function Dashboard() {
       const uid = session.user.id;
       setCurrentUserId(uid);
 
+      // 🆕 Rentang minggu ini: Senin 00:00 (lokal) sampai sekarang.
+      const startOfWeek = getStartOfThisWeekMonday();
+      const startOfWeekIso = startOfWeek.toISOString();
+
       const { data: salesData, error: salesError } = await supabase
         .from('sales_transactions')
         .select('id, total_amount, created_at')
         .eq('user_id', uid);
 
       if (salesError) throw salesError;
+
+      // 🆕 Ambil pengeluaran REAL minggu ini dari tabel expenses (bukan simulasi).
+      // owner_user_id di tabel expenses diisi dari staff.user_id saat staf
+      // login di app kasir, yang selalu sama dengan UUID auth owner ini.
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('id, amount, created_at')
+        .eq('owner_user_id', uid)
+        .gte('created_at', startOfWeekIso);
+
+      if (expensesError) throw expensesError;
 
       const { data: stockData } = await supabase
         .from('raw_materials')
@@ -87,30 +120,44 @@ export default function Dashboard() {
       let rowsCalculated = [];
       let transactionIds = [];
 
+      // Template 7 hari (Senin..Minggu) minggu ini, mulai dari 0 — akan diisi
+      // dengan data real sales & expenses di bawah.
+      const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      rowsCalculated = dayLabels.map((day) => ({ day, sales: 0, expenses: 0 }));
+
       if (salesData && salesData.length > 0) {
         totalTxCount = salesData.length;
         totalSalesSum = salesData.reduce((sum, tx) => sum + (Number(tx.total_amount) || 0), 0);
         transactionIds = salesData.map(tx => tx.id);
-        
-        rowsCalculated = [
-          { day: 'Senin', sales: Math.round(totalSalesSum * 0.12), expenses: Math.round(totalSalesSum * 0.06) },
-          { day: 'Selasa', sales: Math.round(totalSalesSum * 0.18), expenses: Math.round(totalSalesSum * 0.09) },
-          { day: 'Rabu', sales: Math.round(totalSalesSum * 0.15), expenses: Math.round(totalSalesSum * 0.07) },
-          { day: 'Kamis', sales: Math.round(totalSalesSum * 0.22), expenses: Math.round(totalSalesSum * 0.11) },
-          { day: 'Jumat', sales: Math.round(totalSalesSum * 0.28), expenses: Math.round(totalSalesSum * 0.13) },
-          { day: 'Sabtu', sales: Math.round(totalSalesSum * 0.35), expenses: Math.round(totalSalesSum * 0.16) },
-          { day: 'Minggu', sales: Math.round(totalSalesSum * 0.31), expenses: Math.round(totalSalesSum * 0.14) }
-        ];
-      } else {
-        rowsCalculated = [
-          { day: 'Senin', sales: 0, expenses: 0 }, { day: 'Selasa', sales: 0, expenses: 0 },
-          { day: 'Rabu', sales: 0, expenses: 0 }, { day: 'Kamis', sales: 0, expenses: 0 }, 
-          { day: 'Jumat', sales: 0, expenses: 0 }, { day: 'Sabtu', sales: 0, expenses: 0 }, { day: 'Minggu', sales: 0, expenses: 0 }
-        ];
+
+        // 🆕 Kelompokkan SALES per hari (Senin-Minggu) minggu ini, dari data asli —
+        // sebelumnya ini cuma totalSalesSum * persentase acak (simulasi).
+        salesData.forEach((tx) => {
+          const txDate = new Date(tx.created_at);
+          if (txDate >= startOfWeek) {
+            const idx = getMondayBasedDayIndex(txDate);
+            rowsCalculated[idx].sales += Number(tx.total_amount) || 0;
+          }
+        });
+      }
+
+      // 🆕 Kelompokkan EXPENSES per hari (Senin-Minggu) minggu ini, dari tabel
+      // expenses yang sudah difilter rentang waktunya lewat query di atas.
+      let totalExpensesThisWeek = 0;
+      if (expensesData && expensesData.length > 0) {
+        expensesData.forEach((exp) => {
+          const expDate = new Date(exp.created_at);
+          const idx = getMondayBasedDayIndex(expDate);
+          const amount = Number(exp.amount) || 0;
+          rowsCalculated[idx].expenses += amount;
+          totalExpensesThisWeek += amount;
+        });
       }
 
       const calculatedCOGS = Math.round(totalSalesSum * 0.35);
-      const calculatedOpEx = Math.round(totalSalesSum * 0.15);
+      // 🆕 Operating Expenses sekarang dari data real minggu ini, bukan
+      // totalSalesSum * 0.15 (simulasi).
+      const calculatedOpEx = totalExpensesThisWeek;
       const calculatedNetProfit = totalSalesSum - calculatedCOGS - calculatedOpEx;
       const marginRatio = totalSalesSum > 0 ? Math.round((calculatedNetProfit / totalSalesSum) * 100) : 0;
       const calculatedAvg = totalTxCount > 0 ? Math.round(totalSalesSum / totalTxCount) : 0;

@@ -331,7 +331,7 @@ export default function StaffManagement() {
             </div>
           ) : shiftList.length === 0 ? (
             <div style={{ padding: '40px 24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', fontSize: '13.5px' }}>
-              Belum ada jadwal shift yang dibuat, Gar. Klik "Add New Shift" untuk mulai menyusun jadwal staff lu.
+              Belum ada jadwal shift yang dibuat. Klik "Add New Shift" untuk mulai menyusun jadwal staff.
             </div>
           ) : (
             // List vertikal yang bisa di-scroll, dibatasi tingginya agar tidak memanjangkan seluruh halaman
