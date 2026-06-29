@@ -189,9 +189,10 @@ export default function Dashboard() {
       );
       setStockMaterials(uniqueNames);
 
+      // 🆕 Tambahan kolom ai_insight_text — insight naratif tren harga dari Gemini
       const { data: trendData, error: trendError } = await supabase
         .from('raw_material_trends')
-        .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source');
+        .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source, ai_insight_text');
 
       if (trendError) throw trendError;
       setTrendRowsCache(trendData || []);
@@ -320,6 +321,21 @@ export default function Dashboard() {
         <TrendingDown size={11} /> DATA STOK
       </span>
     );
+  };
+
+  // 🆕 Helper: tentukan teks insight yang ditampilkan di bawah grafik tren bahan baku.
+  // Prioritas: insight asli dari Gemini (AI_ESTIMATE) > teks generik untuk data resmi
+  // > teks generik untuk yang belum/tidak punya insight (fallback unit price atau insight kosong).
+  const getInsightText = (trend) => {
+    if (!trend) return null;
+    if (trend.data_source === 'AI_ESTIMATE' && trend.ai_insight_text) {
+      return trend.ai_insight_text;
+    }
+    if (trend.data_source === 'OFFICIAL') {
+      return `Data harga ${trend.material_name} ini berasal dari sumber resmi, jadi akurasinya bisa diandalkan untuk perhitungan HPP lu, Gar.`;
+    }
+    // FALLBACK_UNIT_PRICE yang belum sempat di-AI, atau AI_ESTIMATE tapi insight kosong
+    return `Estimasi AI untuk ${trend.material_name} belum tersedia. Sistem Brainy akan memperbaruinya secara berkala.`;
   };
 
   if (isLoading) {
@@ -546,6 +562,12 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', paddingLeft: '75px', paddingRight: '100px', justifyContent: 'space-between' }}>
                 {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(w => <span key={w}>{w}</span>)}
+              </div>
+
+              {/* 🆕 💡 Brainy Insights — tren harga bahan baku (konsisten dengan box Laba Rugi) */}
+              <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '16px' }}>
+                <span style={{ fontSize: '15px' }}>💡</span>
+                <p style={{ margin: 0, lineHeight: '1.45' }}>{getInsightText(matchedTrend)}</p>
               </div>
             </>
           )}

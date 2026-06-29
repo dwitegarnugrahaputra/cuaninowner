@@ -71,20 +71,28 @@ def estimate_price_with_gemini(material_name: str, unit_price_fallback: int) -> 
 
     prompt = f"""Kamu adalah asisten riset harga bahan baku untuk usaha warung kopi dan restoran kecil di Indonesia.
 
-Tugasmu: estimasi harga pasar ECERAN untuk bahan berikut selama 4 minggu terakhir (minggu terlama dulu, minggu terbaru terakhir).
+Tugasmu ada DUA:
+1. Estimasi harga pasar ECERAN untuk bahan berikut selama 4 minggu terakhir (minggu terlama dulu, minggu terbaru terakhir).
+2. Tulis insight singkat (2-3 kalimat) tentang tren harga bahan ini, untuk ditampilkan ke pemilik usaha di dashboard.
 
 Bahan: {material_name}
 Harga referensi dari data stok warung: Rp {unit_price_fallback:,}
 
-Panduan:
+Panduan estimasi harga:
 - Harga dalam Rupiah (IDR), per satuan yang paling umum dijual di pasar/supermarket Indonesia
 - Jika bahan punya merek spesifik (contoh: "Kopi Kapal Api", "Frisian Flag"), estimasi harga produk tersebut
 - Jika tidak yakin, gunakan harga referensi sebagai acuan dengan variasi ±5-10% antar minggu
 - Jangan gunakan harga grosir atau harga ekspor
 - Pertimbangkan fluktuasi harga pasar Indonesia beberapa minggu terakhir
 
+Panduan insight:
+- Bahasa Indonesia, nada profesional dan netral (bukan informal/akrab)
+- Jelaskan ARAH tren (naik/turun/stabil) dan KEMUNGKINAN dampaknya untuk pembelian stok
+- Maksimal 2-3 kalimat, langsung ke poin, tanpa basa-basi pembuka
+- Jangan ulangi angka harga secara mentah (itu sudah ditampilkan di grafik), fokus pada makna tren-nya
+
 PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa penjelasan:
-{{"week_1": <int>, "week_2": <int>, "week_3": <int>, "week_4": <int>, "confidence": "<high|medium|low>", "note": "<penjelasan singkat max 10 kata>"}}"""
+{{"week_1": <int>, "week_2": <int>, "week_3": <int>, "week_4": <int>, "confidence": "<high|medium|low>", "note": "<penjelasan singkat max 10 kata>", "insight": "<insight 2-3 kalimat tentang tren harga>"}}"""
 
     headers = {
         "Content-Type": "application/json",
@@ -98,7 +106,7 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
         ],
         "generationConfig": {
             "temperature": 0.2,        # rendah = lebih konsisten, tidak terlalu kreatif
-            "maxOutputTokens": 200,    # cukup untuk 1 JSON kecil
+            "maxOutputTokens": 350,    # cukup untuk JSON kecil + insight 2-3 kalimat
             "responseMimeType": "application/json",
         },
         "safetySettings": [
@@ -130,6 +138,7 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
                     return {
                         "success": False,
                         "prices": None,
+                        "insight": None,
                         "source_note": f"Gemini HTTP error: 429 setelah {MAX_RETRIES} retry",
                         "raw_response": response.text[:300] if response.text else "",
                     }
@@ -139,12 +148,12 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
 
         except requests.exceptions.Timeout:
             if attempt == MAX_RETRIES - 1:
-                return {"success": False, "prices": None, "source_note": "Gemini timeout", "raw_response": ""}
+                return {"success": False, "prices": None, "insight": None, "source_note": "Gemini timeout", "raw_response": ""}
             print(f"         ⏳ Timeout, retry ({attempt + 1}/{MAX_RETRIES})...")
             time.sleep(10)
             continue
         except requests.exceptions.HTTPError as e:
-            return {"success": False, "prices": None, "source_note": f"Gemini HTTP error: {e}", "raw_response": response.text[:300] if response is not None and response.text else ""}
+            return {"success": False, "prices": None, "insight": None, "source_note": f"Gemini HTTP error: {e}", "raw_response": response.text[:300] if response is not None and response.text else ""}
 
     # ── Parse response sukses ────────────────────────────────────────────────
     try:
@@ -168,22 +177,28 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown, tanpa
 
         confidence  = parsed.get("confidence", "unknown")
         note        = parsed.get("note", "")
+        insight     = parsed.get("insight", "").strip()
+
+        # Fallback kalau Gemini tidak menyertakan insight (jaga-jaga, jangan sampai kosong di Dashboard)
+        if not insight:
+            insight = f"Estimasi harga {material_name} berdasarkan data referensi stok, tren detail belum tersedia."
 
         return {
             "success":      True,
             "prices":       prices,
             "source_note":  f"Estimasi AI Gemini ({confidence} confidence) — {note}",
+            "insight":      insight,
             "raw_response": raw_text,
         }
 
     except (KeyError, IndexError) as e:
         raw = response.text if response is not None else ""
-        return {"success": False, "prices": None, "source_note": f"Gemini response malformed: {e}", "raw_response": raw[:300]}
+        return {"success": False, "prices": None, "insight": None, "source_note": f"Gemini response malformed: {e}", "raw_response": raw[:300]}
     except (json.JSONDecodeError, ValueError) as e:
         raw = raw_text if 'raw_text' in locals() else ""
-        return {"success": False, "prices": None, "source_note": f"JSON parse error: {e}", "raw_response": raw[:300]}
+        return {"success": False, "prices": None, "insight": None, "source_note": f"JSON parse error: {e}", "raw_response": raw[:300]}
     except Exception as e:
-        return {"success": False, "prices": None, "source_note": f"Error tidak terduga: {e}", "raw_response": ""}
+        return {"success": False, "prices": None, "insight": None, "source_note": f"Error tidak terduga: {e}", "raw_response": ""}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -280,6 +295,7 @@ def run_ai_fallback(force: bool = False, dry_run: bool = False, limit: int = Non
 
             print(f"         ✅ Berhasil: {[f'Rp {p:,}' for p in prices]}")
             print(f"         📝 {result['source_note']}")
+            print(f"         💡 {result['insight']}")
 
             if not dry_run:
                 update_payload = {
@@ -295,6 +311,8 @@ def run_ai_fallback(force: bool = False, dry_run: bool = False, limit: int = Non
                     # Rekomendasi beli/tunggu berdasarkan tren minggu terakhir
                     # (disimpan di source_origin sebagai metadata tambahan)
                     "source_origin": result["source_note"],
+                    # Insight naratif 2-3 kalimat untuk ditampilkan di Dashboard
+                    "ai_insight_text": result["insight"],
                 }
                 try:
                     supabase.table("raw_material_trends") \
