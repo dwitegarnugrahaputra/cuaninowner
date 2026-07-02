@@ -154,6 +154,90 @@ def fuzzy_match_kopi(material_name_lower):
     return any(k in material_name_lower for k in kopi_keywords)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# RULE-BASED TREND ANALYSIS (analyzePriceTrend)
+# Dipakai untuk bahan dengan data_source = 'OFFICIAL' (Yahoo Finance / Badan
+# Pangan) sehingga Brainy tidak lagi hanya bilang "sumber data resmi", tapi
+# benar-benar menjelaskan arah tren harga + rekomendasi beli/tunggu stok.
+#
+# Rule % perubahan dihitung dari titik pertama (Week 1) ke titik terakhir
+# (Week 4), persis seperti spesifikasi yang sudah disepakati:
+#   >= +8%        -> segera beli (tren naik tinggi)
+#   +2% s/d +8%    -> beli bertahap
+#   -2% s/d +2%    -> stabil, beli sesuai kebutuhan
+#   -8% s/d -2%    -> bisa ditunda
+#   <= -8%         -> waktu baik untuk beli banyak
+#
+# Untuk bahan dengan hasil AI (AI_ESTIMATE + ai_insight_text dari Gemini),
+# insight AI tetap diprioritaskan — fungsi ini TIDAK menimpa data AI_ESTIMATE,
+# hanya dipakai untuk OFFICIAL yang selama ini belum punya insight naratif.
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_price_trend(material_name, prices):
+    """
+    Analisis tren harga 4 minggu & hasilkan insight naratif + rekomendasi
+    pembelian, mengikuti rule yang sama dengan analyzePriceTrend() Brainy.
+
+    Args:
+        material_name : nama bahan baku (untuk narasi)
+        prices         : list 4 harga mingguan [w1, w2, w3, w4]
+
+    Return:
+        {
+            "pct_change": float,      # persentase perubahan w1 -> w4
+            "trend_label": str,       # "naik tajam" | "naik" | "stabil" | "turun" | "turun tajam"
+            "insight_text": str,      # narasi 1-2 kalimat untuk ditampilkan di dashboard
+            "recommendation": str,    # "BELI_SEGERA" | "BELI_BERTAHAP" | "SESUAI_KEBUTUHAN" | "BISA_DITUNDA" | "BELI_BANYAK"
+        }
+    """
+    first, last = prices[0], prices[-1]
+    pct_change = ((last - first) / first * 100) if first else 0.0
+
+    if pct_change >= 8:
+        trend_label = "naik tajam"
+        recommendation = "BELI_SEGERA"
+        insight_text = (
+            f"Harga {material_name} naik tajam sebesar {pct_change:.1f}% dalam 4 minggu terakhir. "
+            f"Segera lakukan pembelian stok karena tren kenaikan cukup tinggi sehingga berpotensi "
+            f"meningkatkan biaya operasional apabila pembelian ditunda."
+        )
+    elif pct_change >= 2:
+        trend_label = "naik"
+        recommendation = "BELI_BERTAHAP"
+        insight_text = (
+            f"Harga {material_name} menunjukkan tren naik sebesar {pct_change:.1f}% dalam 4 minggu terakhir. "
+            f"Mulai menambah stok secara bertahap agar tidak terdampak kenaikan harga berikutnya."
+        )
+    elif pct_change <= -8:
+        trend_label = "turun tajam"
+        recommendation = "BELI_BANYAK"
+        insight_text = (
+            f"Harga {material_name} turun tajam sebesar {abs(pct_change):.1f}% dalam 4 minggu terakhir. "
+            f"Ini merupakan waktu yang baik untuk membeli stok dalam jumlah lebih besar karena harga sedang "
+            f"berada pada tren penurunan."
+        )
+    elif pct_change <= -2:
+        trend_label = "turun"
+        recommendation = "BISA_DITUNDA"
+        insight_text = (
+            f"Harga {material_name} turun sebesar {abs(pct_change):.1f}% dalam 4 minggu terakhir. "
+            f"Pembelian dapat ditunda apabila stok masih mencukupi karena harga masih memiliki peluang turun."
+        )
+    else:
+        trend_label = "stabil"
+        recommendation = "SESUAI_KEBUTUHAN"
+        insight_text = (
+            f"Harga {material_name} relatif stabil (perubahan {pct_change:+.1f}%) dalam 4 minggu terakhir. "
+            f"Harga relatif stabil sehingga pembelian cukup dilakukan sesuai kebutuhan operasional."
+        )
+
+    return {
+        "pct_change": round(pct_change, 2),
+        "trend_label": trend_label,
+        "insight_text": insight_text,
+        "recommendation": recommendation,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # STEP 1 (LANJUTAN): Loop semua bahan, tentukan sumber data untuk tiap bahan
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n🔍 Matching & fetching harga untuk setiap bahan baku...")
@@ -269,6 +353,11 @@ processed_list = []
 for _, row in df_raw.iterrows():
     prices = row["historical_prices"]
     price_change = prices[3] - prices[2]
+
+    # Rule-based trend analysis (analyzePriceTrend) — dipakai untuk narasi
+    # insight & rekomendasi yang konsisten dengan rule 8%/2%/-2%/-8%.
+    trend_result = analyze_price_trend(row["material_name"], prices)
+
     processed_list.append({
         "Bahan_Baku":     row["material_name"],
         "Week_1":         prices[0],
@@ -276,7 +365,10 @@ for _, row in df_raw.iterrows():
         "Week_3":         prices[2],
         "Week_4":         prices[3],
         "Selisih_Harga":  price_change,
-        "Rekomendasi_AI": "BELI" if price_change <= 0 else "TUNGGU",
+        "Pct_Change":     trend_result["pct_change"],
+        "Trend_Label":    trend_result["trend_label"],
+        "Insight_Text":   trend_result["insight_text"],
+        "Rekomendasi_AI": trend_result["recommendation"],
         "Sumber":         row["source_origin"],
         "data_source":    row["data_source"],
     })
@@ -362,11 +454,20 @@ for idx, row in df_prepared.iterrows():
         # Kolom itu hanya diupdate oleh Tahap 5 (AI fallback script).
     }
 
+    # ── Insight tren untuk bahan OFFICIAL (Yahoo Finance / Badan Pangan) ────
+    # Bahan AI_ESTIMATE TIDAK disentuh di sini — insight-nya murni dari Gemini
+    # (ai_fallback.py) dan harus tetap diprioritaskan sesuai spesifikasi.
+    # Bahan FALLBACK_UNIT_PRICE juga tidak diisi di sini karena masih flat
+    # (belum ada tren nyata) dan menunggu giliran AI Tahap 5.
+    if row["data_source"] == "OFFICIAL":
+        payload["ai_insight_text"] = row["Insight_Text"]
+
     try:
         supabase_client.table("raw_material_trends") \
             .upsert(payload, on_conflict="material_name") \
             .execute()
-        print(f"   ✅ {mat_name} [{row['data_source']}]")
+        insight_tag = " 💡 insight tren" if row["data_source"] == "OFFICIAL" else ""
+        print(f"   ✅ {mat_name} [{row['data_source']}]{insight_tag}")
         success_count += 1
     except Exception as db_err:
         print(f"   ❌ Error {mat_name}: {db_err}")
