@@ -22,18 +22,24 @@ export default function StockIntelligence() {
   // 🚀 ENGINE REVISI REALTIME: Fungsi mandiri untuk fetch data inventory agar bisa dipanggil berulang secara realtime
   const refreshInventoryCalculations = async () => {
     try {
-      // Pipeline 1: Ambil data Master Bahan Baku
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return;
+
+      // Pipeline 1: Ambil data Master Bahan Baku (khusus outlet milik user ini)
       const { data: matData, error: matError } = await supabase
         .from('raw_materials')
         .select('*')
+        .eq('user_id', uid)
         .order('material_name', { ascending: true });
 
       if (matError) throw matError;
 
-      // Pipeline 2: Ambil seluruh riwayat log supply untuk kalkulasi spending bulanan
+      // Pipeline 2: Ambil seluruh riwayat log supply untuk kalkulasi spending bulanan (khusus user ini)
       const { data: logData, error: logError } = await supabase
         .from('supply_logs')
         .select('*, raw_materials(material_name, unit_price)')
+        .eq('user_id', uid)
         .order('created_at', { ascending: false });
 
       if (logError) throw logError;
@@ -85,36 +91,44 @@ export default function StockIntelligence() {
 
   // Fetch data live stock dan logs dari Supabase secara paralel + Realtime Listener
   useEffect(() => {
+    let inventorySubscription = null;
+
     async function initFetch() {
       setIsLoading(true);
       await refreshInventoryCalculations();
       setIsLoading(false);
+
+      // ⚡ REALTIME PIPELINE SAKTI: Dengerin perubahan data di tabel raw_materials dan supply_logs
+      // ✅ [MULTI-TENANT FIX] filter postgres_changes agar hanya trigger untuk baris milik user ini,
+      // supaya perubahan data tenant lain tidak memicu refetch di sini.
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return;
+
+      inventorySubscription = supabase
+        .channel('live_inventory_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'raw_materials', filter: `user_id=eq.${uid}` },
+          (payload) => {
+            console.log('🔄 Terjadi fluktuasi stok sisa bahan baku, Gar! Menghitung ulang...', payload);
+            refreshInventoryCalculations();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'supply_logs', filter: `user_id=eq.${uid}` },
+          (payload) => {
+            console.log('📝 Ada log supply baru masuk (OCR/Manual), Gar! Menyegarkan data...', payload);
+            refreshInventoryCalculations();
+          }
+        )
+        .subscribe();
     }
     initFetch();
 
-    // ⚡ REALTIME PIPELINE SAKTI: Dengerin perubahan data di tabel raw_materials dan supply_logs sekaligus
-    const inventorySubscription = supabase
-      .channel('live_inventory_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'raw_materials' },
-        (payload) => {
-          console.log('🔄 Terjadi fluktuasi stok sisa bahan baku, Gar! Menghitung ulang...', payload);
-          refreshInventoryCalculations();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'supply_logs' },
-        (payload) => {
-          console.log('📝 Ada log supply baru masuk (OCR/Manual), Gar! Menyegarkan data...', payload);
-          refreshInventoryCalculations();
-        }
-      )
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(inventorySubscription);
+      if (inventorySubscription) supabase.removeChannel(inventorySubscription);
     };
   }, []);
 

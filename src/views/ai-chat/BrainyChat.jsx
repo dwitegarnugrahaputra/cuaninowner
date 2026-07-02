@@ -91,6 +91,7 @@ function buildEmptyFallbackChart(range) {
 export default function BrainyChat() {
   const [activeSubTab, setActiveSubTab] = useState('ask-brainy');
   const [userName, setUserName] = useState('Bapak/Ibu Owner');
+  const [outletName, setOutletName] = useState('Outlet Anda'); // ⚡ BARU: diisi dari outlet_config, bukan hardcode
 
   // State Manajemen Chat & Integritas AI
   const [messages, setMessages] = useState([]);
@@ -151,7 +152,7 @@ export default function BrainyChat() {
         if (!savedSessions || JSON.parse(savedSessions).length === 0) {
           const initialId = 'sess_' + Date.now();
           const initialHistory = [
-            { role: 'brainy', text: `Selamat datang, Bapak/Ibu ${currentOwnerName}. Saya adalah Brainy, asisten finansial virtual internal Anda di cuanin.id. Apakah ada indikator performa operasional Warung Kopi Jaya yang ingin Anda evaluasi hari ini?` }
+            { role: 'brainy', text: `Selamat datang, Bapak/Ibu ${currentOwnerName}. Saya adalah Brainy, asisten finansial virtual internal Anda di cuanin.id. Apakah ada indikator performa operasional ${resolvedOutletName} yang ingin Anda evaluasi hari ini?` }
           ];
           const defaultSession = [{ id: initialId, title: 'Evaluasi Performa Awal', timeLabel: 'Baru Saja', history: initialHistory }];
           
@@ -161,9 +162,30 @@ export default function BrainyChat() {
           localStorage.setItem('cuanin_brainy_sessions', JSON.stringify(defaultSession));
         }
 
-        const { data: menus } = await supabase.from('menus').select('menu_name, price, is_available');
-        const { data: staff } = await supabase.from('staff').select('name, role_id, status');
-        const { data: sales } = await supabase.from('sales_transactions').select('total_amount, status, payment_method').limit(15);
+        const ownerUid = session?.user?.id;
+        const { data: menus } = ownerUid
+          ? await supabase.from('menus').select('menu_name, price, is_available').eq('user_id', ownerUid)
+          : { data: [] };
+        const { data: staff } = ownerUid
+          ? await supabase.from('staff').select('name, role_id, status').eq('user_id', ownerUid)
+          : { data: [] };
+        const { data: sales } = ownerUid
+          ? await supabase.from('sales_transactions').select('total_amount, status, payment_method').eq('user_id', ownerUid).limit(15)
+          : { data: [] };
+
+        // ⚡ BARU: Fetch nama outlet asli dari outlet_config (terikat user yang sedang login)
+        let resolvedOutletName = 'Outlet Anda';
+        if (session && session.user) {
+          const { data: outletData } = await supabase
+            .from('outlet_config')
+            .select('outlet_name')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          if (outletData?.outlet_name) {
+            resolvedOutletName = outletData.outlet_name;
+          }
+        }
+        setOutletName(resolvedOutletName);
 
         if (menus && menus.length > 0) {
           setMenuList(menus);
@@ -180,6 +202,10 @@ export default function BrainyChat() {
 
         const snapshot = `
 CONTEKSTUAL DATA REAL-TIME OPERASIONAL OUTLET:
+--- IDENTITAS OUTLET ---
+- Nama Outlet: ${resolvedOutletName}
+- Nama Owner/Manajer: ${currentOwnerName}
+
 --- KATALOG MENU AKTIF ---
 ${menuStr}
 
@@ -205,9 +231,16 @@ ${staffStr}
     async function buildForecastChart() {
       setIsForecastChartLoading(true);
       try {
+        const { data: { session: forecastSession } } = await supabase.auth.getSession();
+        if (!forecastSession || !forecastSession.user) {
+          setIsForecastChartLoading(false);
+          return;
+        }
+
         const { data: sales, error } = await supabase
           .from('sales_transactions')
           .select('total_amount, status, created_at')
+          .eq('user_id', forecastSession.user.id)
           .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -350,7 +383,7 @@ ${staffStr}
     try {
       const systemInstruction = `
         Anda adalah "Brainy", penasihat bisnis virtual, CFO virtual, dan analis kecerdasan buatan (AI) profesional yang terintegrasi penuh di dalam sistem POS manajemen cuanin.id. 
-        Tugas utama Anda adalah membantu manajemen outlet (atas nama Bapak/Ibu ${userName}) dalam menganalisis kinerja operasional bisnis Warung Kopi Jaya.
+        Tugas utama Anda adalah membantu manajemen outlet (atas nama Bapak/Ibu ${userName}) dalam menganalisis kinerja operasional bisnis ${outletName}.
         Wajib menggunakan gaya bahasa Indonesia yang formal, sopan, whitespace: pre-wrap, objektif, dan berbasis data keuangan.
 
         Berikut adalah ringkasan data kondisi database aktual saat ini yang harus Anda jadikan sebagai parameter mutlak dalam menjawab instruksi pengguna jika relevan:
@@ -402,7 +435,7 @@ ${staffStr}
 
     const newId = 'sess_' + Date.now();
     const cleanHistory = [
-      { role: 'brainy', text: `Sesi analisis baru telah dimulai. Silakan ajukan parameter evaluasi performa operasional Warung Kopi Jaya yang baru, Bapak/Ibu ${userName}.` }
+      { role: 'brainy', text: `Sesi analisis baru telah dimulai. Silakan ajukan parameter evaluasi performa operasional ${outletName} yang baru, Bapak/Ibu ${userName}.` }
     ];
     
     const newSessionObj = {

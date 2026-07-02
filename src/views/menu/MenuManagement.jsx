@@ -6,6 +6,12 @@ import {
 
 import { supabase } from '../../config/supabaseClient';
 
+// 🔐 Helper: ambil user_id user yang sedang login (dipakai di seluruh query multi-tenant)
+async function getCurrentUserId() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id || null;
+}
+
 // ================= 🖼️ REUSABLE IMAGE PICKER PANEL =================
 // Mendukung 3 mode: URL eksternal, Upload file (galeri/file explorer), Kamera
 // currentImage  = nilai image_url saat ini (string URL atau base64)
@@ -184,6 +190,34 @@ function ImagePickerPanel({ currentImage, onImageChange }) {
   );
 }
 
+// 🧮 Helper: hitung unit resep (base_unit) & harga per unit kecil dari sebuah bahan baku.
+// Prioritas: pakai base_unit + content_per_package (data baru, generik untuk semua unit gudang
+// seperti Pouch, Pack, Botol, Dus, dst). Kalau bahan lama belum punya base_unit/content_per_package,
+// fallback ke logic lama (kg/liter/litre) supaya tidak error, lalu default apa adanya kalau tidak match.
+function getRecipeUnitPricing(material) {
+  if (!material) return { displayUnit: '', unitCost: 0 };
+  const price = Number(material.unit_price || 0);
+
+  if (material.base_unit && Number(material.content_per_package) > 0) {
+    const content = Number(material.content_per_package);
+    return {
+      displayUnit: material.base_unit,
+      unitCost: price / content,
+    };
+  }
+
+  // Fallback untuk bahan lama yang belum diisi base_unit / content_per_package
+  const unitLower = material.unit?.toLowerCase();
+  if (unitLower === 'litre' || unitLower === 'liter' || unitLower === 'kg') {
+    return {
+      displayUnit: unitLower === 'kg' ? 'gram' : 'ml',
+      unitCost: price / 1000,
+    };
+  }
+
+  return { displayUnit: material.unit, unitCost: price };
+}
+
 export default function MenuManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Coffee');
@@ -201,9 +235,12 @@ export default function MenuManagement() {
   // 📥 READ PIPELINE 1: Tarik Data Bahan Baku Aktif dari Gudang
   const fetchStockIngredients = async () => {
     try {
+      const uid = await getCurrentUserId();
+      if (!uid) return;
       const { data, error } = await supabase
         .from('raw_materials')
-        .select('id, material_name, unit, unit_price')
+        .select('id, material_name, unit, unit_price, base_unit, content_per_package')
+        .eq('user_id', uid)
         .order('material_name', { ascending: true });
       if (error) throw error;
       if (data) setStockIngredients(data);
@@ -216,9 +253,12 @@ export default function MenuManagement() {
   const fetchMenuCatalog = async () => {
     setIsLoading(true);
     try {
+      const uid = await getCurrentUserId();
+      if (!uid) { setIsLoading(false); return; }
       const { data, error } = await supabase
         .from('menus')
         .select('*')
+        .eq('user_id', uid)
         .order('category', { ascending: true })
         .order('menu_name', { ascending: true });
       if (error) throw error;
@@ -261,7 +301,10 @@ export default function MenuManagement() {
       alert('Mohon isi resep produk.'); return;
     }
     try {
+      const uid = await getCurrentUserId();
+      if (!uid) { alert('Sesi login tidak ditemukan, silakan login ulang.'); return; }
       const { error } = await supabase.from('menus').insert([{
+        user_id: uid,
         menu_name: newMenu.menu_name,
         category: selectedCategory,
         price: Number(newMenu.price),
@@ -288,6 +331,8 @@ export default function MenuManagement() {
       alert('Form edit nama menu dan harga tidak boleh kosong, Gar!'); return;
     }
     try {
+      const uid = await getCurrentUserId();
+      if (!uid) { alert('Sesi login tidak ditemukan, silakan login ulang.'); return; }
       const { data, error } = await supabase
         .from('menus')
         .update({
@@ -298,6 +343,7 @@ export default function MenuManagement() {
           recipe: recipeRows
         })
         .eq('id', editingMenu.id)
+        .eq('user_id', uid)
         .select();
       if (error) throw error;
       if (!data || data.length === 0) throw new Error('Tidak ada baris yang diperbarui.');
@@ -312,7 +358,9 @@ export default function MenuManagement() {
   // 🔄 TOGGLE AVAILABILITY
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
-      const { data, error } = await supabase.from('menus').update({ is_available: !currentStatus }).eq('id', id).select();
+      const uid = await getCurrentUserId();
+      if (!uid) return;
+      const { data, error } = await supabase.from('menus').update({ is_available: !currentStatus }).eq('id', id).eq('user_id', uid).select();
       if (error) throw error;
       if (!data || data.length === 0) { alert('Gagal mengubah status: tidak ada baris yang cocok di database.'); return; }
       await fetchMenuCatalog();
@@ -326,7 +374,9 @@ export default function MenuManagement() {
     if (!id) { alert('ID menu tidak valid, gagal menghapus, Gar!'); return; }
     if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
     try {
-      const { data, error } = await supabase.from('menus').delete().eq('id', id).select();
+      const uid = await getCurrentUserId();
+      if (!uid) return;
+      const { data, error } = await supabase.from('menus').delete().eq('id', id).eq('user_id', uid).select();
       if (error) throw error;
       if (!data || data.length === 0) throw new Error('Tidak ada baris yang terhapus.');
       await fetchMenuCatalog();
@@ -340,14 +390,8 @@ export default function MenuManagement() {
   const handleAddNewMenuRecipeRow = () => {
     if (stockIngredients.length === 0) { alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.'); return; }
     const firstMat = stockIngredients[0];
-    let displayUnit = firstMat.unit;
-    let initialQty = 10;
-    let unitCost = Number(firstMat.unit_price || 0);
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-      initialQty = displayUnit === 'gram' ? 15 : 30;
-      unitCost = Number(firstMat.unit_price || 0) / 1000;
-    }
+    const { displayUnit, unitCost } = getRecipeUnitPricing(firstMat);
+    const initialQty = 10;
     setNewMenuRecipe([...newMenuRecipe, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
   };
 
@@ -358,12 +402,7 @@ export default function MenuManagement() {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
-        let displayUnit = matchedMaterial.unit;
-        let unitCost = Number(matchedMaterial.unit_price || 0);
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        }
+        const { displayUnit, unitCost } = getRecipeUnitPricing(matchedMaterial);
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;
@@ -384,14 +423,8 @@ export default function MenuManagement() {
   const handleAddRecipeRow = () => {
     if (stockIngredients.length === 0) return;
     const firstMat = stockIngredients[0];
-    let displayUnit = firstMat.unit;
-    let initialQty = 10;
-    let unitCost = Number(firstMat.unit_price || 0);
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-      initialQty = displayUnit === 'gram' ? 15 : 30;
-      unitCost = Number(firstMat.unit_price || 0) / 1000;
-    }
+    const { displayUnit, unitCost } = getRecipeUnitPricing(firstMat);
+    const initialQty = 10;
     setRecipeRows([...recipeRows, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
   };
 
@@ -402,12 +435,7 @@ export default function MenuManagement() {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
-        let displayUnit = matchedMaterial.unit;
-        let unitCost = Number(matchedMaterial.unit_price || 0);
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        }
+        const { displayUnit, unitCost } = getRecipeUnitPricing(matchedMaterial);
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
         updatedRows[index].unit = displayUnit;

@@ -104,7 +104,7 @@ export default function StaffManagement() {
       };
 
       if (editingStaff) {
-        const { error } = await supabase.from('staff').update(payload).eq('id', editingStaff.id);
+        const { error } = await supabase.from('staff').update(payload).eq('id', editingStaff.id).eq('user_id', currentUid);
         if (error) throw error;
         alert('Data staff berhasil diperbarui!');
       } else {
@@ -119,7 +119,7 @@ export default function StaffManagement() {
 
   const handleDeleteStaff = async (id) => {
     if (!window.confirm('Hapus staff ini, Gar?')) return;
-    await supabase.from('staff').delete().eq('id', id);
+    await supabase.from('staff').delete().eq('id', id).eq('user_id', currentUid);
     await fetchStaffAndRolesData();
   };
 
@@ -228,7 +228,7 @@ export default function StaffManagement() {
 
   const handleDeleteShift = async (id) => {
     if (!window.confirm('Hapus jadwal shift ini, Gar?')) return;
-    await supabase.from('staff_shifts').delete().eq('id', id);
+    await supabase.from('staff_shifts').delete().eq('id', id).eq('user_id', currentUid);
     await fetchShiftData();
   };
 

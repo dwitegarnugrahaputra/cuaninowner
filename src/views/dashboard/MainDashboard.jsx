@@ -113,7 +113,8 @@ export default function Dashboard() {
 
       const { data: stockData } = await supabase
         .from('raw_materials')
-        .select('id, current_stock, minimum_threshold');
+        .select('id, current_stock, minimum_threshold')
+        .eq('user_id', uid);
 
       let totalSalesSum = 0;
       let totalTxCount = 0;
@@ -224,9 +225,14 @@ export default function Dashboard() {
   const loadMaterialTrendSources = async () => {
     setIsTrendLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) { setIsTrendLoading(false); return; }
+
       const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
         .from('raw_materials')
         .select('material_name')
+        .eq('user_id', uid)
         .order('material_name', { ascending: true });
 
       if (rawMaterialsError) throw rawMaterialsError;

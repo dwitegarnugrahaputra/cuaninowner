@@ -24,6 +24,11 @@ export default function SalesMonitoring() {
     async function fetchSalesAndStaffData() {
       setIsLoading(true);
       try {
+        // ✅ [MULTI-TENANT FIX] Ambil user_id owner yang sedang login lebih dulu
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id;
+        if (!uid) { setIsLoading(false); return; }
+
         // 1. Tarik Data Master Transaksi Penjualan - SINKRONISASI KOLOM JABATAN RELASIONAL (ANTI-ERROR)
         const { data: salesData, error: salesError } = await supabase
           .from('sales_transactions')
@@ -37,6 +42,7 @@ export default function SalesMonitoring() {
             created_at,
             staff:served_by ( id, name, image_url, role_id )
           `)
+          .eq('user_id', uid)
           .order('created_at', { ascending: false });
 
         if (salesError) throw salesError;
