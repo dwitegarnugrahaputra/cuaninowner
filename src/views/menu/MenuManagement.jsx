@@ -1,656 +1,709 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp, Loader2, Sparkles, ShieldCheck
+  Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet, Trash, Save, Loader2,
+  Link, Upload, Camera, Image
 } from 'lucide-react';
+
 import { supabase } from '../../config/supabaseClient';
 
-function CuaninLogoMini() {
+// ================= 🖼️ REUSABLE IMAGE PICKER PANEL =================
+// Mendukung 3 mode: URL eksternal, Upload file (galeri/file explorer), Kamera
+// currentImage  = nilai image_url saat ini (string URL atau base64)
+// onImageChange = callback(newImageUrl) dipanggil setiap kali gambar berubah
+function ImagePickerPanel({ currentImage, onImageChange }) {
+  const [activeTab, setActiveTab] = useState('url'); // 'url' | 'upload' | 'camera'
+  const [urlInput, setUrlInput] = useState(currentImage || '');
+  const [isDragging, setIsDragging] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Sync urlInput kalau currentImage berubah dari luar (misal saat modal edit dibuka)
+  useEffect(() => {
+    if (activeTab === 'url') setUrlInput(currentImage || '');
+  }, [currentImage]);
+
+  // Matikan kamera kalau pindah tab
+  useEffect(() => {
+    if (activeTab !== 'camera') stopCamera();
+    else startCamera();
+    return () => stopCamera();
+  }, [activeTab]);
+
+  // ---- Helpers ----
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const handleFileChange = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('File harus berupa gambar (JPG, PNG, WEBP, dll).'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Ukuran file maksimal 5 MB.'); return; }
+    const base64 = await fileToBase64(file);
+    onImageChange(base64);
+  };
+
+  // Drag & drop
+  const handleDrop = (e) => {
+    e.preventDefault(); setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileChange(file);
+  };
+
+  // Kamera
+  const startCamera = async () => {
+    setCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (err) {
+      setCameraError('Akses kamera ditolak atau tidak tersedia di browser ini.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    const base64 = canvas.toDataURL('image/jpeg', 0.85);
+    onImageChange(base64);
+    stopCamera();
+    setActiveTab('url'); // Tampilkan hasil di preview
+  };
+
+  const tabStyle = (tab) => ({
+    flex: 1, padding: '8px 0', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer',
+    border: 'none', borderRadius: '6px', transition: 'all 0.15s',
+    backgroundColor: activeTab === tab ? '#006847' : 'transparent',
+    color: activeTab === tab ? '#ffffff' : '#6B7280',
+  });
+
   return (
-    <div style={{ width: '36px', height: '36px', backgroundColor: '#006847', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', flexShrink: 0 }}>
-      <div style={{ width: '100%', height: '100%', backgroundColor: '#ffffff', borderRadius: '5px', padding: '3px 0px 3px 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-        <div style={{ width: '100%', height: '100%', backgroundColor: '#006847', borderRadius: '3px 0 0 3px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <div style={{ width: '12px', height: '12px', backgroundColor: '#ffffff', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '-1px' }}>
-            <div style={{ width: '4px', height: '4px', backgroundColor: '#006847', borderRadius: '50%' }} />
+    <div>
+      {/* Tab selector */}
+      <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', padding: '4px', marginBottom: '10px' }}>
+        <button style={tabStyle('url')} onClick={() => setActiveTab('url')}><Link size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>URL</button>
+        <button style={tabStyle('upload')} onClick={() => setActiveTab('upload')}><Upload size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>Upload</button>
+        <button style={tabStyle('camera')} onClick={() => setActiveTab('camera')}><Camera size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>Kamera</button>
+      </div>
+
+      {/* Tab: URL */}
+      {activeTab === 'url' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input
+            type="text"
+            placeholder="https://..."
+            value={urlInput}
+            onChange={(e) => { setUrlInput(e.target.value); onImageChange(e.target.value); }}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+          />
+          <div style={{ border: '1px dashed #D1D5DB', borderRadius: '10px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA', overflow: 'hidden' }}>
+            {currentImage
+              ? <img src={currentImage} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.target.style.display='none'; }} />
+              : <div style={{ textAlign: 'center', color: '#9CA3AF' }}><Image size={28} /><p style={{ margin: '4px 0 0', fontSize: '11px' }}>Preview gambar</p></div>
+            }
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Tab: Upload */}
+      {activeTab === 'upload' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              border: `2px dashed ${isDragging ? '#006847' : '#D1D5DB'}`,
+              borderRadius: '10px', padding: '20px', textAlign: 'center',
+              cursor: 'pointer', backgroundColor: isDragging ? '#E6F4EA' : '#FAFAFA',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Upload size={24} color={isDragging ? '#006847' : '#9CA3AF'} style={{ margin: '0 auto 8px' }} />
+            <p style={{ margin: 0, fontSize: '12px', color: '#4B5563', fontWeight: '600' }}>Klik atau drag & drop gambar di sini</p>
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#9CA3AF' }}>JPG, PNG, WEBP — maks 5 MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileChange(e.target.files[0])}
+            />
+          </div>
+          {/* Preview hasil upload */}
+          {currentImage && (
+            <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', height: '80px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' }}>
+              <img src={currentImage} alt="Preview" style={{ height: '100%', objectFit: 'contain' }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Kamera */}
+      {activeTab === 'camera' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          {cameraError
+            ? <div style={{ padding: '20px', textAlign: 'center', color: '#DC2626', fontSize: '12px', border: '1px dashed #FCA5A5', borderRadius: '10px', width: '100%', boxSizing: 'border-box' }}>{cameraError}</div>
+            : (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: '100%', borderRadius: '10px', border: '1px solid #E5E7EB', backgroundColor: '#000', maxHeight: '160px', objectFit: 'cover' }}
+                />
+                <button
+                  onClick={capturePhoto}
+                  style={{ padding: '8px 24px', backgroundColor: '#006847', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Camera size={14} /> Ambil Foto
+                </button>
+              </>
+            )
+          }
+        </div>
+      )}
     </div>
   );
 }
 
-function isFuzzyNameMatch(nameA, nameB) {
-  if (!nameA || !nameB) return false;
-  const a = nameA.toLowerCase().trim();
-  const b = nameB.toLowerCase().trim();
-  return a.includes(b) || b.includes(a);
-}
+export default function MenuManagement() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Coffee');
 
-function findTrendMatch(stockMaterialName, trendRows) {
-  if (!stockMaterialName || !trendRows || trendRows.length === 0) return null;
-  return trendRows.find((trend) => isFuzzyNameMatch(stockMaterialName, trend.material_name)) || null;
-}
-
-// 🆕 Senin (00:00) minggu ini, di waktu LOKAL browser
-function getStartOfThisWeekMonday() {
-  const now = new Date();
-  const day = now.getDay(); 
-  const diffToMonday = day === 0 ? 6 : day - 1; 
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-// 🆕 Index hari (0=Senin ... 6=Minggu) dari sebuah Date
-function getMondayBasedDayIndex(date) {
-  const day = date.getDay(); 
-  return day === 0 ? 6 : day - 1;
-}
-
-export default function Dashboard() {
-  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const [menus, setMenus] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUid, setCurrentUserId] = useState(null);
+  const [stockIngredients, setStockIngredients] = useState([]);
+  const [menuSummary, setMenuSummary] = useState({ totalItems: 0, totalCategories: 0, outOfStockCount: 0 });
 
-  const [financials, setFinancials] = useState({
-    totalSales: 0, 
-    netProfit: 0,
-    totalTransactions: 0,
-    salesTrend: '+0%',
-    profitTrend: '+0%',
-    tableRows: [],
-    monthLabel: 'JUNE 2026',
-    grossRevenue: 0,
-    cogs: 0,
-    operatingExpenses: 0,
-    netProfitMarginLabel: 'Margin: 0%',
-    brainyInsightText: "Menunggu transaksi riil masuk untuk melakukan kalkulasi performa kafe lu, Gar.",
-    avgTransaction: 0,
-    loyaltyRate: 0,
-    peakHoursLabel: 'Belum Ada Data',
-    peakHoursPercentage: '0%'
-  });
+  const [newMenu, setNewMenu] = useState({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
+  const [newMenuRecipe, setNewMenuRecipe] = useState([]);
+  const [editingMenu, setEditingMenu] = useState(null);
+  const [recipeRows, setRecipeRows] = useState([]);
 
-  const [criticalStockCount, setCriticalStockCount] = useState(0);
-  const [topMenus, setTopMenus] = useState([]);
-
-  const [stockMaterials, setStockMaterials] = useState([]);
-  const [trendRowsCache, setTrendRowsCache] = useState([]);
-  const [selectedMaterial, setSelectedMaterial] = useState('');
-  const [isTrendLoading, setIsTrendLoading] = useState(true);
-
-  // 🧠 GENERATOR INSIGHT FINANSIAL INTERNAL: Dinamis memetakan performa berdasarkan nama outlet asli database
-  const generateFinancialInsight = (sales, profit, cogs, opex, targetOutletName) => {
-    if (sales === 0) {
-      return `Brainy Insights: Belum ada transaksi masuk dari kasir mobile di ${targetOutletName}. Dasbor saat ini menampilkan performa riil bernilai nol.`;
+  // 📥 READ PIPELINE 1: Tarik Data Bahan Baku Aktif dari Gudang
+  const fetchStockIngredients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('raw_materials')
+        .select('id, material_name, unit, unit_price')
+        .order('material_name', { ascending: true });
+      if (error) throw error;
+      if (data) setStockIngredients(data);
+    } catch (err) {
+      console.error('⚠️ Gagal memuat data inventori gudang:', err.message);
     }
-
-    const marginRatio = Math.round((profit / sales) * 100);
-    
-    if (profit < 0) {
-      return `⚠️ Brainy Danger Alert: Operasional ${targetOutletName} mengalami defisit akuntansi sebesar Rp ${Math.abs(profit).toLocaleString('id-ID')} minggu ini, Gar! Faktor utamanya adalah beban pengeluaran (OpEx) lu tembus Rp ${opex.toLocaleString('id-ID')}. Segera pangkas pengadaan bahan baku non-esensial!`;
-    }
-
-    if (opex > sales * 0.4) {
-      return `💡 Brainy Optimization: Omset ${targetOutletName} berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, tapi margin tertekan ke bawah (${marginRatio}%) karena kebocoran pengeluaran riil (OpEx) mencapai Rp ${opex.toLocaleString('id-ID')}. Cek log aktivitas pengeluaran kasir lu!`;
-    }
-
-    return `✨ Brainy Insights: Omset ${targetOutletName} lu berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`;
   };
 
-  const syncDashboardMetricsFromDB = async () => {
+  // 📥 READ PIPELINE 2: Ambil Katalog Menu Terkini dari Supabase Cloud
+  const fetchMenuCatalog = async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user) return;
-      
-      const uid = session.user.id;
-      setCurrentUserId(uid);
-
-      const startOfWeek = getStartOfThisWeekMonday();
-      const startOfWeekIso = startOfWeek.toISOString();
-
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales_transactions')
-        .select('id, total_amount, created_at')
-        .eq('user_id', uid);
-
-      if (salesError) throw salesError;
-
-      const { data: expensesData, error: expensesError } = await supabase
-        .from('expenses')
-        .select('id, amount, created_at')
-        .eq('owner_user_id', uid)
-        .gte('created_at', startOfWeekIso);
-
-      if (expensesError) throw expensesError;
-
-      const { data: stockData } = await supabase
-        .from('raw_materials')
-        .select('id, current_stock, minimum_threshold')
-        .eq('user_id', uid);
-
-      // 🟩 1. AMBIL NAMA OUTLET DINAMIS DARI DATABASE SECARA REAL
-      let resolvedOutletName = 'Outlet Lu';
-      const { data: outletData } = await supabase
-        .from('outlet_config')
-        .select('outlet_name')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (outletData?.outlet_name) {
-        resolvedOutletName = outletData.outlet_name;
+      const { data, error } = await supabase
+        .from('menus')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('menu_name', { ascending: true });
+      if (error) throw error;
+      if (data) {
+        setMenus(data);
+        const uniqueCategories = new Set(data.map(item => item.category)).size;
+        const outOfStockItems = data.filter(item => item.is_available === false).length;
+        setMenuSummary({ totalItems: data.length, totalCategories: uniqueCategories, outOfStockCount: outOfStockItems });
       }
-
-      let totalSalesSum = 0;
-      let totalTxCount = 0;
-      let rowsCalculated = [];
-      let transactionIds = [];
-
-      const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-      rowsCalculated = dayLabels.map((day) => ({ day, sales: 0, expenses: 0 }));
-
-      if (salesData && salesData.length > 0) {
-        totalTxCount = salesData.length;
-        totalSalesSum = salesData.reduce((sum, tx) => sum + (Number(tx.total_amount) || 0), 0);
-        transactionIds = salesData.map(tx => tx.id);
-
-        salesData.forEach((tx) => {
-          const txDate = new Date(tx.created_at);
-          if (txDate >= startOfWeek) {
-            const idx = getMondayBasedDayIndex(txDate);
-            rowsCalculated[idx].sales += Number(tx.total_amount) || 0;
-          }
-        });
-      }
-
-      let totalExpensesThisWeek = 0;
-      if (expensesData && expensesData.length > 0) {
-        expensesData.forEach((exp) => {
-          const expDate = new Date(exp.created_at);
-          const idx = getMondayBasedDayIndex(expDate);
-          const amount = Number(exp.amount) || 0;
-          rowsCalculated[idx].expenses += amount;
-          totalExpensesThisWeek += amount;
-        });
-      }
-
-      const calculatedCOGS = Math.round(totalSalesSum * 0.35);
-      const calculatedOpEx = totalExpensesThisWeek;
-      const calculatedNetProfit = totalSalesSum - calculatedCOGS - calculatedOpEx;
-      const marginRatio = totalSalesSum > 0 ? Math.round((calculatedNetProfit / totalSalesSum) * 100) : 0;
-      const calculatedAvg = totalTxCount > 0 ? Math.round(totalSalesSum / totalTxCount) : 0;
-
-      let calculatedCritical = 0;
-      if (stockData) {
-        calculatedCritical = stockData.filter(item => (Number(item.current_stock) || 0) <= (Number(item.minimum_threshold) || 0)).length;
-      }
-
-      if (transactionIds.length > 0) {
-        const { data: itemData, error: itemError } = await supabase
-          .from('transaction_items')
-          .select(`quantity, menus:menu_id ( menu_name, image_url )`)
-          .in('transaction_id', transactionIds);
-
-        if (!itemError && itemData) {
-          const menuMap = {};
-          itemData.forEach(item => {
-            const menuName = item.menus?.menu_name;
-            const imageUrl = item.menus?.image_url;
-            if (menuName) {
-              if (!menuMap[menuName]) {
-                menuMap[menuName] = { menu_name: menuName, sold_count: 0, image_url: imageUrl };
-              }
-              menuMap[menuName].sold_count += Number(item.quantity) || 0;
-            }
-          });
-          setTopMenus(Object.values(menuMap).sort((a, b) => b.sold_count - a.sold_count).slice(0, 3));
-        }
-      } else {
-        setTopMenus([]);
-      }
-
-      // 🟩 2. HITUNG LOGIKA INSIGHT DENGAN NAMA OUTLET YANG ASLI
-      const dynamicInsight = totalSalesSum > 0 
-        ? `Brainy Insights: Omset ${resolvedOutletName} lu berjalan lancar di angka Rp ${totalSalesSum.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`
-        : `Brainy Insights: Belum ada transaksi masuk dari kasir mobile di ${resolvedOutletName}. Dasbor saat ini menampilkan performa riil bernilai nol.`;
-
-      setFinancials({
-        totalSales: totalSalesSum,
-        netProfit: calculatedNetProfit,
-        totalTransactions: totalTxCount,
-        salesTrend: totalSalesSum > 0 ? '+15%' : '+0%',
-        profitTrend: calculatedNetProfit > 0 ? '+12%' : '+0%',
-        tableRows: rowsCalculated,
-        monthLabel: 'JUNE 2026',
-        grossRevenue: totalSalesSum,
-        cogs: calculatedCOGS,
-        operatingExpenses: calculatedOpEx,
-        netProfitMarginLabel: `Margin: ${marginRatio}%`,
-        avgTransaction: calculatedAvg,
-        loyaltyRate: totalSalesSum > 0 ? 65 : 0,
-        peakHoursLabel: totalSalesSum > 0 ? '13:00 – 16:30' : 'Belum Ada Data',
-        peakHoursPercentage: totalSalesSum > 0 ? '45%' : '0%',
-        brainyInsightText: dynamicInsight, // 🌟 Diikat langsung ke variabel penampung dinamis
-        outletName: resolvedOutletName // Simpan nama outlet ke state untuk dipakai di JSX sub-heading chart
-      });
-
-      setCriticalStockCount(calculatedCritical);
-
     } catch (err) {
-      console.error('⚠️ Gagal menyinkronkan data ERD dashboard:', err.message);
+      console.error('⚠️ Gagal menarik data katalog menu:', err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadMaterialTrendSources = async () => {
-    setIsTrendLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id;
-      if (!uid) { setIsTrendLoading(false); return; }
-
-      const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
-        .from('raw_materials')
-        .select('material_name')
-        .eq('user_id', uid)
-        .order('material_name', { ascending: true });
-
-      if (rawMaterialsError) throw rawMaterialsError;
-
-      const uniqueNames = Array.from(
-        new Set((rawMaterialsData || []).map((row) => row.material_name).filter(Boolean))
-      );
-      setStockMaterials(uniqueNames);
-
-      const { data: trendData, error: trendError } = await supabase
-        .from('raw_material_trends')
-        .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source, ai_insight_text');
-
-      if (trendError) throw trendError;
-      setTrendRowsCache(trendData || []);
-
-      if (uniqueNames.length > 0) {
-        setSelectedMaterial(uniqueNames[0]);
-      }
-    } catch (err) {
-      console.error('⚠️ Gagal memuat sumber data tren bahan baku:', err.message);
-    } finally {
-      setIsTrendLoading(false);
-    }
-  };
-
   useEffect(() => {
-    syncDashboardMetricsFromDB();
-    loadMaterialTrendSources();
+    fetchMenuCatalog();
+    fetchStockIngredients();
   }, []);
 
-  const matchedTrend = findTrendMatch(selectedMaterial, trendRowsCache);
+  useEffect(() => {
+    if (editingMenu) {
+      setRecipeRows(editingMenu.recipe && Array.isArray(editingMenu.recipe) ? editingMenu.recipe : []);
+    } else {
+      setRecipeRows([]);
+    }
+  }, [editingMenu]);
 
-  const parseRupiahLabelToNumber = (label) => {
-    if (!label || typeof label !== 'string') return 0;
-    const cleaned = label.replace(/Rp\s?/i, '').replace(',', '.').trim();
-    const multiplier = cleaned.toLowerCase().endsWith('k') ? 1000 : 1;
-    const numericPart = parseFloat(cleaned.replace(/k/i, ''));
-    return isNaN(numericPart) ? 0 : Math.round(numericPart * multiplier);
+  const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+  const currentTotalCogs = recipeRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+
+  // 📤 CREATE PIPELINE
+  const handleCreateMenu = async (e) => {
+    e.preventDefault();
+    if (!newMenu.menu_name.trim() || !newMenu.price || Number(newMenu.price) <= 0) {
+      alert('Isi data nama menu dan nominal harga secara valid, Gar!'); return;
+    }
+    if (newMenuRecipe.length === 0) {
+      alert('Mohon isi resep produk.'); return;
+    }
+    try {
+      const { error } = await supabase.from('menus').insert([{
+        menu_name: newMenu.menu_name,
+        category: selectedCategory,
+        price: Number(newMenu.price),
+        image_url: newMenu.image_url,
+        is_available: true,
+        recipe: newMenuRecipe
+      }]);
+      if (error) throw error;
+      setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
+      setNewMenuRecipe([]);
+      setIsModalOpen(false);
+      await fetchMenuCatalog();
+      alert('Menu berhasil disimpan!');
+    } catch (err) {
+      alert('Gagal menyisipkan menu baru: ' + err.message);
+    }
   };
 
-  const activeCurve = matchedTrend
-    ? {
-        labelColor: matchedTrend.hex_color || '#006847',
-        numericWeeks: [
-          parseRupiahLabelToNumber(matchedTrend.week_1),
-          parseRupiahLabelToNumber(matchedTrend.week_2),
-          parseRupiahLabelToNumber(matchedTrend.week_3),
-          parseRupiahLabelToNumber(matchedTrend.week_4),
-        ],
+  // 📝 UPDATE PIPELINE
+  const handleUpdateMenu = async (e) => {
+    e.preventDefault();
+    if (!editingMenu?.id) { alert('ID menu tidak ditemukan, gagal melakukan update, Gar!'); return; }
+    if (!editingMenu.menu_name.trim() || !editingMenu.price || Number(editingMenu.price) <= 0) {
+      alert('Form edit nama menu dan harga tidak boleh kosong, Gar!'); return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('menus')
+        .update({
+          menu_name: editingMenu.menu_name,
+          category: editingMenu.category,
+          price: Number(editingMenu.price),
+          image_url: editingMenu.image_url,
+          recipe: recipeRows
+        })
+        .eq('id', editingMenu.id)
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang diperbarui.');
+      setEditingMenu(null);
+      await fetchMenuCatalog();
+      alert('Data menu berhasil diperbarui!');
+    } catch (err) {
+      alert('Gagal memperbarui rekaman data menu: ' + err.message);
+    }
+  };
+
+  // 🔄 TOGGLE AVAILABILITY
+  const handleToggleAvailability = async (id, currentStatus) => {
+    try {
+      const { data, error } = await supabase.from('menus').update({ is_available: !currentStatus }).eq('id', id).select();
+      if (error) throw error;
+      if (!data || data.length === 0) { alert('Gagal mengubah status: tidak ada baris yang cocok di database.'); return; }
+      await fetchMenuCatalog();
+    } catch (err) {
+      console.error('⚠️ Gagal mengubah status availabilitas:', err.message);
+    }
+  };
+
+  // ❌ DELETE PIPELINE
+  const handleDeleteMenu = async (id) => {
+    if (!id) { alert('ID menu tidak valid, gagal menghapus, Gar!'); return; }
+    if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
+    try {
+      const { data, error } = await supabase.from('menus').delete().eq('id', id).select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang terhapus.');
+      await fetchMenuCatalog();
+      alert('Produk resmi terhapus selamanya dari database cloud!');
+    } catch (err) {
+      alert('Supabase menolak aksi delete! Eror: ' + err.message);
+    }
+  };
+
+  // ================= RESEP BARU =================
+  const handleAddNewMenuRecipeRow = () => {
+    if (stockIngredients.length === 0) { alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.'); return; }
+    const firstMat = stockIngredients[0];
+    let displayUnit = firstMat.unit;
+    let initialQty = 10;
+    let unitCost = Number(firstMat.unit_price || 0);
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+      initialQty = displayUnit === 'gram' ? 15 : 30;
+      unitCost = Number(firstMat.unit_price || 0) / 1000;
+    }
+    setNewMenuRecipe([...newMenuRecipe, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
+  };
+
+  const handleUpdateNewMenuRecipeRow = (index, key, value) => {
+    const updatedRows = [...newMenuRecipe];
+    updatedRows[index][key] = value;
+    if (key === 'ingredientId' || key === 'qty') {
+      const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
+      const matchedMaterial = stockIngredients.find(m => m.id === targetId);
+      if (matchedMaterial) {
+        let displayUnit = matchedMaterial.unit;
+        let unitCost = Number(matchedMaterial.unit_price || 0);
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        }
+        updatedRows[index].ingredientId = matchedMaterial.id;
+        updatedRows[index].ingredientName = matchedMaterial.material_name;
+        updatedRows[index].unit = displayUnit;
+        const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
+        updatedRows[index].cost = Math.round(currentQty * unitCost);
       }
-    : {
-        labelColor: '#9CA3AF',
-        numericWeeks: [0, 0, 0, 0],
-      };
-
-  const chartWidth = 700;
-  const chartHeight = 340;
-  const paddingX = 0;
-  const paddingTop = 14;
-  const paddingBottom = 14;
-  const Y_AXIS_MIN = 0;
-  const Y_AXIS_MAX = 10000000;
-
-  const valueToY = (value) => {
-    const clamped = Math.min(Math.max(value, Y_AXIS_MIN), Y_AXIS_MAX);
-    const ratio = (clamped - Y_AXIS_MIN) / (Y_AXIS_MAX - Y_AXIS_MIN);
-    return (chartHeight - paddingBottom) - ratio * (chartHeight - paddingTop - paddingBottom);
+    }
+    setNewMenuRecipe(updatedRows);
   };
 
-  const allDataIsZero = financials.tableRows.every(r => (r.sales || 0) === 0 && (r.expenses || 0) === 0);
-  const EMPTY_STATE_OFFSET = 10;
+  const handleRemoveNewMenuRecipeRow = (index) => {
+    const updatedRows = [...newMenuRecipe];
+    updatedRows.splice(index, 1);
+    setNewMenuRecipe(updatedRows);
+  };
 
-  const generateCoordinates = (keyName) => {
-    if (financials.tableRows.length === 0) return [];
-    const lastIndex = financials.tableRows.length - 1;
-    return financials.tableRows.map((row, index) => {
-      const x = lastIndex === 0 ? paddingX : paddingX + (index / lastIndex) * (chartWidth - paddingX * 2);
-      let y = valueToY(row[keyName] || 0);
-      if (allDataIsZero) {
-        y += keyName === 'sales' ? -EMPTY_STATE_OFFSET : EMPTY_STATE_OFFSET;
+  // ================= RESEP EDIT =================
+  const handleAddRecipeRow = () => {
+    if (stockIngredients.length === 0) return;
+    const firstMat = stockIngredients[0];
+    let displayUnit = firstMat.unit;
+    let initialQty = 10;
+    let unitCost = Number(firstMat.unit_price || 0);
+    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
+      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+      initialQty = displayUnit === 'gram' ? 15 : 30;
+      unitCost = Number(firstMat.unit_price || 0) / 1000;
+    }
+    setRecipeRows([...recipeRows, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
+  };
+
+  const handleUpdateRecipeRow = (index, key, value) => {
+    const updatedRows = [...recipeRows];
+    updatedRows[index][key] = value;
+    if (key === 'ingredientId' || key === 'qty') {
+      const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
+      const matchedMaterial = stockIngredients.find(m => m.id === targetId);
+      if (matchedMaterial) {
+        let displayUnit = matchedMaterial.unit;
+        let unitCost = Number(matchedMaterial.unit_price || 0);
+        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
+          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
+          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
+        }
+        updatedRows[index].ingredientId = matchedMaterial.id;
+        updatedRows[index].ingredientName = matchedMaterial.material_name;
+        updatedRows[index].unit = displayUnit;
+        const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
+        updatedRows[index].cost = Math.round(currentQty * unitCost);
       }
-      return { x, y };
-    });
+    }
+    setRecipeRows(updatedRows);
   };
 
-  const salesPoints = generateCoordinates('sales');
-  const expensesPoints = generateCoordinates('expenses');
-
-  const buildSvgPath = (points) => {
-    if (points.length === 0) return '';
-    return points.reduce((path, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${path} L ${p.x} ${p.y}`, '');
-  };
-
-  const dynamicSalesPath = buildSvgPath(salesPoints);
-  const dynamicExpensesPath = buildSvgPath(expensesPoints);
-
-  const yAxisTicks = [];
-  for (let v = 10000000; v >= 0; v -= 1000000) yAxisTicks.push(v);
-
-  const xCoords = [100, 240, 380, 520]; 
-  const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
-  const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
-  const rawMin = validPrices.length > 0 ? Math.min(...validPrices) : 10000;
-  const priceRange = rawMax - rawMin;
-  const scaleMax = rawMax + (priceRange * 0.1 || 5000);
-  const scaleMin = Math.max(0, rawMin - (priceRange * 0.1 || 2000));
-  const scaleRange = scaleMax - scaleMin;
-
-  const calculatedPoints = activeCurve.numericWeeks.map(price => {
-    if (price <= 0 || scaleRange === 0) return 150;
-    const ratio = (price - scaleMin) / scaleRange;
-    return 150 - (ratio * 120);
-  });
-
-  const linePath = `M ${xCoords[0]} ${calculatedPoints[0]} L ${xCoords[1]} ${calculatedPoints[1]} L ${xCoords[2]} ${calculatedPoints[2]} L ${xCoords[3]} ${calculatedPoints[3]}`;
-  const yLabels = [scaleMax, scaleMax - (scaleRange * 0.5), scaleMin].map(num => `Rp ${Math.round(num).toLocaleString('id-ID')}`);
-
-  const renderDataSourceBadge = (dataSource) => {
-    if (dataSource === 'AI_ESTIMATE') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-          <Sparkles size={11} /> ESTIMASI AI
-        </span>
-      );
-    }
-    if (dataSource === 'OFFICIAL') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-          <ShieldCheck size={11} /> DATA RESMI
-        </span>
-      );
-    }
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-        <TrendingDown size={11} /> DATA STOK
-      </span>
-    );
-  };
-
-  const getInsightText = (trend) => {
-    if (!trend) return null;
-    if (trend.data_source === 'AI_ESTIMATE' && trend.ai_insight_text) {
-      return trend.ai_insight_text;
-    }
-    if (trend.data_source === 'OFFICIAL') {
-      return `Data harga ${trend.material_name} ini berasal dari sumber resmi, jadi akurasinya bisa diandalkan untuk perhitungan HPP lu, Gar.`;
-    }
-    return `Estimasi AI untuk ${trend.material_name} belum tersedia. Sistem Brainy akan memperbaruinya secara berkala.`;
+  const handleRemoveRecipeRow = (index) => {
+    const updatedRows = [...recipeRows];
+    updatedRows.splice(index, 1);
+    setRecipeRows(updatedRows);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', width: '100%', position: 'relative' }}>
       
-      {/* CARD METRIKS BARIS ATAS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <CuaninLogoMini />
-            <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={12}/> {financials.salesTrend}</div>
-          </div>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>TOTAL PENJUALAN</span>
-          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp {financials.totalSales.toLocaleString('id-ID')}</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Menu Management</h1>
+          <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#6B7280' }}>Configure and monitor your restaurant menu catalog for Warung Kopi Jaya.</p>
         </div>
+        <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0, 104, 71, 0.1)' }}>
+          <Plus size={16} /> Add New Item
+        </button>
+      </div>
 
-        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>💵</div>
-            <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={12}/> {financials.profitTrend}</div>
-          </div>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>PROFIT BERSIH</span>
-          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</h2>
+      {/* THREE HEAD METRICS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Total Menu Items</span>
+          <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{menuSummary.totalItems}</h2>
         </div>
-
-        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📝</div>
-          </div>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>JUMLAH TRANSAKSI</span>
-          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{financials.totalTransactions.toLocaleString('id-ID')}</h2>
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Active Categories</span>
+          <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>{menuSummary.totalCategories}</h2>
         </div>
-
-        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}><AlertTriangle size={18} /></div>
-            <div style={{ backgroundColor: criticalStockCount > 0 ? '#DC2626' : '#059669', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold' }}>{criticalStockCount > 0 ? 'KRITIS' : 'AMAN'}</div>
-          </div>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>STOK KRITIS</span>
-          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: criticalStockCount > 0 ? '#DC2626' : '#111827' }}>{criticalStockCount} Items</h2>
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Out of Stock</span>
+          <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#DC2626' }}>{menuSummary.outOfStockCount}</h2>
         </div>
       </div>
 
-      {/* SALES VS EXPENSES GRAPH BOX */}
-      <div style={{ backgroundColor: '#fff', padding: '28px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div onClick={() => setIsBreakdownOpen(!isBreakdownOpen)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              Sales vs Expenses {isBreakdownOpen ? <ChevronUp size={16} color="#006847" /> : <ChevronDown size={16} color="#6B7280" />}
-            </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#6B7280' }}>
-              Visualisasi fluktuasi mingguan performa operasional {financials.outletName || 'Aroma Latte'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '20px', fontSize: '13px', fontWeight: 'bold' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '12px', backgroundColor: '#006847', borderRadius: '50%' }} /> Sales</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '12px', backgroundColor: '#4F46E5', borderRadius: '50%' }} /> Expenses</span>
-          </div>
+      {isLoading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <Loader2 size={16} className="animate-spin" /> Memuat katalog menu cuanin.id...
         </div>
-        
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: `${chartHeight}px`, flexShrink: 0 }}>
-            {yAxisTicks.map((tick) => (
-              <span key={tick} style={{ fontSize: '10px', fontWeight: 'bold', color: '#9CA3AF', whiteSpace: 'nowrap', transform: 'translateY(-50%)', lineHeight: 1 }}>
-                Rp {tick.toLocaleString('id-ID')}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
-            <div style={{ position: 'relative', width: '100%', height: `${chartHeight}px` }}>
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: `${chartHeight}px`, display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
-                {yAxisTicks.map((tick) => (
-                  <line key={tick} x1={0} y1={valueToY(tick)} x2={chartWidth} y2={valueToY(tick)} stroke={tick === 0 ? '#E5E7EB' : '#F3F4F6'} strokeWidth={tick === 0 ? '1.5' : '1'} strokeDasharray={tick === 0 ? '0' : '3'} />
-                ))}
-                <path d={dynamicExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={dynamicSalesPath} fill="none" stroke="#006847" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {expensesPoints.map((p, i) => (
-                <div key={`e-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ffffff', border: '2.5px solid #4F46E5', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
-              ))}
-              {salesPoints.map((p, i) => (
-                <div key={`s-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ffffff', border: '3px solid #006847', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
-              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
-            </div>
-          </div>
-        </div>
-
-        {isBreakdownOpen && (
-          <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ color: '#9CA3AF', fontWeight: 'bold', borderBottom: '1px solid #F3F4F6' }}>
-                  <th style={{ padding: '10px 8px' }}>HARI</th>
-                  <th style={{ padding: '10px 8px' }}>TOTAL SALES</th>
-                  <th style={{ padding: '10px 8px' }}>TOTAL EXPENSES</th>
-                  <th style={{ padding: '10px 8px' }}>STATUS MARGIN</th>
+      ) : menus.length > 0 ? (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #E5E7EB', color: '#9CA3AF', fontWeight: 'bold', backgroundColor: '#F9FAFB' }}>
+                <th style={{ padding: '14px 24px' }}>ITEM DETAILS</th>
+                <th style={{ padding: '14px 24px' }}>CATEGORY</th>
+                <th style={{ padding: '14px 24px' }}>PRICE</th>
+                <th style={{ padding: '14px 24px' }}>STATUS</th>
+                <th style={{ padding: '14px 24px', textAlign: 'right' }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {menus.map((item) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                  <td style={{ padding: '16px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <img src={item.image_url} alt={item.menu_name} style={{ width: '44px', height: '44px', borderRadius: '10px', objectFit: 'cover' }} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{item.menu_name}</p>
+                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>ID: {String(item.id).substring(0, 8).toUpperCase()}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>{item.category}</span></td>
+                  <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>Rp {Number(item.price).toLocaleString('id-ID')}</td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <span onClick={() => handleToggleAvailability(item.id, item.is_available)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>
+                      <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />{item.is_available ? 'Available' : 'Out of Stock'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+                      <Edit2 size={16} style={{ cursor: 'pointer', color: '#006847' }} onClick={() => setEditingMenu(item)} />
+                      <Trash2 size={16} style={{ cursor: 'pointer', color: '#DC2626' }} onClick={() => handleDeleteMenu(item.id)} />
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {financials.tableRows.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: '600' }}>{row.day}</td>
-                    <td style={{ padding: '12px 8px', color: '#006847', fontWeight: 'bold' }}>Rp {row.sales.toLocaleString('id-ID')}</td>
-                    <td style={{ padding: '12px 8px', color: '#4F46E5', fontWeight: '600' }}>Rp {row.expenses.toLocaleString('id-ID')}</td>
-                    <td style={{ padding: '12px 8px' }}>
-                      <span style={{ backgroundColor: row.sales >= row.expenses ? '#E6F4EA' : '#FEE2E2', color: row.sales >= row.expenses ? '#006847' : '#DC2626', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' }}>
-                        {row.sales >= row.expenses ? 'SURPLUS' : 'DEFISIT'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+          <div style={{ fontSize: '28px' }}>☕</div>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#4B5563', marginTop: '12px' }}>Katalog Menu Masih Kosong</h3>
+        </div>
+      )}
 
-      {/* TOP SELLING PRODUCTS */}
-      <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 'bold', color: '#111827' }}>⭐ Top Selling Menu (Top 3 Live)</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: topMenus.length > 0 ? 'repeat(3, 1fr)' : '1fr', gap: '16px' }}>
-          {topMenus.length > 0 ? (
-            topMenus.map((menu, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid #F3F4F6', padding: '12px', borderRadius: '14px', backgroundColor: '#F9FAFB' }}>
-                <img src={menu.image_url} alt={menu.menu_name} style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }} onError={(e)=>{e.target.src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=100"}} />
+      {/* ================= MODAL: ADD NEW ITEM ================= */}
+      {isModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '24px', height: '24px', backgroundColor: '#E6F4EA', color: '#006847', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={14} /></div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#111827' }}>Tambah Produk ke Menu</h2>
+              </div>
+              <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setIsModalOpen(false)} />
+            </div>
+
+            <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* KIRI: Form */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 'bold', color: '#111827' }}>{menu.menu_name}</p>
-                  <span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold' }}>{menu.sold_count} SOLD</span>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><Info size={14}/> Informasi Dasar</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
+                      <input type="text" placeholder="Contoh: Americano Ice" value={newMenu.menu_name} onChange={(e) => setNewMenu({...newMenu, menu_name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual (Rp)</label>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <span style={{ position: 'absolute', left: '12px', fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>Rp</span>
+                          <input type="text" placeholder="0" value={newMenu.price} onChange={(e) => setNewMenu({...newMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px 10px 34px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {['Coffee', 'Non-Coffee', 'Food', 'Pastry'].map((cat) => (
+                            <span key={cat} onClick={() => setSelectedCategory(cat)} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: selectedCategory === cat ? '#006847' : '#E5E7EB', color: selectedCategory === cat ? '#ffffff' : '#4B5563', transition: 'all 0.15s' }}>{cat}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep produk</h4>
+                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleAddNewMenuRecipeRow}><Plus size={14}/> Tambah Bahan</span>
+                  </div>
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
+                      <span>Bahan Baku</span><span style={{ textAlign: 'center' }}>Takaran</span><span>Cost Modal</span><span></span>
+                    </div>
+                    {newMenuRecipe.length > 0 ? (
+                      newMenuRecipe.map((row, index) => (
+                        <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6', backgroundColor: '#ffffff' }}>
+                          <select value={row.ingredientId} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'ingredientId', e.target.value)} style={{ border: '1px solid #D1D5DB', padding: '6px', borderRadius: '6px', backgroundColor: '#fff', fontSize: '12px', outline: 'none' }}>
+                            <option value="">-- Pilih Stok Bahan --</option>
+                            {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
+                          </select>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                            <input type="text" value={row.qty} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                            <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
+                          </div>
+                          <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                          <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveNewMenuRecipeRow(index)} />
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', backgroundColor: '#ffffff' }}>Belum ada pemetaan resep. Klik '+ Tambah Bahan' di atas.</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            ))
-          ) : (
-            <div style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontStyle: 'italic', fontSize: '13.5px', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px dashed #D1D5DB' }}>
-              Belum ada riil menu terlaris. Sesi penjualan produk dari kasir mobile belum dimulai.
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
-        
-        {/* AUDITED LABA RUGI BLOCK */}
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>LABA RUGI (AUDITED)</span>
-            <span style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontSize: '10px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '6px' }}>{financials.monthLabel}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#4B5563' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp {financials.grossRevenue.toLocaleString('id-ID')}</strong></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp {financials.cogs.toLocaleString('id-ID')}</strong></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp {financials.operatingExpenses.toLocaleString('id-ID')}</strong></div>
-            <div style={{ backgroundColor: '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>{financials.netProfitMarginLabel}</span></div>
-              <strong style={{ fontSize: '18px', color: '#006847' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</strong>
-            </div>
-            <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '15px' }}>💡</span>
-              <p style={{ margin: 0, lineHeight: '1.45' }}>{financials.brainyInsightText}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* TREN BAHAN BAKU BLOCK */}
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>TREN HARGA BAHAN BAKU</span>
-            {isTrendLoading ? (
-              <Loader2 size={14} className="animate-spin" color="#9CA3AF" />
-            ) : stockMaterials.length > 0 ? (
-              <select
-                value={selectedMaterial}
-                onChange={(e) => setSelectedMaterial(e.target.value)}
-                style={{ padding: '6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#FAFAFA', maxWidth: '180px' }}
-              >
-                {stockMaterials.map((name) => (
-                  <option key={name} value={name}>{name.toUpperCase()}</option>
-                ))}
-              </select>
-            ) : null}
-          </div>
-
-          {stockMaterials.length === 0 && !isTrendLoading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
-              Belum ada bahan baku di stok. Tambahkan bahan baku dulu di menu Stock untuk melihat tren harganya di sini.
-            </div>
-          ) : !matchedTrend && !isTrendLoading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
-              Belum ada data tren harga untuk "{selectedMaterial}". Sistem AI Brainy akan otomatis mencari estimasi harganya secara berkala.
-            </div>
-          ) : (
-            <>
-              {/* 🏷️ Badge sumber data — 3 kondisi: OFFICIAL / AI_ESTIMATE / FALLBACK_UNIT_PRICE */}
-              {matchedTrend && (
-                <div style={{ marginBottom: '12px' }}>
-                  {renderDataSourceBadge(matchedTrend.data_source)}
+              {/* KANAN: Image Picker + Profit Analysis */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Foto Menu</label>
+                  {/* ✅ ImagePickerPanel reusable — mendukung URL, Upload, dan Kamera */}
+                  <ImagePickerPanel
+                    currentImage={newMenu.image_url}
+                    onImageChange={(url) => setNewMenu({ ...newMenu, image_url: url })}
+                  />
                 </div>
-              )}
-
-              <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
-                <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                  <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
-                  <g>
-                    <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
-                    <text x="65" y="34" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
-                    <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
-                    <text x="65" y="154" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[2]}</text>
-                  </g>
-                  <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" />
-                  {xCoords.map((xVal, index) => (
-                    <circle key={index} cx={xVal} cy={calculatedPoints[index]} r="4" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2.5" />
-                  ))}
-                </svg>
+                <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={16}/> Instant Profit Analysis</span>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>ESTIMATED COGS</span>
+                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold' }}>Rp {newMenuTotalCogs.toLocaleString('id-ID')}</h3>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>PROJECTED MARGIN</span>
+                    <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#34D399' }}>
+                      {Number(newMenu.price) > 0 ? `${Math.round(((Number(newMenu.price) - newMenuTotalCogs) / Number(newMenu.price)) * 100)}%` : '0%'}
+                    </h2>
+                  </div>
+                </div>
               </div>
-              <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', paddingLeft: '75px', paddingRight: '100px', justifyContent: 'space-between' }}>
-                {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(w => <span key={w}>{w}</span>)}
+            </div>
+
+            <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 24px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Batal</button>
+              <button type="button" onClick={handleCreateMenu} style={{ padding: '10px 24px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14}/> Simpan Menu</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT ITEM ================= */}
+      {editingMenu && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ width: '920px', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#111827' }}>Edit Detil Menu Produk & Resep</h2>
+              <X size={20} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setEditingMenu(null)} />
+            </div>
+
+            <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* KIRI: Form Edit */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nama Menu</label>
+                  <input type="text" required value={editingMenu.menu_name} onChange={(e) => setEditingMenu({...editingMenu, menu_name: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Harga Jual Baru (Rp)</label>
+                    <input type="text" required value={editingMenu.price} onChange={(e) => setEditingMenu({...editingMenu, price: e.target.value.replace(/[^0-9]/g, '')})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontWeight: 'bold' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Kategori</label>
+                    <select value={editingMenu.category} onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})} style={{ width: '100%', padding: '10px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', outline: 'none', backgroundColor: '#fff', height: '38px', cursor: 'pointer' }}>
+                      <option value="Coffee">Coffee</option>
+                      <option value="Non-Coffee">Non-Coffee</option>
+                      <option value="Food">Food</option>
+                      <option value="Pastry">Pastry</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ borderTop: '1px dashed #E5E7EB', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}><FileSpreadsheet size={14}/> Pemetaan Resep Bahan Baku</h4>
+                    <span style={{ color: '#006847', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={handleAddRecipeRow}><Plus size={14}/> Tambah Bahan</span>
+                  </div>
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', fontSize: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', backgroundColor: '#F3F4F6', padding: '8px 12px', fontWeight: 'bold', color: '#4B5563' }}>
+                      <span>Bahan Terikat</span><span style={{ textAlign: 'center' }}>Takaran</span><span>Cost Modal</span><span></span>
+                    </div>
+                    {recipeRows.map((row, index) => (
+                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 40px', padding: '12px', alignItems: 'center', borderBottom: '1px solid #F3F4F6', backgroundColor: '#ffffff' }}>
+                        <select value={row.ingredientId} onChange={(e) => handleUpdateRecipeRow(index, 'ingredientId', e.target.value)} style={{ border: '1px solid #D1D5DB', padding: '6px', borderRadius: '6px', backgroundColor: '#fff', fontSize: '12px', outline: 'none' }}>
+                          <option value="">-- Pilih Stok Bahan --</option>
+                          {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
+                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                          <input type="text" value={row.qty} onChange={(e) => handleUpdateRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                          <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
+                        </div>
+                        <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
+                        <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveRecipeRow(index)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* 🆕 💡 Brainy Insights — tren harga bahan baku (konsisten dengan box Laba Rugi) */}
-              <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '16px' }}>
-                <span style={{ fontSize: '15px' }}>💡</span>
-                <p style={{ margin: 0, lineHeight: '1.45' }}>{getInsightText(matchedTrend)}</p>
+              {/* KANAN: Image Picker + Margin Simulator */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Foto Produk</label>
+                  {/* ✅ ImagePickerPanel reusable — mendukung URL, Upload, dan Kamera */}
+                  <ImagePickerPanel
+                    currentImage={editingMenu.image_url}
+                    onImageChange={(url) => setEditingMenu({ ...editingMenu, image_url: url })}
+                  />
+                </div>
+                <div style={{ backgroundColor: '#06163A', borderRadius: '14px', padding: '20px', color: '#ffffff', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#34D399', display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={16}/> Brainy Live Margin Simulator</span>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>TOTAL COGS (MODAL BAHAN REAL)</span>
+                    <h3 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#fff' }}>Rp {currentTotalCogs.toLocaleString('id-ID')}</h3>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600', display: 'block' }}>SIMULATED MARGIN PROFIT</span>
+                    <h2 style={{ margin: '2px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#34D399' }}>
+                      {Number(editingMenu.price) > 0 ? `${Math.round(((Number(editingMenu.price) - currentTotalCogs) / Number(editingMenu.price) * 100))}%` : '0%'}
+                    </h2>
+                  </div>
+                </div>
               </div>
-            </>
-          )}
-        </div>
-      </div>
+            </div>
 
-      {/* METRIKS BAWAH BARIS SUMMARY */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>📊 AVERAGE TRANSACTION</span>
-          <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>Rp {financials.avgTransaction.toLocaleString('id-ID')}</h3>
-          <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>{financials.avgTransactionTrend} <span style={{ color: '#9CA3AF', fontWeight: '500' }}>vs last month</span></span>
+            <div style={{ padding: '16px 24px', backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={() => setEditingMenu(null)} style={{ padding: '10px 24px', backgroundColor: '#ffffff', color: '#4B5563', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Batal</button>
+              <button type="button" onClick={handleUpdateMenu} style={{ padding: '10px 24px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>Perbarui Menu</button>
+            </div>
+          </div>
         </div>
-        <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>🧬 LOYALTY RATE</span>
-          <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>{financials.loyaltyRate}%</h3>
-          <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>{financials.loyaltyRateTrend} <span style={{ color: '#9CA3AF', fontWeight: '500' }}>from new members</span></span>
-        </div>
-        <div style={{ backgroundColor: '#ffffff', padding: '20px 24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>⏰ PEAK HOURS</span>
-          <h3 style={{ margin: '6px 0 2px 0', fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>{financials.peakHoursLabel}</h3>
-          <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: '500' }}>Account for <strong>{financials.peakHoursPercentage}</strong> of daily sales</span>
-        </div>
-      </div>
+      )}
 
     </div>
   );

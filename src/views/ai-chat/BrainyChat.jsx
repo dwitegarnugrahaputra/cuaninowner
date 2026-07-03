@@ -6,8 +6,20 @@ import {
   Send, Bot, MessageSquare, Sparkles, Loader2, Plus, 
   Truck, Percent, Calendar, Archive, Clock, ArrowRight, Trash2
 } from 'lucide-react';
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell
+} from 'recharts';
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+// ✅ HELPER: cek status transaksi/item "sukses" tanpa peduli huruf besar/kecil
+// (DB pernah punya campuran 'success' / 'SUCCESS' / 'Completed' — biar tidak rapuh lagi)
+function isSuccessStatus(status) {
+  if (!status) return false;
+  const normalized = String(status).trim().toLowerCase();
+  return normalized === 'success' || normalized === 'completed';
+}
 
 // 📊 HELPER: Susun rangkaian chart (aktual + proyeksi)
 function buildForecastSeries({ sortedDateKeys, dailyTotals, dailyAvg, growthRatePerDay, range }) {
@@ -68,6 +80,224 @@ function buildForecastSeries({ sortedDateKeys, dailyTotals, dailyAvg, growthRate
   }
 
   return series;
+}
+
+// 💰 HELPER: Format angka rupiah singkat untuk axis & tooltip
+function formatRupiahShort(value) {
+  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}jt`;
+  if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
+  return `Rp ${value}`;
+}
+
+// 🧾 TOOLTIP KUSTOM: menampilkan status aktual/proyeksi saat hover
+function ForecastTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  const point = payload[0].payload;
+  return (
+    <div style={{
+      backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px',
+      padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px'
+    }}>
+      <div style={{ fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>{label}</div>
+      <div style={{ color: '#006847', fontWeight: 'bold' }}>{formatRupiahShort(point.value)}</div>
+      <div style={{
+        marginTop: '4px', fontSize: '10px', fontWeight: 'bold',
+        color: point.isProjected ? '#059669' : '#374151'
+      }}>
+        {point.isProjected ? '● Proyeksi Brainy' : '● Data Aktual'}
+      </div>
+    </div>
+  );
+}
+
+// 📦 SMART INVENTORY FORECASTING: menghitung estimasi hari tersisa sebelum bahan baku habis
+// Pipeline: transaction_items (penjualan per menu, 30 hari) -> menus.recipe (kolom JSON komposisi bahan) -> raw_materials (stok saat ini)
+// ⚠️ CATATAN SKEMA: resep TIDAK disimpan di tabel terpisah 'menu_recipes' (tabel itu tidak dipakai/kosong),
+// melainkan sebagai array JSON di kolom `recipe` pada tabel `menus`, diisi lewat modal Tambah/Edit Menu di MenuManagement.jsx.
+// Format tiap item resep: { ingredientId, ingredientName, qty, unit, cost }
+// Jika raw_materials.unit bertipe kg/litre, qty resep disimpan dalam gram/ml (lihat handleAddRecipeRow) sehingga perlu dibagi 1000 saat dibandingkan ke current_stock.
+async function computeInventoryForecastText(ownerUid) {
+  try {
+    if (!ownerUid) return 'BELUM ADA DATA STOK BAHAN BAKU.';
+
+    const { data: materials, error: matErr } = await supabase
+      .from('raw_materials')
+      .select('id, material_name, current_stock, unit, minimum_threshold')
+      .eq('user_id', ownerUid);
+    if (matErr) throw matErr;
+
+    if (!materials || materials.length === 0) {
+      return 'BELUM ADA REKAMAN DATA BAHAN BAKU PADA SISTEM.';
+    }
+
+    const { data: menus, error: menuErr } = await supabase
+      .from('menus')
+      .select('id, menu_name, recipe')
+      .eq('user_id', ownerUid);
+    if (menuErr) throw menuErr;
+
+    const menusWithRecipe = (menus || []).filter(m => Array.isArray(m.recipe) && m.recipe.length > 0);
+    if (menusWithRecipe.length === 0) {
+      return 'BELUM ADA MENU DENGAN PEMETAAN RESEP (kolom `recipe` pada tabel menus). Lengkapi resep lewat modal Tambah/Edit Menu di Menu Management agar proyeksi konsumsi bahan baku dapat dihitung.';
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // 🔗 Join ke sales_transactions untuk memastikan hanya menghitung transaksi milik outlet ini
+    // ⚠️ CATATAN PENTING: transaction_items.status TIDAK BISA DIPAKAI — kolom ini selalu 'pending'
+    // dan tidak pernah diupdate oleh aplikasi (field mati, mirip menu_recipes). Status sukses yang
+    // valid HARUS diambil dari sales_transactions.status (parent transaksi), bukan dari item-nya.
+    const { data: items, error: itemErr } = await supabase
+      .from('transaction_items')
+      .select('menu_id, quantity, created_at, sales_transactions!inner(user_id, status)')
+      .eq('sales_transactions.user_id', ownerUid)
+      .gte('created_at', thirtyDaysAgo);
+    if (itemErr) throw itemErr;
+
+    // 📊 Total kuantitas terjual per menu selama 30 hari terakhir
+    // (filter status "sukses" di JS pakai isSuccessStatus terhadap status TRANSAKSI INDUK, bukan item)
+    const menuQtyTotals = {};
+    (items || []).filter(it => isSuccessStatus(it.sales_transactions?.status)).forEach(it => {
+      menuQtyTotals[it.menu_id] = (menuQtyTotals[it.menu_id] || 0) + Number(it.quantity || 0);
+    });
+
+    // 🗺️ Peta cepat material_id -> unit dasar (untuk konversi gram/ml -> kg/litre bila perlu)
+    const materialUnitMap = {};
+    materials.forEach(m => { materialUnitMap[m.id] = (m.unit || '').toLowerCase(); });
+
+    // ⚙️ Konversi penjualan menu -> rate konsumsi harian per bahan baku (material_id)
+    const dailyConsumption = {};
+    menusWithRecipe.forEach(menu => {
+      const menuDailyRate = (menuQtyTotals[menu.id] || 0) / 30;
+      if (menuDailyRate <= 0) return;
+      menu.recipe.forEach(ingredient => {
+        const matId = ingredient.ingredientId;
+        if (!matId) return;
+        let qty = Number(ingredient.qty || 0);
+        // Konversi balik gram/ml -> kg/litre sesuai satuan dasar raw_materials
+        const baseUnit = materialUnitMap[matId];
+        if (baseUnit === 'kg' || baseUnit === 'litre' || baseUnit === 'liter') {
+          qty = qty / 1000;
+        }
+        dailyConsumption[matId] = (dailyConsumption[matId] || 0) + (menuDailyRate * qty);
+      });
+    });
+
+    // 🧮 Hitung estimasi hari tersisa per bahan baku, urutkan dari yang paling kritis
+    const forecastRows = materials.map(m => {
+      const rate = dailyConsumption[m.id] || 0;
+      const daysRemaining = rate > 0 ? (Number(m.current_stock) / rate) : null;
+      return { ...m, dailyRate: rate, daysRemaining };
+    }).sort((a, b) => {
+      if (a.daysRemaining === null) return 1;
+      if (b.daysRemaining === null) return -1;
+      return a.daysRemaining - b.daysRemaining;
+    });
+
+    const lines = forecastRows.map(row => {
+      if (row.dailyRate <= 0) {
+        return `- ${row.material_name}: Stok ${Number(row.current_stock).toLocaleString('id-ID')} ${row.unit} (belum ada penjualan menu terkait bahan ini dalam 30 hari terakhir, konsumsi tidak dapat dihitung).`;
+      }
+      const days = Math.floor(row.daysRemaining);
+      const flag = days <= 3 ? ' 🔴 KRITIS - segera restok' : days <= 7 ? ' 🟠 PERLU DIPANTAU minggu ini' : '';
+      return `- ${row.material_name}: Stok ${Number(row.current_stock).toLocaleString('id-ID')} ${row.unit}, rata-rata konsumsi ~${row.dailyRate.toFixed(2)} ${row.unit}/hari → estimasi habis dalam ${days} hari${flag}`;
+    });
+
+    return lines.join('\n');
+  } catch (err) {
+    console.error('⚠️ Gagal menghitung proyeksi Smart Inventory Forecasting:', err.message);
+    return 'GAGAL MENGHITUNG PROYEKSI BAHAN BAKU (periksa koneksi tabel raw_materials/menus/transaction_items).';
+  }
+}
+
+// 💵 AUTOMATED FINANCIAL HEALTH INSIGHTS: hitung Revenue riil dari sales_transactions.total_amount
+// (SAMA SUMBER dengan MainDashboard.jsx, supaya kedua angka selalu sinkron), HPP (COGS) riil dari
+// resep menu × qty terjual (transaction_items), dan OpEx riil dari tabel expenses.
+async function computeFinancialHealthText(ownerUid) {
+  try {
+    if (!ownerUid) return 'BELUM ADA DATA FINANSIAL.';
+
+    const { data: menus, error: menuErr } = await supabase
+      .from('menus')
+      .select('id, menu_name, recipe')
+      .eq('user_id', ownerUid);
+    if (menuErr) throw menuErr;
+
+    // 🗺️ Peta cepat menu_id -> total HPP per 1 unit terjual (jumlah cost semua bahan di resep)
+    const menuCogsPerUnit = {};
+    (menus || []).forEach(m => {
+      if (Array.isArray(m.recipe)) {
+        menuCogsPerUnit[m.id] = m.recipe.reduce((sum, ing) => sum + Number(ing.cost || 0), 0);
+      }
+    });
+
+    // 💰 REVENUE: diambil dari sales_transactions.total_amount, SAMA PERSIS dengan sumber yang
+    // dipakai MainDashboard.jsx (bukan dijumlah dari transaction_items.price_at_sale lagi).
+    // Ini penting karena total_amount bisa memuat pajak/diskon/pembulatan yang tidak selalu identik
+    // dengan hasil qty × price_at_sale per item — kalau sumbernya beda, angka Dashboard vs Brainy
+    // akan selalu terlihat "tidak sinkron" walau keduanya sama-sama benar dari sudut pandang masing-masing.
+    const { data: salesTx, error: salesErr } = await supabase
+      .from('sales_transactions')
+      .select('id, total_amount, status')
+      .eq('user_id', ownerUid);
+    if (salesErr) throw salesErr;
+
+    const successTxIds = new Set(
+      (salesTx || []).filter(tx => isSuccessStatus(tx.status)).map(tx => tx.id)
+    );
+    const totalRevenueFromItems = (salesTx || [])
+      .filter(tx => isSuccessStatus(tx.status))
+      .reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
+
+    // 🧾 COGS: tetap dihitung dari transaction_items (butuh breakdown per menu × cost resep),
+    // tapi hanya untuk baris yang transaksi induknya SUKSES (pakai successTxIds di atas).
+    // ⚠️ transaction_items.status TIDAK DIPAKAI — kolom ini selalu 'pending' dan tidak pernah
+    // diupdate oleh aplikasi (field mati). Filter kesuksesan harus dari sales_transactions.status.
+    const { data: items, error: itemErr } = await supabase
+      .from('transaction_items')
+      .select('menu_id, quantity, transaction_id, sales_transactions!inner(user_id)')
+      .eq('sales_transactions.user_id', ownerUid);
+    if (itemErr) throw itemErr;
+
+    let totalCogs = 0;
+    let itemsMissingRecipe = 0;
+
+    (items || []).filter(it => successTxIds.has(it.transaction_id)).forEach(it => {
+      const qty = Number(it.quantity || 0);
+      const cogsPerUnit = menuCogsPerUnit[it.menu_id];
+      if (cogsPerUnit === undefined) {
+        itemsMissingRecipe += 1;
+      } else {
+        totalCogs += qty * cogsPerUnit;
+      }
+    });
+
+    const { data: expensesData, error: expErr } = await supabase
+      .from('expenses')
+      .select('amount')
+      .eq('owner_user_id', ownerUid);
+    if (expErr) throw expErr;
+
+    const totalOpEx = (expensesData || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+    const netProfit = totalRevenueFromItems - totalCogs - totalOpEx;
+    const marginRatio = totalRevenueFromItems > 0 ? Math.round((netProfit / totalRevenueFromItems) * 100) : 0;
+
+    const warningLine = itemsMissingRecipe > 0
+      ? `\n⚠️ Catatan: ${itemsMissingRecipe} baris transaksi merujuk ke menu yang belum punya pemetaan resep, sehingga HPP untuk item tersebut tidak ikut terhitung (kemungkinan margin sedikit under-estimated).`
+      : '';
+
+    return `
+- Total Pendapatan (dari sales_transactions.total_amount, transaksi berstatus sukses — sinkron dengan Dashboard): Rp ${totalRevenueFromItems.toLocaleString('id-ID')}
+- Total HPP/COGS (dihitung riil dari resep × qty terjual, BUKAN asumsi): Rp ${totalCogs.toLocaleString('id-ID')}
+- Total Biaya Operasional (OpEx dari tabel expenses): Rp ${totalOpEx.toLocaleString('id-ID')}
+- Laba Bersih (Net Profit): Rp ${netProfit.toLocaleString('id-ID')}
+- Margin Bersih: ${marginRatio}%
+- Status: ${netProfit >= 0 ? 'PROFIT' : 'RUGI/DEFISIT'}${warningLine}`.trim();
+  } catch (err) {
+    console.error('⚠️ Gagal menghitung Automated Financial Health Insights:', err.message);
+    return 'GAGAL MENGHITUNG DATA FINANSIAL (periksa koneksi tabel menus/transaction_items/expenses).';
+  }
 }
 
 function buildEmptyFallbackChart(range) {
@@ -197,8 +427,14 @@ export default function BrainyChat() {
         
         let totalRevenue = 0;
         if (sales && sales.length > 0) {
-          totalRevenue = sales.filter(tx => tx.status === 'Completed' || tx.status === 'SUCCESS').reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
+          totalRevenue = sales.filter(tx => isSuccessStatus(tx.status)).reduce((sum, tx) => sum + Number(tx.total_amount || 0), 0);
         }
+
+        // 📦 SMART INVENTORY FORECASTING: hitung proyeksi ketersediaan bahan baku (blueprint requirement)
+        const inventoryForecastStr = await computeInventoryForecastText(ownerUid);
+
+        // 💵 AUTOMATED FINANCIAL HEALTH INSIGHTS: HPP riil dari resep + OpEx riil dari expenses (blueprint requirement)
+        const financialHealthStr = await computeFinancialHealthText(ownerUid);
 
         const snapshot = `
 CONTEKSTUAL DATA REAL-TIME OPERASIONAL OUTLET:
@@ -215,6 +451,12 @@ ${staffStr}
 --- RINGKASAN DATA FINANSIAL TERKINI ---
 - Total Akumulasi Pendapatan Terlacak: Rp ${totalRevenue.toLocaleString('id-ID')}
 - Jumlah Feed Transaksi Terbaru: ${sales ? sales.length : 0} Entri data.
+
+--- AUTOMATED FINANCIAL HEALTH INSIGHTS: LAPORAN LABA RUGI (P&L) RIIL, HPP DIHITUNG DARI RESEP ---
+${financialHealthStr}
+
+--- SMART INVENTORY FORECASTING: PROYEKSI KETERSEDIAAN BAHAN BAKU (berdasar rata-rata konsumsi 30 hari terakhir) ---
+${inventoryForecastStr}
         `;
         setDbSnapshot(snapshot);
       } catch (err) {
@@ -246,7 +488,7 @@ ${staffStr}
         if (error) throw error;
 
         const completedSales = (sales || []).filter(
-          tx => tx.status === 'Completed' || tx.status === 'SUCCESS'
+          tx => isSuccessStatus(tx.status)
         );
 
         if (completedSales.length === 0) {
@@ -388,6 +630,11 @@ ${staffStr}
 
         Berikut adalah ringkasan data kondisi database aktual saat ini yang harus Anda jadikan sebagai parameter mutlak dalam menjawab instruksi pengguna jika relevan:
         ${dbSnapshot}
+
+        Instruksi khusus untuk pertanyaan seputar stok/bahan baku (misal "bahan apa yang bakal habis"): rujuk langsung ke bagian "SMART INVENTORY FORECASTING" di atas.
+        Prioritaskan bahan baku berlabel KRITIS atau PERLU DIPANTAU, sebutkan estimasi jumlah hari tersisa secara eksplisit, dan berikan rekomendasi kapan sebaiknya melakukan restock. Jangan menyatakan data tidak tersedia jika bagian tersebut sudah berisi rincian bahan baku.
+
+        Instruksi khusus untuk pertanyaan seputar kondisi finansial/profitabilitas (misal "apakah profit", "bagaimana kondisi keuangan"): rujuk langsung ke bagian "AUTOMATED FINANCIAL HEALTH INSIGHTS" di atas, yang sudah berisi HPP riil, OpEx riil, laba bersih, dan margin. Jangan menyatakan data HPP/OpEx tidak tersedia jika bagian tersebut sudah berisi angka-angka tersebut — jawab langsung apakah outlet profit atau rugi berdasarkan field "Status" di sana.
       `;
 
       const response = await ai.models.generateContent({
@@ -672,22 +919,49 @@ ${staffStr}
                 {isForecastChartLoading ? (
                   <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}><Loader2 size={16} className="animate-spin" /> Menghitung peramalan tren finansial...</div>
                 ) : (
-                  /* 🔥 FIXED OPTIMIZATION: Membatasi max-width kontainer serta mengunci susunan flex agar pilar diagram merapat padat */
-                  <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '28px', padding: '0 24px 20px 24px', width: '100%', maxWidth: '650px', margin: '0 auto' }}>
-                    {forecastChartData.map((point, idx) => {
-                      const maxValue = Math.max(1, ...forecastChartData.map(d => d.value));
-                      const barHeightPx = Math.max(6, Math.round((point.value / maxValue) * 130));
-                      return (
-                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '60px', flexShrink: 0 }}>
-                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#374151', whiteSpace: 'nowrap' }}>
-                            {point.value >= 1000000 ? `Rp ${(point.value / 1000000).toFixed(1)}jt` : `Rp ${(point.value / 1000).toFixed(0)}rb`}
-                          </span>
-                          <div style={{ width: '36px', height: `${barHeightPx}px`, backgroundColor: point.isProjected ? '#34D399' : '#006847', borderRadius: '6px 6px 0 0', border: point.isProjected ? '2px dashed #10B981' : 'none', boxSizing: 'border-box', transition: 'height 0.3s ease' }} />
-                          <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: '600' }}>{point.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div style={{ width: '100%', height: '220px' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={forecastChartData} margin={{ top: 24, right: 16, left: 8, bottom: 0 }} barCategoryGap="30%">
+                          <CartesianGrid vertical={false} stroke="#F3F4F6" />
+                          <XAxis
+                            dataKey="label" axisLine={{ stroke: '#E5E7EB' }} tickLine={false}
+                            tick={{ fontSize: 11, fill: '#9CA3AF', fontWeight: 600 }}
+                          />
+                          <YAxis
+                            tickFormatter={formatRupiahShort} axisLine={false} tickLine={false}
+                            tick={{ fontSize: 10, fill: '#9CA3AF' }} width={56}
+                          />
+                          <Tooltip content={<ForecastTooltip />} cursor={{ fill: 'rgba(0,104,71,0.05)' }} />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                            {forecastChartData.map((point, idx) => (
+                              <Cell
+                                key={idx}
+                                fill={point.isProjected ? '#34D399' : '#006847'}
+                                fillOpacity={point.isProjected ? 0.55 : 1}
+                              />
+                            ))}
+                          </Bar>
+                          <Line
+                            type="monotone" dataKey="value" stroke="#006847" strokeWidth={2}
+                            dot={{ r: 3, strokeWidth: 0, fill: '#006847' }} activeDot={false}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* 🏷️ LEGENDA: Aktual vs Proyeksi */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#006847', display: 'inline-block' }} />
+                        <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: 600 }}>Data Aktual</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#34D399', opacity: 0.55, display: 'inline-block' }} />
+                        <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: 600 }}>Proyeksi Brainy</span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

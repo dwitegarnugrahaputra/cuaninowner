@@ -1,8 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp, Loader2, Sparkles, ShieldCheck
+  TrendingUp, AlertTriangle, ChevronDown, ChevronUp, Loader2, Sparkles
 } from 'lucide-react';
 import { supabase } from '../../config/supabaseClient';
+import {
+  ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
+} from 'recharts';
+
+// 💰 HELPER: Format angka rupiah singkat untuk axis & tooltip chart (sama gaya dengan BrainyChat.jsx)
+function formatRupiahShort(value) {
+  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}jt`;
+  if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
+  return `Rp ${value}`;
+}
+
+// 🧾 TOOLTIP KUSTOM: dipakai chart Sales vs Expenses (gaya sama dengan ForecastTooltip di BrainyChat.jsx)
+function SalesExpensesTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div style={{
+      backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px',
+      padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px'
+    }}>
+      <div style={{ fontWeight: 'bold', color: '#111827', marginBottom: '6px' }}>{label}</div>
+      {payload.map((entry, idx) => (
+        <div key={idx} style={{ color: entry.color, fontWeight: 'bold', marginTop: idx > 0 ? '2px' : 0 }}>
+          {entry.name}: {formatRupiahShort(entry.value)}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function CuaninLogoMini() {
   return (
@@ -18,33 +47,42 @@ function CuaninLogoMini() {
   );
 }
 
-function isFuzzyNameMatch(nameA, nameB) {
-  if (!nameA || !nameB) return false;
-  const a = nameA.toLowerCase().trim();
-  const b = nameB.toLowerCase().trim();
-  return a.includes(b) || b.includes(a);
+// ☕ HELPER: urutkan brand kopi berdasar "value terbaik" — quality_score tinggi & harga wajar
+// diprioritaskan di atas. Dipakai untuk menentukan badge "REKOMENDASI BRAINY".
+function rankCoffeeBrandsByValue(brands) {
+  if (!brands || brands.length === 0) return [];
+  return [...brands].sort((a, b) => Number(b.quality_score || 0) - Number(a.quality_score || 0));
 }
 
-function findTrendMatch(stockMaterialName, trendRows) {
-  if (!stockMaterialName || !trendRows || trendRows.length === 0) return null;
-  return trendRows.find((trend) => isFuzzyNameMatch(stockMaterialName, trend.material_name)) || null;
+// 🧾 TOOLTIP KUSTOM: dipakai bar chart Perbandingan Brand Biji Kopi
+function CoffeeBrandTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  const point = payload[0].payload;
+  return (
+    <div style={{
+      backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '10px',
+      padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px', minWidth: '150px'
+    }}>
+      <div style={{ fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>{label}</div>
+      <div style={{ color: '#006847', fontWeight: 'bold' }}>Rp {Number(point.price_per_kg || 0).toLocaleString('id-ID')}/kg</div>
+      <div style={{ color: '#D97706', fontWeight: '600', marginTop: '2px' }}>Skor Kualitas: {point.quality_score}/100</div>
+    </div>
+  );
 }
 
-// 🆕 Senin (00:00) minggu ini, di waktu LOKAL browser — dipakai sebagai titik
-// awal rentang grafik "Sales vs Expenses" maupun query expenses real.
+// 🆕 Senin (00:00) minggu ini, di waktu LOKAL browser
 function getStartOfThisWeekMonday() {
   const now = new Date();
-  const day = now.getDay(); // 0 = Minggu, 1 = Senin, ... 6 = Sabtu
-  const diffToMonday = day === 0 ? 6 : day - 1; // Minggu dianggap akhir minggu, bukan awal
+  const day = now.getDay(); 
+  const diffToMonday = day === 0 ? 6 : day - 1; 
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
   monday.setHours(0, 0, 0, 0);
   return monday;
 }
 
-// 🆕 Index hari (0=Senin ... 6=Minggu) dari sebuah Date, konsisten dengan
-// urutan tableRows ['Senin', 'Selasa', ..., 'Minggu'].
+// 🆕 Index hari (0=Senin ... 6=Minggu) dari sebuah Date
 function getMondayBasedDayIndex(date) {
-  const day = date.getDay(); // 0=Minggu, 1=Senin, ...
+  const day = date.getDay(); 
   return day === 0 ? 6 : day - 1;
 }
 
@@ -75,10 +113,27 @@ export default function Dashboard() {
   const [criticalStockCount, setCriticalStockCount] = useState(0);
   const [topMenus, setTopMenus] = useState([]);
 
-  const [stockMaterials, setStockMaterials] = useState([]);
-  const [trendRowsCache, setTrendRowsCache] = useState([]);
-  const [selectedMaterial, setSelectedMaterial] = useState('');
-  const [isTrendLoading, setIsTrendLoading] = useState(true);
+  const [coffeeBrands, setCoffeeBrands] = useState([]);
+  const [isCoffeeBrandsLoading, setIsCoffeeBrandsLoading] = useState(true);
+
+  // 🧠 GENERATOR INSIGHT FINANSIAL INTERNAL: Dinamis memetakan performa berdasarkan nama outlet asli database
+  const generateFinancialInsight = (sales, profit, cogs, opex, targetOutletName) => {
+    if (sales === 0) {
+      return `Brainy Insights: Belum ada transaksi masuk dari kasir mobile di ${targetOutletName}. Dasbor saat ini menampilkan performa riil bernilai nol.`;
+    }
+
+    const marginRatio = Math.round((profit / sales) * 100);
+    
+    if (profit < 0) {
+      return `⚠️ Brainy Danger Alert: Operasional ${targetOutletName} mengalami defisit akuntansi sebesar Rp ${Math.abs(profit).toLocaleString('id-ID')} minggu ini, Gar! Faktor utamanya adalah beban pengeluaran (OpEx) lu tembus Rp ${opex.toLocaleString('id-ID')}. Segera pangkas pengadaan bahan baku non-esensial!`;
+    }
+
+    if (opex > sales * 0.4) {
+      return `💡 Brainy Optimization: Omset ${targetOutletName} berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, tapi margin tertekan ke bawah (${marginRatio}%) karena kebocoran pengeluaran riil (OpEx) mencapai Rp ${opex.toLocaleString('id-ID')}. Cek log aktivitas pengeluaran kasir lu!`;
+    }
+
+    return `✨ Brainy Insights: Omset ${targetOutletName} lu berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`;
+  };
 
   const syncDashboardMetricsFromDB = async () => {
     setIsLoading(true);
@@ -89,7 +144,6 @@ export default function Dashboard() {
       const uid = session.user.id;
       setCurrentUserId(uid);
 
-      // 🆕 Rentang minggu ini: Senin 00:00 (lokal) sampai sekarang.
       const startOfWeek = getStartOfThisWeekMonday();
       const startOfWeekIso = startOfWeek.toISOString();
 
@@ -100,9 +154,6 @@ export default function Dashboard() {
 
       if (salesError) throw salesError;
 
-      // 🆕 Ambil pengeluaran REAL minggu ini dari tabel expenses (bukan simulasi).
-      // owner_user_id di tabel expenses diisi dari staff.user_id saat staf
-      // login di app kasir, yang selalu sama dengan UUID auth owner ini.
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
         .select('id, amount, created_at')
@@ -111,18 +162,50 @@ export default function Dashboard() {
 
       if (expensesError) throw expensesError;
 
+      // 💰 REAL OPEX: total pengeluaran ALL-TIME (bukan cuma minggu ini) supaya konsisten dengan totalSalesSum
+      // yang juga dihitung dari SELURUH riwayat sales_transactions (tidak dibatasi tanggal).
+      const { data: expensesAllData, error: expensesAllError } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('owner_user_id', uid);
+      if (expensesAllError) throw expensesAllError;
+      const totalOpExAllTime = (expensesAllData || []).reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+      // 🧾 REAL HPP/COGS: ambil resep tiap menu (kolom JSON `recipe` di tabel menus) untuk menghitung modal riil,
+      // menggantikan asumsi kasar COGS = 35% dari omset.
+      const { data: menusRecipeData, error: menusRecipeError } = await supabase
+        .from('menus')
+        .select('id, recipe')
+        .eq('user_id', uid);
+      if (menusRecipeError) throw menusRecipeError;
+      const menuCogsPerUnitMap = {};
+      (menusRecipeData || []).forEach(m => {
+        if (Array.isArray(m.recipe)) {
+          menuCogsPerUnitMap[m.id] = m.recipe.reduce((sum, ing) => sum + Number(ing.cost || 0), 0);
+        }
+      });
+
       const { data: stockData } = await supabase
         .from('raw_materials')
         .select('id, current_stock, minimum_threshold')
         .eq('user_id', uid);
+
+      // 🟩 1. AMBIL NAMA OUTLET DINAMIS DARI DATABASE SECARA REAL
+      let resolvedOutletName = 'Outlet Lu';
+      const { data: outletData } = await supabase
+        .from('outlet_config')
+        .select('outlet_name')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (outletData?.outlet_name) {
+        resolvedOutletName = outletData.outlet_name;
+      }
 
       let totalSalesSum = 0;
       let totalTxCount = 0;
       let rowsCalculated = [];
       let transactionIds = [];
 
-      // Template 7 hari (Senin..Minggu) minggu ini, mulai dari 0 — akan diisi
-      // dengan data real sales & expenses di bawah.
       const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
       rowsCalculated = dayLabels.map((day) => ({ day, sales: 0, expenses: 0 }));
 
@@ -131,8 +214,6 @@ export default function Dashboard() {
         totalSalesSum = salesData.reduce((sum, tx) => sum + (Number(tx.total_amount) || 0), 0);
         transactionIds = salesData.map(tx => tx.id);
 
-        // 🆕 Kelompokkan SALES per hari (Senin-Minggu) minggu ini, dari data asli —
-        // sebelumnya ini cuma totalSalesSum * persentase acak (simulasi).
         salesData.forEach((tx) => {
           const txDate = new Date(tx.created_at);
           if (txDate >= startOfWeek) {
@@ -142,8 +223,6 @@ export default function Dashboard() {
         });
       }
 
-      // 🆕 Kelompokkan EXPENSES per hari (Senin-Minggu) minggu ini, dari tabel
-      // expenses yang sudah difilter rentang waktunya lewat query di atas.
       let totalExpensesThisWeek = 0;
       if (expensesData && expensesData.length > 0) {
         expensesData.forEach((exp) => {
@@ -155,10 +234,48 @@ export default function Dashboard() {
         });
       }
 
-      const calculatedCOGS = Math.round(totalSalesSum * 0.35);
-      // 🆕 Operating Expenses sekarang dari data real minggu ini, bukan
-      // totalSalesSum * 0.15 (simulasi).
-      const calculatedOpEx = totalExpensesThisWeek;
+      // 🧾 REAL HPP/COGS + Top Menu: satu query transaction_items dipakai untuk dua kebutuhan sekaligus
+      let calculatedCOGS = 0;
+      let itemsMissingRecipeCount = 0;
+      if (transactionIds.length > 0) {
+        const { data: itemData, error: itemError } = await supabase
+          .from('transaction_items')
+          .select(`quantity, menu_id, menus:menu_id ( menu_name, image_url )`)
+          .in('transaction_id', transactionIds);
+
+        if (!itemError && itemData) {
+          const menuMap = {};
+          itemData.forEach(item => {
+            const qty = Number(item.quantity) || 0;
+            const menuName = item.menus?.menu_name;
+            const imageUrl = item.menus?.image_url;
+            if (menuName) {
+              if (!menuMap[menuName]) {
+                menuMap[menuName] = { menu_name: menuName, sold_count: 0, image_url: imageUrl };
+              }
+              menuMap[menuName].sold_count += qty;
+            }
+
+            // 💰 Akumulasi HPP riil: qty terjual × total cost bahan baku dari resep menu tersebut
+            const cogsPerUnit = menuCogsPerUnitMap[item.menu_id];
+            if (cogsPerUnit === undefined) {
+              itemsMissingRecipeCount += 1;
+            } else {
+              calculatedCOGS += qty * cogsPerUnit;
+            }
+          });
+          setTopMenus(Object.values(menuMap).sort((a, b) => b.sold_count - a.sold_count).slice(0, 3));
+        }
+      } else {
+        setTopMenus([]);
+      }
+      calculatedCOGS = Math.round(calculatedCOGS);
+      if (itemsMissingRecipeCount > 0) {
+        console.warn(`⚠️ Brainy Dashboard: ${itemsMissingRecipeCount} baris transaction_items merujuk ke menu tanpa resep, HPP untuk item tsb tidak ikut terhitung.`);
+      }
+
+      // 💵 OpEx dihitung ALL-TIME (bukan cuma minggu ini) agar konsisten dengan totalSalesSum yang juga all-time
+      const calculatedOpEx = totalOpExAllTime;
       const calculatedNetProfit = totalSalesSum - calculatedCOGS - calculatedOpEx;
       const marginRatio = totalSalesSum > 0 ? Math.round((calculatedNetProfit / totalSalesSum) * 100) : 0;
       const calculatedAvg = totalTxCount > 0 ? Math.round(totalSalesSum / totalTxCount) : 0;
@@ -168,29 +285,10 @@ export default function Dashboard() {
         calculatedCritical = stockData.filter(item => (Number(item.current_stock) || 0) <= (Number(item.minimum_threshold) || 0)).length;
       }
 
-      if (transactionIds.length > 0) {
-        const { data: itemData, error: itemError } = await supabase
-          .from('transaction_items')
-          .select(`quantity, menus:menu_id ( menu_name, image_url )`)
-          .in('transaction_id', transactionIds);
-
-        if (!itemError && itemData) {
-          const menuMap = {};
-          itemData.forEach(item => {
-            const menuName = item.menus?.menu_name;
-            const imageUrl = item.menus?.image_url;
-            if (menuName) {
-              if (!menuMap[menuName]) {
-                menuMap[menuName] = { menu_name: menuName, sold_count: 0, image_url: imageUrl };
-              }
-              menuMap[menuName].sold_count += Number(item.quantity) || 0;
-            }
-          });
-          setTopMenus(Object.values(menuMap).sort((a, b) => b.sold_count - a.sold_count).slice(0, 3));
-        }
-      } else {
-        setTopMenus([]);
-      }
+      // 🟩 2. HITUNG LOGIKA INSIGHT DENGAN NAMA OUTLET YANG ASLI
+      const dynamicInsight = totalSalesSum > 0 
+        ? `Brainy Insights: Omset ${resolvedOutletName} lu berjalan lancar di angka Rp ${totalSalesSum.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`
+        : `Brainy Insights: Belum ada transaksi masuk dari kasir mobile di ${resolvedOutletName}. Dasbor saat ini menampilkan performa riil bernilai nol.`;
 
       setFinancials({
         totalSales: totalSalesSum,
@@ -208,9 +306,8 @@ export default function Dashboard() {
         loyaltyRate: totalSalesSum > 0 ? 65 : 0,
         peakHoursLabel: totalSalesSum > 0 ? '13:00 – 16:30' : 'Belum Ada Data',
         peakHoursPercentage: totalSalesSum > 0 ? '45%' : '0%',
-        brainyInsightText: totalSalesSum > 0 
-          ? `Brainy Insights: Omset Warung Kopi Jaya lu berjalan lancar di angka Rp ${totalSalesSum.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`
-          : "Brainy Insights: Belum ada transaksi masuk dari kasir mobile. Dasbor saat ini menampilkan performa riil bernilai nol.",
+        brainyInsightText: dynamicInsight, // 🌟 Diikat langsung ke variabel penampung dinamis
+        outletName: resolvedOutletName // Simpan nama outlet ke state untuk dipakai di JSX sub-heading chart
       });
 
       setCriticalStockCount(calculatedCritical);
@@ -222,183 +319,61 @@ export default function Dashboard() {
     }
   };
 
-  const loadMaterialTrendSources = async () => {
-    setIsTrendLoading(true);
+  // ☕ PERBANDINGAN BRAND BIJI KOPI: data ini GLOBAL (lintas semua outlet), bukan spesifik
+  // stok user — karena tujuannya membantu owner memilih brand kopi terbaik untuk dibeli,
+  // bukan melacak bahan baku yang sudah ada di stok mereka sendiri.
+  // Data diisi oleh pipeline Python terpisah (coffee_brand_pipeline.py) ke tabel
+  // `coffee_brand_trends`, di-refresh berkala via Gemini + Google Search grounding.
+  const loadCoffeeBrandComparison = async () => {
+    setIsCoffeeBrandsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id;
-      if (!uid) { setIsTrendLoading(false); return; }
+      const { data: brandData, error: brandError } = await supabase
+        .from('coffee_brand_trends')
+        .select('brand_name, price_per_kg, quality_score, price_trend_pct, data_source, insight_text, hex_color')
+        .order('quality_score', { ascending: false });
 
-      const { data: rawMaterialsData, error: rawMaterialsError } = await supabase
-        .from('raw_materials')
-        .select('material_name')
-        .eq('user_id', uid)
-        .order('material_name', { ascending: true });
-
-      if (rawMaterialsError) throw rawMaterialsError;
-
-      const uniqueNames = Array.from(
-        new Set((rawMaterialsData || []).map((row) => row.material_name).filter(Boolean))
-      );
-      setStockMaterials(uniqueNames);
-
-      // 🆕 Tambahan kolom ai_insight_text — insight naratif tren harga dari Gemini
-      const { data: trendData, error: trendError } = await supabase
-        .from('raw_material_trends')
-        .select('material_name, hex_color, week_1, week_2, week_3, week_4, current_price_label, data_source, ai_insight_text');
-
-      if (trendError) throw trendError;
-      setTrendRowsCache(trendData || []);
-
-      if (uniqueNames.length > 0) {
-        setSelectedMaterial(uniqueNames[0]);
-      }
+      if (brandError) throw brandError;
+      setCoffeeBrands(brandData || []);
     } catch (err) {
-      console.error('⚠️ Gagal memuat sumber data tren bahan baku:', err.message);
+      console.error('⚠️ Gagal memuat perbandingan brand biji kopi:', err.message);
     } finally {
-      setIsTrendLoading(false);
+      setIsCoffeeBrandsLoading(false);
     }
   };
 
   useEffect(() => {
     syncDashboardMetricsFromDB();
-    loadMaterialTrendSources();
+    loadCoffeeBrandComparison();
   }, []);
 
-  const matchedTrend = findTrendMatch(selectedMaterial, trendRowsCache);
+  // ☕ DATA CHART: siapkan brand kopi untuk BarChart recharts, urut berdasar skor kualitas.
+  const rankedCoffeeBrands = rankCoffeeBrandsByValue(coffeeBrands);
+  const topCoffeeBrand = rankedCoffeeBrands.length > 0 ? rankedCoffeeBrands[0] : null;
+  const coffeeBrandChartData = rankedCoffeeBrands.map((b) => ({
+    label: b.brand_name,
+    price_per_kg: Number(b.price_per_kg || 0),
+    quality_score: Number(b.quality_score || 0),
+    hex_color: b.hex_color || '#006847'
+  }));
 
-  const parseRupiahLabelToNumber = (label) => {
-    if (!label || typeof label !== 'string') return 0;
-    const cleaned = label.replace(/Rp\s?/i, '').replace(',', '.').trim();
-    const multiplier = cleaned.toLowerCase().endsWith('k') ? 1000 : 1;
-    const numericPart = parseFloat(cleaned.replace(/k/i, ''));
-    return isNaN(numericPart) ? 0 : Math.round(numericPart * multiplier);
-  };
+  // 📊 DATA CHART: format ulang tableRows jadi bentuk yang dipahami recharts,
+  // dengan label hari singkat (MON, TUE, ...) sama seperti tampilan lama.
+  const DAY_SHORT_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  const salesExpensesChartData = financials.tableRows.map((row, idx) => ({
+    label: DAY_SHORT_LABELS[idx] || row.day,
+    Sales: Math.round(row.sales || 0),
+    Expenses: Math.round(row.expenses || 0)
+  }));
 
-  const activeCurve = matchedTrend
-    ? {
-        labelColor: matchedTrend.hex_color || '#006847',
-        numericWeeks: [
-          parseRupiahLabelToNumber(matchedTrend.week_1),
-          parseRupiahLabelToNumber(matchedTrend.week_2),
-          parseRupiahLabelToNumber(matchedTrend.week_3),
-          parseRupiahLabelToNumber(matchedTrend.week_4),
-        ],
-      }
-    : {
-        labelColor: '#9CA3AF',
-        numericWeeks: [0, 0, 0, 0],
-      };
 
-  const chartWidth = 700;
-  const chartHeight = 340;
-  const paddingX = 0;
-  const paddingTop = 14;
-  const paddingBottom = 14;
-  const Y_AXIS_MIN = 0;
-  const Y_AXIS_MAX = 10000000;
-
-  const valueToY = (value) => {
-    const clamped = Math.min(Math.max(value, Y_AXIS_MIN), Y_AXIS_MAX);
-    const ratio = (clamped - Y_AXIS_MIN) / (Y_AXIS_MAX - Y_AXIS_MIN);
-    return (chartHeight - paddingBottom) - ratio * (chartHeight - paddingTop - paddingBottom);
-  };
-
-  const allDataIsZero = financials.tableRows.every(r => (r.sales || 0) === 0 && (r.expenses || 0) === 0);
-  const EMPTY_STATE_OFFSET = 10;
-
-  const generateCoordinates = (keyName) => {
-    if (financials.tableRows.length === 0) return [];
-    const lastIndex = financials.tableRows.length - 1;
-    return financials.tableRows.map((row, index) => {
-      const x = lastIndex === 0 ? paddingX : paddingX + (index / lastIndex) * (chartWidth - paddingX * 2);
-      let y = valueToY(row[keyName] || 0);
-      if (allDataIsZero) {
-        y += keyName === 'sales' ? -EMPTY_STATE_OFFSET : EMPTY_STATE_OFFSET;
-      }
-      return { x, y };
-    });
-  };
-
-  const salesPoints = generateCoordinates('sales');
-  const expensesPoints = generateCoordinates('expenses');
-
-  const buildSvgPath = (points) => {
-    if (points.length === 0) return '';
-    return points.reduce((path, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${path} L ${p.x} ${p.y}`, '');
-  };
-
-  const dynamicSalesPath = buildSvgPath(salesPoints);
-  const dynamicExpensesPath = buildSvgPath(expensesPoints);
-
-  const yAxisTicks = [];
-  for (let v = 10000000; v >= 0; v -= 1000000) yAxisTicks.push(v);
-
-  const xCoords = [100, 240, 380, 520]; 
-  const validPrices = activeCurve.numericWeeks.filter(p => p > 0);
-  const rawMax = validPrices.length > 0 ? Math.max(...validPrices) : 100000;
-  const rawMin = validPrices.length > 0 ? Math.min(...validPrices) : 10000;
-  const priceRange = rawMax - rawMin;
-  const scaleMax = rawMax + (priceRange * 0.1 || 5000);
-  const scaleMin = Math.max(0, rawMin - (priceRange * 0.1 || 2000));
-  const scaleRange = scaleMax - scaleMin;
-
-  const calculatedPoints = activeCurve.numericWeeks.map(price => {
-    if (price <= 0 || scaleRange === 0) return 150;
-    const ratio = (price - scaleMin) / scaleRange;
-    return 150 - (ratio * 120);
-  });
-
-  const linePath = `M ${xCoords[0]} ${calculatedPoints[0]} L ${xCoords[1]} ${calculatedPoints[1]} L ${xCoords[2]} ${calculatedPoints[2]} L ${xCoords[3]} ${calculatedPoints[3]}`;
-  const yLabels = [scaleMax, scaleMax - (scaleRange * 0.5), scaleMin].map(num => `Rp ${Math.round(num).toLocaleString('id-ID')}`);
-
-  // ── Helper: render badge berdasarkan data_source ─────────────────────────
-  const renderDataSourceBadge = (dataSource) => {
-    if (dataSource === 'AI_ESTIMATE') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-          <Sparkles size={11} /> ESTIMASI AI
-        </span>
-      );
+  const getCoffeeInsightText = (brand) => {
+    if (!brand) return null;
+    if (brand.insight_text) return brand.insight_text;
+    if (brand.data_source === 'OFFICIAL') {
+      return `Data harga ${brand.brand_name} berasal dari sumber resmi, jadi akurasinya bisa diandalkan untuk perbandingan biaya bahan baku.`;
     }
-    if (dataSource === 'OFFICIAL') {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-          <ShieldCheck size={11} /> DATA RESMI
-        </span>
-      );
-    }
-    // FALLBACK_UNIT_PRICE atau nilai lainnya
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
-        <TrendingDown size={11} /> DATA STOK
-      </span>
-    );
+    return `Estimasi untuk ${brand.brand_name} sedang disempurnakan oleh sistem Brainy.`;
   };
-
-  // 🆕 Helper: tentukan teks insight yang ditampilkan di bawah grafik tren bahan baku.
-  // Prioritas: insight asli dari Gemini (AI_ESTIMATE) > teks generik untuk data resmi
-  // > teks generik untuk yang belum/tidak punya insight (fallback unit price atau insight kosong).
-  const getInsightText = (trend) => {
-    if (!trend) return null;
-    if (trend.data_source === 'AI_ESTIMATE' && trend.ai_insight_text) {
-      return trend.ai_insight_text;
-    }
-    if (trend.data_source === 'OFFICIAL') {
-      return `Data harga ${trend.material_name} ini berasal dari sumber resmi, jadi akurasinya bisa diandalkan untuk perhitungan HPP lu, Gar.`;
-    }
-    // FALLBACK_UNIT_PRICE yang belum sempat di-AI, atau AI_ESTIMATE tapi insight kosong
-    return `Estimasi AI untuk ${trend.material_name} belum tersedia. Sistem Brainy akan memperbaruinya secara berkala.`;
-  };
-
-  if (isLoading) {
-    return (
-      <div style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#006847', fontSize: '14px', fontWeight: 'bold' }}>
-        <Loader2 size={18} className="animate-spin" />
-        <span>Menhitung Akurasi Koordinat Grafik Real-time Proyek Lu...</span>
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box', width: '100%' }}>
@@ -448,7 +423,9 @@ export default function Dashboard() {
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 'bold', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
               Sales vs Expenses {isBreakdownOpen ? <ChevronUp size={16} color="#006847" /> : <ChevronDown size={16} color="#6B7280" />}
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#6B7280' }}>Visualisasi fluktuasi mingguan performa operasional Warung Kopi Jaya</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#6B7280' }}>
+              Visualisasi fluktuasi mingguan performa operasional {financials.outletName || 'Aroma Latte'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '20px', fontSize: '13px', fontWeight: 'bold' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '10px', height: '12px', backgroundColor: '#006847', borderRadius: '50%' }} /> Sales</span>
@@ -456,35 +433,31 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: `${chartHeight}px`, flexShrink: 0 }}>
-            {yAxisTicks.map((tick) => (
-              <span key={tick} style={{ fontSize: '10px', fontWeight: 'bold', color: '#9CA3AF', whiteSpace: 'nowrap', transform: 'translateY(-50%)', lineHeight: 1 }}>
-                Rp {tick.toLocaleString('id-ID')}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
-            <div style={{ position: 'relative', width: '100%', height: `${chartHeight}px` }}>
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: `${chartHeight}px`, display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
-                {yAxisTicks.map((tick) => (
-                  <line key={tick} x1={0} y1={valueToY(tick)} x2={chartWidth} y2={valueToY(tick)} stroke={tick === 0 ? '#E5E7EB' : '#F3F4F6'} strokeWidth={tick === 0 ? '1.5' : '1'} strokeDasharray={tick === 0 ? '0' : '3'} />
-                ))}
-                <path d={dynamicExpensesPath} fill="none" stroke="#4F46E5" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={dynamicSalesPath} fill="none" stroke="#006847" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {expensesPoints.map((p, i) => (
-                <div key={`e-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ffffff', border: '2.5px solid #4F46E5', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
-              ))}
-              {salesPoints.map((p, i) => (
-                <div key={`s-${i}`} style={{ position: 'absolute', left: `${(p.x / chartWidth) * 100}%`, top: `${(p.y / chartHeight) * 100}%`, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ffffff', border: '3px solid #006847', transform: 'translate(-50%, -50%)', boxSizing: 'border-box' }} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#9CA3AF', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
-              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
-            </div>
-          </div>
+        <div style={{ width: '100%', height: '340px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={salesExpensesChartData} margin={{ top: 16, right: 16, left: 8, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="#F3F4F6" />
+              <XAxis
+                dataKey="label" axisLine={{ stroke: '#E5E7EB' }} tickLine={false}
+                tick={{ fontSize: 11, fill: '#9CA3AF', fontWeight: 600 }}
+              />
+              <YAxis
+                tickFormatter={formatRupiahShort} axisLine={false} tickLine={false}
+                tick={{ fontSize: 10, fill: '#9CA3AF' }} width={56}
+              />
+              <Tooltip content={<SalesExpensesTooltip />} cursor={{ stroke: '#E5E7EB', strokeWidth: 1 }} />
+              <Line
+                type="monotone" dataKey="Sales" name="Sales" stroke="#006847" strokeWidth={3.5}
+                dot={{ r: 4, strokeWidth: 3, stroke: '#006847', fill: '#ffffff' }}
+                activeDot={{ r: 6 }} animationDuration={900} animationEasing="ease-out"
+              />
+              <Line
+                type="monotone" dataKey="Expenses" name="Expenses" stroke="#4F46E5" strokeWidth={3.5}
+                dot={{ r: 4, strokeWidth: 2.5, stroke: '#4F46E5', fill: '#ffffff' }}
+                activeDot={{ r: 6 }} animationDuration={900} animationEasing="ease-out" animationBegin={150}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
         {isBreakdownOpen && (
@@ -562,65 +535,63 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* TREN BAHAN BAKU BLOCK */}
+        {/* PERBANDINGAN BRAND BIJI KOPI (bar chart, data GLOBAL lintas outlet) */}
         <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>TREN HARGA BAHAN BAKU</span>
-            {isTrendLoading ? (
-              <Loader2 size={14} className="animate-spin" color="#9CA3AF" />
-            ) : stockMaterials.length > 0 ? (
-              <select
-                value={selectedMaterial}
-                onChange={(e) => setSelectedMaterial(e.target.value)}
-                style={{ padding: '6px 12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#FAFAFA', maxWidth: '180px' }}
-              >
-                {stockMaterials.map((name) => (
-                  <option key={name} value={name}>{name.toUpperCase()}</option>
-                ))}
-              </select>
-            ) : null}
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827', display: 'block' }}>PERBANDINGAN BRAND BIJI KOPI</span>
+              <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Harga per kg & skor kualitas, dianalisis Brainy AI</span>
+            </div>
+            {isCoffeeBrandsLoading && <Loader2 size={14} className="animate-spin" color="#9CA3AF" />}
           </div>
 
-          {stockMaterials.length === 0 && !isTrendLoading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
-              Belum ada bahan baku di stok. Tambahkan bahan baku dulu di menu Stock untuk melihat tren harganya di sini.
+          {isCoffeeBrandsLoading ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px' }}>
+              Memuat data perbandingan brand kopi...
             </div>
-          ) : !matchedTrend && !isTrendLoading ? (
+          ) : coffeeBrandChartData.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12.5px', fontStyle: 'italic' }}>
-              Belum ada data tren harga untuk "{selectedMaterial}". Sistem AI Brainy akan otomatis mencari estimasi harganya secara berkala.
+              Belum ada data perbandingan brand biji kopi. Pipeline Brainy AI akan mengisinya secara berkala.
             </div>
           ) : (
             <>
-              {/* 🏷️ Badge sumber data — 3 kondisi: OFFICIAL / AI_ESTIMATE / FALLBACK_UNIT_PRICE */}
-              {matchedTrend && (
+              {topCoffeeBrand && (
                 <div style={{ marginBottom: '12px' }}>
-                  {renderDataSourceBadge(matchedTrend.data_source)}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#E6F4EA', color: '#006847', fontSize: '10px', fontWeight: 'bold', padding: '4px 9px', borderRadius: '6px' }}>
+                    <Sparkles size={11} /> REKOMENDASI BRAINY: {topCoffeeBrand.brand_name.toUpperCase()}
+                  </span>
                 </div>
               )}
 
-              <div style={{ width: '100%', position: 'relative', marginBottom: '10px', aspectRatio: '650 / 180' }}>
-                <svg viewBox="0 0 650 180" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                  <line x1="75" y1="10" x2="75" y2="160" stroke="#9CA3AF" strokeWidth="1.5" />
-                  <g>
-                    <line x1="75" y1="30" x2="550" y2="30" stroke="#F3F4F6" strokeWidth="1" />
-                    <text x="65" y="34" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[0]}</text>
-                    <line x1="75" y1="150" x2="550" y2="150" stroke="#F3F4F6" strokeWidth="1" />
-                    <text x="65" y="154" fill="#6B7280" fontSize="10" fontWeight="bold" textAnchor="end">{yLabels[2]}</text>
-                  </g>
-                  <path d={linePath} fill="none" stroke={activeCurve.labelColor} strokeWidth="3" />
-                  {xCoords.map((xVal, index) => (
-                    <circle key={index} cx={xVal} cy={calculatedPoints[index]} r="4" fill="#ffffff" stroke={activeCurve.labelColor} strokeWidth="2.5" />
-                  ))}
-                </svg>
-              </div>
-              <div style={{ display: 'flex', fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', paddingLeft: '75px', paddingRight: '100px', justifyContent: 'space-between' }}>
-                {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map(w => <span key={w}>{w}</span>)}
+              <div style={{ width: '100%', height: '220px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={coffeeBrandChartData} margin={{ top: 16, right: 16, left: 8, bottom: 0 }} barCategoryGap="28%">
+                    <CartesianGrid vertical={false} stroke="#F3F4F6" />
+                    <XAxis
+                      dataKey="label" axisLine={{ stroke: '#E5E7EB' }} tickLine={false}
+                      tick={{ fontSize: 10, fill: '#9CA3AF', fontWeight: 600 }}
+                    />
+                    <YAxis
+                      tickFormatter={formatRupiahShort} axisLine={false} tickLine={false}
+                      tick={{ fontSize: 10, fill: '#9CA3AF' }} width={56}
+                    />
+                    <Tooltip content={<CoffeeBrandTooltip />} cursor={{ fill: 'rgba(0,104,71,0.05)' }} />
+                    <Bar dataKey="price_per_kg" radius={[6, 6, 0, 0]} maxBarSize={44} animationDuration={900} animationEasing="ease-out">
+                      {coffeeBrandChartData.map((entry, idx) => (
+                        <Cell
+                          key={idx}
+                          fill={topCoffeeBrand && entry.label === topCoffeeBrand.brand_name ? '#006847' : (entry.hex_color || '#A7F3D0')}
+                        />
+                      ))}
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
 
-              {/* 🆕 💡 Brainy Insights — tren harga bahan baku (konsisten dengan box Laba Rugi) */}
+              {/* 🆕 💡 Brainy Insights — perbandingan brand biji kopi (konsisten dengan box Laba Rugi) */}
               <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '16px' }}>
                 <span style={{ fontSize: '15px' }}>💡</span>
-                <p style={{ margin: 0, lineHeight: '1.45' }}>{getInsightText(matchedTrend)}</p>
+                <p style={{ margin: 0, lineHeight: '1.45' }}>{getCoffeeInsightText(topCoffeeBrand)}</p>
               </div>
             </>
           )}
