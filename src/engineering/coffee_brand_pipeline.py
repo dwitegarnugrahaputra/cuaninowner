@@ -36,7 +36,7 @@ SUPABASE_KEY    = os.environ.get("SUPABASE_KEY")
 GEMINI_MODEL    = "gemini-2.5-flash-lite"
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
-RATE_LIMIT_DELAY   = 10   # detik, jeda antar request Gemini (hindari rate limit RPM)
+RATE_LIMIT_DELAY   = 15   # detik, jeda antar request Gemini (hindari rate limit RPM & server overload)
 MAX_RETRIES         = 3
 RETRY_BACKOFF_BASE  = 30  # detik (30s, 60s, 90s)
 
@@ -144,13 +144,14 @@ PENTING: Balas HANYA dengan JSON berikut, tanpa teks lain, tanpa markdown:
     for attempt in range(MAX_RETRIES):
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=20)
-            if response.status_code == 429:
+            if response.status_code in (429, 503):
+                label = "Rate limit (429)" if response.status_code == 429 else "Server overload (503)"
                 wait = (attempt + 1) * RETRY_BACKOFF_BASE
                 if attempt < MAX_RETRIES - 1:
-                    print(f"         ⏳ Rate limit (429), tunggu {wait}s sebelum retry ({attempt + 1}/{MAX_RETRIES})...")
+                    print(f"         ⏳ {label}, tunggu {wait}s sebelum retry ({attempt + 1}/{MAX_RETRIES})...")
                     time.sleep(wait)
                     continue
-                return {"success": False, "source_note": f"Gemini HTTP error: 429 setelah {MAX_RETRIES} retry", "raw_response": response.text[:300] if response.text else ""}
+                return {"success": False, "source_note": f"Gemini HTTP error: {response.status_code} setelah {MAX_RETRIES} retry", "raw_response": response.text[:300] if response.text else ""}
             response.raise_for_status()
             break
         except requests.exceptions.Timeout:

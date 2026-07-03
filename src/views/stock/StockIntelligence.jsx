@@ -13,6 +13,7 @@ export default function StockIntelligence() {
   const [supplyLogs, setSupplyLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAllLogs, setShowAllLogs] = useState(false);
+  const [isInsightDismissed, setIsInsightDismissed] = useState(false);
   const [stockSummary, setStockSummary] = useState({
     totalValue: 0,
     criticalCount: 0,
@@ -338,7 +339,7 @@ export default function StockIntelligence() {
       </div>
 
       {/* BRAINY FLOATING AUTOMATED RESTOCK NOTIFICATION BOX */}
-      {materials.length > 0 && stockSummary.criticalCount > 0 && (
+      {materials.length > 0 && stockSummary.criticalCount > 0 && !isInsightDismissed && (
         <div style={{ position: 'fixed', bottom: '24px', left: '58%', transform: 'translateX(-50%)', width: 'calc(100% - 350px)', maxWidth: '640px', backgroundColor: '#111827', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', boxSizing: 'border-box', zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: '#059669', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
@@ -352,7 +353,7 @@ export default function StockIntelligence() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-            <button onClick={() => alert('Draf diabaikan')} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
+            <button onClick={() => setIsInsightDismissed(true)} style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#E5E7EB', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Ignore</button>
             <button 
               onClick={() => {
                 // ✅ [FIX] Filter menggunakan minimum_threshold dari database — konsisten dengan kalkulasi di atas

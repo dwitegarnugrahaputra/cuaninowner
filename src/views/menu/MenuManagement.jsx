@@ -261,13 +261,19 @@ export default function MenuManagement() {
       alert('Mohon isi resep produk.'); return;
     }
     try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        alert('Sesi login tidak ditemukan, silakan login ulang.');
+        return;
+      }
       const { error } = await supabase.from('menus').insert([{
         menu_name: newMenu.menu_name,
         category: selectedCategory,
         price: Number(newMenu.price),
         image_url: newMenu.image_url,
         is_available: true,
-        recipe: newMenuRecipe
+        recipe: newMenuRecipe,
+        user_id: user.id
       }]);
       if (error) throw error;
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
