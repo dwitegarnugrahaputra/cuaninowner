@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet, Trash, Save, Loader2,
-  Link, Upload, Camera, Image
+  Link, Upload, Camera, Image, AlertTriangle
 } from 'lucide-react';
 
 import { supabase } from '../../config/supabaseClient';
@@ -203,7 +203,9 @@ export default function MenuManagement() {
     try {
       const { data, error } = await supabase
         .from('raw_materials')
-        .select('id, material_name, unit, unit_price')
+        // ✅ [FR-K06 EXTENSION] current_stock ikut ditarik supaya bisa dipakai
+        // menghitung status stok riil tiap menu (bandingkan resep vs stok).
+        .select('id, material_name, unit, unit_price, current_stock')
         .order('material_name', { ascending: true });
       if (error) throw error;
       if (data) setStockIngredients(data);
@@ -250,6 +252,23 @@ export default function MenuManagement() {
 
   const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
   const currentTotalCogs = recipeRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+
+  // 🧮 [FR-K06 EXTENSION] Hitung status stok RIIL suatu menu berdasarkan
+  // resep (kolom JSONB `recipe`) vs stok bahan baku terkini di `stockIngredients`.
+  // Ini terpisah dari toggle manual `is_available` — jadi meskipun owner lupa
+  // matiin toggle-nya, dashboard tetap kasih tahu kalau bahannya sudah habis.
+  const isMenuStockAvailable = (menuItem) => {
+    const recipe = menuItem.recipe;
+    if (!recipe || !Array.isArray(recipe) || recipe.length === 0) {
+      // Belum ada resep terdaftar -> tidak bisa divalidasi, anggap aman.
+      return true;
+    }
+    return recipe.every((ingredient) => {
+      const material = stockIngredients.find((m) => m.id === ingredient.ingredientId);
+      if (!material) return true; // bahan sudah dihapus dari master data, skip
+      return Number(material.current_stock) >= Number(ingredient.qty || 0);
+    });
+  };
 
   // 📤 CREATE PIPELINE
   const handleCreateMenu = async (e) => {
@@ -490,9 +509,18 @@ export default function MenuManagement() {
                   <td style={{ padding: '16px 24px' }}><span style={{ backgroundColor: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>{item.category}</span></td>
                   <td style={{ padding: '16px 24px', fontWeight: 'bold', color: '#006847' }}>Rp {Number(item.price).toLocaleString('id-ID')}</td>
                   <td style={{ padding: '16px 24px' }}>
-                    <span onClick={() => handleToggleAvailability(item.id, item.is_available)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>
-                      <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />{item.is_available ? 'Available' : 'Out of Stock'}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                      <span onClick={() => handleToggleAvailability(item.id, item.is_available)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: item.is_available ? '#059669' : '#DC2626', cursor: 'pointer', backgroundColor: item.is_available ? '#E6F4EA' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px', fontSize: '11px' }}>
+                        <div style={{ width: '6px', height: '6px', backgroundColor: item.is_available ? '#10B981' : '#DC2626', borderRadius: '50%' }} />{item.is_available ? 'Available' : 'Out of Stock'}
+                      </span>
+                      {/* ✅ [FR-K06 EXTENSION] Badge kedua: status stok bahan baku RIIL
+                          (dihitung dari resep vs raw_materials), independen dari toggle di atas. */}
+                      {!isMenuStockAvailable(item) && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', color: '#D97706', backgroundColor: '#FFF7ED', padding: '4px 10px', borderRadius: '12px', fontSize: '10px' }}>
+                          <AlertTriangle size={11} />Bahan Baku Habis
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
