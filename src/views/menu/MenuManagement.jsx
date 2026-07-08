@@ -198,14 +198,20 @@ export default function MenuManagement() {
   const [editingMenu, setEditingMenu] = useState(null);
   const [recipeRows, setRecipeRows] = useState([]);
 
+  // 🔐 [BUGFIX MULTI-TENANT] ID owner yang sedang login. Semua query read/write
+  // di bawah WAJIB di-scope pakai ini, supaya data antar akun tidak bocor.
+  const [ownerId, setOwnerId] = useState(null);
+
   // 📥 READ PIPELINE 1: Tarik Data Bahan Baku Aktif dari Gudang
-  const fetchStockIngredients = async () => {
+  const fetchStockIngredients = async (uid) => {
     try {
       const { data, error } = await supabase
         .from('raw_materials')
         // ✅ [FR-K06 EXTENSION] current_stock ikut ditarik supaya bisa dipakai
         // menghitung status stok riil tiap menu (bandingkan resep vs stok).
         .select('id, material_name, unit, unit_price, current_stock')
+        // 🔐 [BUGFIX MULTI-TENANT] Filter cuma bahan baku milik akun ini.
+        .eq('user_id', uid)
         .order('material_name', { ascending: true });
       if (error) throw error;
       if (data) setStockIngredients(data);
@@ -215,12 +221,16 @@ export default function MenuManagement() {
   };
 
   // 📥 READ PIPELINE 2: Ambil Katalog Menu Terkini dari Supabase Cloud
-  const fetchMenuCatalog = async () => {
+  const fetchMenuCatalog = async (uid) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('menus')
         .select('*')
+        // 🔐 [BUGFIX MULTI-TENANT] Sebelumnya tidak ada filter ini sama sekali —
+        // akibatnya SEMUA menu dari SEMUA akun ikut tertarik. Ini root cause
+        // kenapa menu akun A muncul juga di akun B.
+        .eq('user_id', uid)
         .order('category', { ascending: true })
         .order('menu_name', { ascending: true });
       if (error) throw error;
@@ -238,8 +248,20 @@ export default function MenuManagement() {
   };
 
   useEffect(() => {
-    fetchMenuCatalog();
-    fetchStockIngredients();
+    // 🔐 [BUGFIX MULTI-TENANT] Ambil user yang login DULU, baru fetch data —
+    // supaya semua query selanjutnya bisa di-scope ke user_id yang benar.
+    const initForOwner = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.error('⚠️ Sesi login tidak ditemukan saat memuat Menu Management.');
+        setIsLoading(false);
+        return;
+      }
+      setOwnerId(user.id);
+      fetchMenuCatalog(user.id);
+      fetchStockIngredients(user.id);
+    };
+    initForOwner();
   }, []);
 
   useEffect(() => {
@@ -280,8 +302,7 @@ export default function MenuManagement() {
       alert('Mohon isi resep produk.'); return;
     }
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      if (!ownerId) {
         alert('Sesi login tidak ditemukan, silakan login ulang.');
         return;
       }
@@ -292,13 +313,13 @@ export default function MenuManagement() {
         image_url: newMenu.image_url,
         is_available: true,
         recipe: newMenuRecipe,
-        user_id: user.id
+        user_id: ownerId
       }]);
       if (error) throw error;
       setNewMenu({ menu_name: '', price: '', image_url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=200' });
       setNewMenuRecipe([]);
       setIsModalOpen(false);
-      await fetchMenuCatalog();
+      await fetchMenuCatalog(ownerId);
       alert('Menu berhasil disimpan!');
     } catch (err) {
       alert('Gagal menyisipkan menu baru: ' + err.message);
@@ -323,11 +344,13 @@ export default function MenuManagement() {
           recipe: recipeRows
         })
         .eq('id', editingMenu.id)
+        // 🔐 [BUGFIX MULTI-TENANT] Pastikan cuma bisa update menu milik sendiri.
+        .eq('user_id', ownerId)
         .select();
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error('Tidak ada baris yang diperbarui.');
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang diperbarui (atau menu ini bukan milik akun Anda).');
       setEditingMenu(null);
-      await fetchMenuCatalog();
+      await fetchMenuCatalog(ownerId);
       alert('Data menu berhasil diperbarui!');
     } catch (err) {
       alert('Gagal memperbarui rekaman data menu: ' + err.message);
@@ -337,10 +360,16 @@ export default function MenuManagement() {
   // 🔄 TOGGLE AVAILABILITY
   const handleToggleAvailability = async (id, currentStatus) => {
     try {
-      const { data, error } = await supabase.from('menus').update({ is_available: !currentStatus }).eq('id', id).select();
+      const { data, error } = await supabase
+        .from('menus')
+        .update({ is_available: !currentStatus })
+        .eq('id', id)
+        // 🔐 [BUGFIX MULTI-TENANT] Guard kepemilikan, sama seperti update biasa.
+        .eq('user_id', ownerId)
+        .select();
       if (error) throw error;
       if (!data || data.length === 0) { alert('Gagal mengubah status: tidak ada baris yang cocok di database.'); return; }
-      await fetchMenuCatalog();
+      await fetchMenuCatalog(ownerId);
     } catch (err) {
       console.error('⚠️ Gagal mengubah status availabilitas:', err.message);
     }
@@ -351,10 +380,16 @@ export default function MenuManagement() {
     if (!id) { alert('ID menu tidak valid, gagal menghapus, Gar!'); return; }
     if (!window.confirm('Apakah lu beneran pengen ngehapus menu ini secara permanen dari database cloud Supabase, Gar?')) return;
     try {
-      const { data, error } = await supabase.from('menus').delete().eq('id', id).select();
+      const { data, error } = await supabase
+        .from('menus')
+        .delete()
+        .eq('id', id)
+        // 🔐 [BUGFIX MULTI-TENANT] Guard kepemilikan — tidak bisa hapus menu akun lain.
+        .eq('user_id', ownerId)
+        .select();
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error('Tidak ada baris yang terhapus.');
-      await fetchMenuCatalog();
+      if (!data || data.length === 0) throw new Error('Tidak ada baris yang terhapus (atau menu ini bukan milik akun Anda).');
+      await fetchMenuCatalog(ownerId);
       alert('Produk resmi terhapus selamanya dari database cloud!');
     } catch (err) {
       alert('Supabase menolak aksi delete! Eror: ' + err.message);

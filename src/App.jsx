@@ -9,6 +9,7 @@ import { LanguageProvider } from './context/LanguageContext';
 // 📂 IMPORT VIEWS ASLI LU
 import Dashboard from './views/dashboard/MainDashboard'; 
 import Sales from './views/sales/SalesMonitoring';
+import Expenses from './views/expenses/ExpensesManagement';
 import Stock from './views/stock/StockIntelligence';
 import MenuManagement from './views/menu/MenuManagement';
 import StaffManagement from './views/staff/StaffManagement';
@@ -98,6 +99,7 @@ function AppContent() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', backgroundColor: '#FAFAFA' }}>
           {currentView === 'dashboard' && <Dashboard />}
           {currentView === 'sales' && <Sales />}
+          {currentView === 'expenses' && <Expenses />}
           {currentView === 'stock' && <Stock />}
           {currentView === 'menu' && <MenuManagement />}
           {currentView === 'staff' && <StaffManagement />}

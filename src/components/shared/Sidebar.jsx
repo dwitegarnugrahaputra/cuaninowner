@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { supabase } from '../../config/supabaseClient'; 
 import { 
   LayoutDashboard, ShoppingBag, Archive, Menu as MenuIcon, Users, 
-  Settings, LogOut, ChevronDown, ChevronUp, Store, Bot, ShieldCheck, Languages 
+  Settings, LogOut, ChevronDown, ChevronUp, Store, Bot, ShieldCheck, Languages, Receipt
 } from 'lucide-react';
 
 function CuaninLogoSidebar() {
@@ -72,6 +72,7 @@ export default function Sidebar({ onNavigateView, activeView }) {
   const mainMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { id: 'sales', label: 'Sales', icon: <ShoppingBag size={18} /> },
+    { id: 'expenses', label: 'Pengeluaran', icon: <Receipt size={18} /> },
     { id: 'stock', label: 'Stock', icon: <Archive size={18} /> },
     { id: 'menu', label: 'Menu Management', icon: <MenuIcon size={18} /> },
     { id: 'staff', label: 'Staff Management', icon: <Users size={18} /> },

@@ -13,6 +13,30 @@ import {
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
+// 🔁 [BUGFIX] Gemini kadang balikin 503 "model is currently experiencing high
+// demand / UNAVAILABLE" — ini transient error dari sisi Google, bukan bug kita,
+// tapi tanpa retry, user langsung lihat "kegagalan komunikasi" walau cuma
+// gangguan sesaat. Helper ini retry otomatis dengan backoff sebelum menyerah.
+async function generateContentWithRetry(params, maxRetries = 2) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await ai.models.generateContent(params);
+    } catch (err) {
+      lastError = err;
+      // Cuma retry untuk error transient (503 UNAVAILABLE / overload / rate limit 429).
+      // Untuk error lain (401 API key salah, dst), langsung lempar tanpa buang waktu retry.
+      const errStr = String(err?.message || err);
+      const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED');
+      if (!isTransient || attempt === maxRetries) throw err;
+      const delayMs = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s...
+      console.warn(`⚠️ Gemini API sedang sibuk (percobaan ${attempt + 1}/${maxRetries + 1}), retry dalam ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 // ✅ HELPER: cek status transaksi/item "sukses" tanpa peduli huruf besar/kecil
 // (DB pernah punya campuran 'success' / 'SUCCESS' / 'Completed' — biar tidak rapuh lagi)
 function isSuccessStatus(status) {
@@ -378,6 +402,28 @@ export default function BrainyChat() {
           setUserName(currentOwnerName);
         }
 
+        // 🐛 [BUGFIX KRITIS] `resolvedOutletName` sebelumnya dideklarasikan (baris ~407)
+        // SETELAH dipakai di initialHistory (baris ~385) — karena pakai `let`, ini
+        // melempar `ReferenceError: Cannot access 'resolvedOutletName' before
+        // initialization` (temporal dead zone). Akibatnya seluruh fungsi
+        // compileBusinessContext() crash paling awal, SEBELUM sempat fetch data
+        // apapun dari Supabase — jadi dbSnapshot selamanya kosong, chat "Ask Brainy"
+        // tidak pernah punya konteks data asli, dan tab Insights/Forecast macet
+        // permanen di placeholder karena guard `if (!dbSnapshot) return;`.
+        // FIX: resolve outlet name DULU, baru dipakai untuk susun pesan sambutan.
+        let resolvedOutletName = 'Outlet Anda';
+        if (session && session.user) {
+          const { data: outletData } = await supabase
+            .from('outlet_config')
+            .select('outlet_name')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          if (outletData?.outlet_name) {
+            resolvedOutletName = outletData.outlet_name;
+          }
+        }
+        setOutletName(resolvedOutletName);
+
         const savedSessions = localStorage.getItem('cuanin_brainy_sessions');
         if (!savedSessions || JSON.parse(savedSessions).length === 0) {
           const initialId = 'sess_' + Date.now();
@@ -402,20 +448,6 @@ export default function BrainyChat() {
         const { data: sales } = ownerUid
           ? await supabase.from('sales_transactions').select('total_amount, status, payment_method').eq('user_id', ownerUid).limit(15)
           : { data: [] };
-
-        // ⚡ BARU: Fetch nama outlet asli dari outlet_config (terikat user yang sedang login)
-        let resolvedOutletName = 'Outlet Anda';
-        if (session && session.user) {
-          const { data: outletData } = await supabase
-            .from('outlet_config')
-            .select('outlet_name')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-          if (outletData?.outlet_name) {
-            resolvedOutletName = outletData.outlet_name;
-          }
-        }
-        setOutletName(resolvedOutletName);
 
         if (menus && menus.length > 0) {
           setMenuList(menus);
@@ -589,7 +621,7 @@ ${inventoryForecastStr}
           `;
         }
 
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry({
           model: 'gemini-2.5-flash',
           contents: [{ role: 'user', parts: [{ text: customPrompt }] }]
         });
@@ -601,6 +633,16 @@ ${inventoryForecastStr}
         }
       } catch (err) {
         console.error('⚠️ Gagal menghasilkan analisis analitik otomatis:', err);
+        // 🐛 [BUGFIX UX] Sebelumnya kalau gagal, teks placeholder ("Sedang
+        // menganalisis...") dibiarkan nyangkut selamanya tanpa pesan error —
+        // user tidak tahu apakah masih loading atau memang gagal. Sekarang
+        // tampilkan pesan eksplisit supaya jelas ini gagal, bukan lambat.
+        const errorText = '⚠️ Gagal memuat analisis dari Brainy AI — kemungkinan server Gemini sedang sibuk atau kuota API habis. Coba lagi beberapa saat.';
+        if (activeSubTab === 'insights') {
+          setAiInsightsText(errorText);
+        } else {
+          setAiForecastText(errorText);
+        }
       } finally {
         setIsTabAnalyzing(false);
       }
@@ -637,7 +679,7 @@ ${inventoryForecastStr}
         Instruksi khusus untuk pertanyaan seputar kondisi finansial/profitabilitas (misal "apakah profit", "bagaimana kondisi keuangan"): rujuk langsung ke bagian "AUTOMATED FINANCIAL HEALTH INSIGHTS" di atas, yang sudah berisi HPP riil, OpEx riil, laba bersih, dan margin. Jangan menyatakan data HPP/OpEx tidak tersedia jika bagian tersebut sudah berisi angka-angka tersebut — jawab langsung apakah outlet profit atau rugi berdasarkan field "Status" di sana.
       `;
 
-      const response = await ai.models.generateContent({
+      const response = await generateContentWithRetry({
         model: 'gemini-2.5-flash',
         contents: [
           { role: 'user', parts: [{ text: systemInstruction + `\n\nPertanyaan Pengguna: ${userMessage}` }] }
@@ -652,7 +694,15 @@ ${inventoryForecastStr}
 
     } catch (err) {
       console.error('Gemini API Error:', err);
-      const errMessages = [...updatedMessages, { role: 'brainy', text: 'Terjadi kegagalan komunikasi dengan API Intelligence Server.' }]; // ✅ kini valid
+      // 🐛 [BUGFIX UX] Bedakan pesan error overload sementara (503/429, sudah
+      // di-retry otomatis tapi tetap gagal) vs error lain, supaya user paham
+      // ini bukan bug permanen kalau memang server Gemini sedang sibuk.
+      const errStr = String(err?.message || err);
+      const isTransient = errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED');
+      const errorText = isTransient
+        ? 'Mohon maaf, server AI (Gemini) sedang mengalami lonjakan permintaan tinggi dan tidak dapat merespons setelah beberapa kali percobaan. Silakan coba lagi dalam beberapa saat.'
+        : 'Terjadi kegagalan komunikasi dengan API Intelligence Server.';
+      const errMessages = [...updatedMessages, { role: 'brainy', text: errorText }]; // ✅ kini valid
       setMessages(errMessages);
       updateSessionHistoryInStorage(activeSessionId, errMessages);
     } finally {
