@@ -198,6 +198,11 @@ export default function MenuManagement() {
   const [editingMenu, setEditingMenu] = useState(null);
   const [recipeRows, setRecipeRows] = useState([]);
 
+  // 🥄 [USAGE UNIT] Cache ingredient_usage_units per raw_material_id.
+  // key = raw_material_id, value = array usage unit ({id, unit_name, grams_per_unit}).
+  // undefined = belum pernah di-fetch, [] = sudah di-fetch tapi memang kosong (fallback ke base unit).
+  const [usageUnitsByMaterial, setUsageUnitsByMaterial] = useState({});
+
   // 🔐 [BUGFIX MULTI-TENANT] ID owner yang sedang login. Semua query read/write
   // di bawah WAJIB di-scope pakai ini, supaya data antar akun tidak bocor.
   const [ownerId, setOwnerId] = useState(null);
@@ -218,6 +223,48 @@ export default function MenuManagement() {
     } catch (err) {
       console.error('⚠️ Gagal memuat data inventori gudang:', err.message);
     }
+  };
+
+  // 📥 READ PIPELINE 1.5: [USAGE UNIT] Tarik ingredient_usage_units milik satu bahan.
+  // Di-cache di state supaya tiap select bahan di baris resep tidak fetch berulang.
+  const fetchUsageUnitsForMaterial = async (materialId) => {
+    if (!materialId) return [];
+    // Sudah pernah di-fetch (termasuk hasil kosong) -> pakai cache, jangan fetch ulang.
+    if (usageUnitsByMaterial[materialId] !== undefined) return usageUnitsByMaterial[materialId];
+    try {
+      const { data, error } = await supabase
+        .from('ingredient_usage_units')
+        .select('id, unit_name, grams_per_unit')
+        .eq('raw_material_id', materialId)
+        .order('unit_name', { ascending: true });
+      if (error) throw error;
+      const list = data || [];
+      setUsageUnitsByMaterial((prev) => ({ ...prev, [materialId]: list }));
+      return list;
+    } catch (err) {
+      console.error('⚠️ Gagal memuat usage unit bahan:', err.message);
+      setUsageUnitsByMaterial((prev) => ({ ...prev, [materialId]: [] }));
+      return [];
+    }
+  };
+
+  // 🧮 [USAGE UNIT] Harga per base_unit (gram/ml/pcs) bahan, sudah dinormalisasi
+  // dari kasus lama kg/litre (mengikuti logic normalisasi yang sudah ada sebelumnya).
+  const computeUnitBaseCost = (material) => {
+    if (!material) return 0;
+    let cost = Number(material.unit_price || 0);
+    const u = (material.unit || '').toLowerCase();
+    if (u === 'litre' || u === 'liter' || u === 'kg') cost = cost / 1000;
+    return cost;
+  };
+
+  // 🧮 [USAGE UNIT] Label base unit fallback (kg->gram, litre->ml, selain itu apa adanya).
+  const computeFallbackUnit = (material) => {
+    if (!material) return '';
+    const u = (material.unit || '').toLowerCase();
+    if (u === 'kg') return 'gram';
+    if (u === 'litre' || u === 'liter') return 'ml';
+    return material.unit;
   };
 
   // 📥 READ PIPELINE 2: Ambil Katalog Menu Terkini dari Supabase Cloud
@@ -266,10 +313,21 @@ export default function MenuManagement() {
 
   useEffect(() => {
     if (editingMenu) {
-      setRecipeRows(editingMenu.recipe && Array.isArray(editingMenu.recipe) ? editingMenu.recipe : []);
+      const rawRows = editingMenu.recipe && Array.isArray(editingMenu.recipe) ? editingMenu.recipe : [];
+      // 🥄 [USAGE UNIT] Normalisasi resep lama yang belum punya usageUnitId/gramsPerUnit
+      // supaya tetap kompatibel (backward compatible) -> dianggap base_unit langsung.
+      const normalizedRows = rawRows.map((row) => ({
+        ...row,
+        usageUnitId: row.usageUnitId ?? null,
+        gramsPerUnit: Number(row.gramsPerUnit || 1),
+      }));
+      setRecipeRows(normalizedRows);
+      // Prefetch usage unit tiap bahan yang sudah terpakai di resep ini.
+      normalizedRows.forEach((row) => { if (row.ingredientId) fetchUsageUnitsForMaterial(row.ingredientId); });
     } else {
       setRecipeRows([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingMenu]);
 
   const newMenuTotalCogs = newMenuRecipe.reduce((sum, row) => sum + Number(row.cost || 0), 0);
@@ -400,35 +458,63 @@ export default function MenuManagement() {
   const handleAddNewMenuRecipeRow = () => {
     if (stockIngredients.length === 0) { alert('Stok gudang kosong, Daftarkan bahan baku dulu di tab Stock.'); return; }
     const firstMat = stockIngredients[0];
-    let displayUnit = firstMat.unit;
-    let initialQty = 10;
-    let unitCost = Number(firstMat.unit_price || 0);
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-      initialQty = displayUnit === 'gram' ? 15 : 30;
-      unitCost = Number(firstMat.unit_price || 0) / 1000;
-    }
-    setNewMenuRecipe([...newMenuRecipe, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
+    const initialQty = 10;
+    // 🥄 [USAGE UNIT] Baris baru default ke base_unit langsung (usageUnitId null, gramsPerUnit 1).
+    // Owner bisa ganti takaran ke usage unit lewat dropdown setelah daftar usage unit ke-load.
+    setNewMenuRecipe([...newMenuRecipe, {
+      ingredientId: firstMat.id,
+      ingredientName: firstMat.material_name,
+      qty: initialQty,
+      unit: computeFallbackUnit(firstMat),
+      usageUnitId: null,
+      gramsPerUnit: 1,
+      cost: Math.round(initialQty * computeUnitBaseCost(firstMat)),
+    }]);
+    fetchUsageUnitsForMaterial(firstMat.id);
   };
 
   const handleUpdateNewMenuRecipeRow = (index, key, value) => {
     const updatedRows = [...newMenuRecipe];
+
+    if (key === 'usageUnitId') {
+      const materialId = updatedRows[index].ingredientId;
+      const material = stockIngredients.find(m => m.id === materialId);
+      if (value === '') {
+        // Owner memilih base_unit langsung.
+        updatedRows[index].usageUnitId = null;
+        updatedRows[index].unit = computeFallbackUnit(material);
+        updatedRows[index].gramsPerUnit = 1;
+      } else {
+        const list = usageUnitsByMaterial[materialId] || [];
+        const matchedUnit = list.find(u => u.id === value);
+        if (matchedUnit) {
+          updatedRows[index].usageUnitId = matchedUnit.id;
+          updatedRows[index].unit = matchedUnit.unit_name;
+          updatedRows[index].gramsPerUnit = Number(matchedUnit.grams_per_unit);
+        }
+      }
+      const currentQty = Number(updatedRows[index].qty || 0);
+      updatedRows[index].cost = Math.round(currentQty * (updatedRows[index].gramsPerUnit || 1) * computeUnitBaseCost(material));
+      setNewMenuRecipe(updatedRows);
+      return;
+    }
+
     updatedRows[index][key] = value;
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
-        let displayUnit = matchedMaterial.unit;
-        let unitCost = Number(matchedMaterial.unit_price || 0);
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        }
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
-        updatedRows[index].unit = displayUnit;
+        if (key === 'ingredientId') {
+          // 🥄 [USAGE UNIT] Ganti bahan -> reset takaran ke base_unit & fetch usage unit bahan baru.
+          updatedRows[index].usageUnitId = null;
+          updatedRows[index].unit = computeFallbackUnit(matchedMaterial);
+          updatedRows[index].gramsPerUnit = 1;
+          fetchUsageUnitsForMaterial(matchedMaterial.id);
+        }
         const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
-        updatedRows[index].cost = Math.round(currentQty * unitCost);
+        updatedRows[index].cost = Math.round(currentQty * (updatedRows[index].gramsPerUnit || 1) * computeUnitBaseCost(matchedMaterial));
       }
     }
     setNewMenuRecipe(updatedRows);
@@ -444,35 +530,62 @@ export default function MenuManagement() {
   const handleAddRecipeRow = () => {
     if (stockIngredients.length === 0) return;
     const firstMat = stockIngredients[0];
-    let displayUnit = firstMat.unit;
-    let initialQty = 10;
-    let unitCost = Number(firstMat.unit_price || 0);
-    if (firstMat.unit?.toLowerCase() === 'litre' || firstMat.unit?.toLowerCase() === 'liter' || firstMat.unit?.toLowerCase() === 'kg') {
-      displayUnit = firstMat.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-      initialQty = displayUnit === 'gram' ? 15 : 30;
-      unitCost = Number(firstMat.unit_price || 0) / 1000;
-    }
-    setRecipeRows([...recipeRows, { ingredientId: firstMat.id, ingredientName: firstMat.material_name, qty: initialQty, unit: displayUnit, cost: Math.round(initialQty * unitCost) }]);
+    const initialQty = 10;
+    // 🥄 [USAGE UNIT] Baris baru default ke base_unit langsung (usageUnitId null, gramsPerUnit 1).
+    setRecipeRows([...recipeRows, {
+      ingredientId: firstMat.id,
+      ingredientName: firstMat.material_name,
+      qty: initialQty,
+      unit: computeFallbackUnit(firstMat),
+      usageUnitId: null,
+      gramsPerUnit: 1,
+      cost: Math.round(initialQty * computeUnitBaseCost(firstMat)),
+    }]);
+    fetchUsageUnitsForMaterial(firstMat.id);
   };
 
   const handleUpdateRecipeRow = (index, key, value) => {
     const updatedRows = [...recipeRows];
+
+    if (key === 'usageUnitId') {
+      const materialId = updatedRows[index].ingredientId;
+      const material = stockIngredients.find(m => m.id === materialId);
+      if (value === '') {
+        // Owner memilih base_unit langsung.
+        updatedRows[index].usageUnitId = null;
+        updatedRows[index].unit = computeFallbackUnit(material);
+        updatedRows[index].gramsPerUnit = 1;
+      } else {
+        const list = usageUnitsByMaterial[materialId] || [];
+        const matchedUnit = list.find(u => u.id === value);
+        if (matchedUnit) {
+          updatedRows[index].usageUnitId = matchedUnit.id;
+          updatedRows[index].unit = matchedUnit.unit_name;
+          updatedRows[index].gramsPerUnit = Number(matchedUnit.grams_per_unit);
+        }
+      }
+      const currentQty = Number(updatedRows[index].qty || 0);
+      updatedRows[index].cost = Math.round(currentQty * (updatedRows[index].gramsPerUnit || 1) * computeUnitBaseCost(material));
+      setRecipeRows(updatedRows);
+      return;
+    }
+
     updatedRows[index][key] = value;
     if (key === 'ingredientId' || key === 'qty') {
       const targetId = key === 'ingredientId' ? value : updatedRows[index].ingredientId;
       const matchedMaterial = stockIngredients.find(m => m.id === targetId);
       if (matchedMaterial) {
-        let displayUnit = matchedMaterial.unit;
-        let unitCost = Number(matchedMaterial.unit_price || 0);
-        if (matchedMaterial.unit?.toLowerCase() === 'litre' || matchedMaterial.unit?.toLowerCase() === 'liter' || matchedMaterial.unit?.toLowerCase() === 'kg') {
-          displayUnit = matchedMaterial.unit.toLowerCase() === 'kg' ? 'gram' : 'ml';
-          unitCost = Number(matchedMaterial.unit_price || 0) / 1000;
-        }
         updatedRows[index].ingredientId = matchedMaterial.id;
         updatedRows[index].ingredientName = matchedMaterial.material_name;
-        updatedRows[index].unit = displayUnit;
+        if (key === 'ingredientId') {
+          // 🥄 [USAGE UNIT] Ganti bahan -> reset takaran ke base_unit & fetch usage unit bahan baru.
+          updatedRows[index].usageUnitId = null;
+          updatedRows[index].unit = computeFallbackUnit(matchedMaterial);
+          updatedRows[index].gramsPerUnit = 1;
+          fetchUsageUnitsForMaterial(matchedMaterial.id);
+        }
         const currentQty = key === 'qty' ? Number(value || 0) : Number(updatedRows[index].qty || 0);
-        updatedRows[index].cost = Math.round(currentQty * unitCost);
+        updatedRows[index].cost = Math.round(currentQty * (updatedRows[index].gramsPerUnit || 1) * computeUnitBaseCost(matchedMaterial));
       }
     }
     setRecipeRows(updatedRows);
@@ -634,8 +747,19 @@ export default function MenuManagement() {
                             {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
                           </select>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                            <input type="text" value={row.qty} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
-                            <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
+                            <input type="text" value={row.qty} onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '40px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                            {/* 🥄 [USAGE UNIT] Dropdown takaran: usage unit bahan ini (sdt, saset, siung, dst),
+                                fallback ke base unit (gram/ml/pcs) kalau bahan belum punya usage unit. */}
+                            <select
+                              value={row.usageUnitId || ''}
+                              onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'usageUnitId', e.target.value)}
+                              style={{ border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '11px', outline: 'none', backgroundColor: '#fff', color: '#4B5563', fontWeight: 'bold' }}
+                            >
+                              {(usageUnitsByMaterial[row.ingredientId] || []).map((u) => (
+                                <option key={u.id} value={u.id}>{u.unit_name}</option>
+                              ))}
+                              <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                            </select>
                           </div>
                           <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
                           <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveNewMenuRecipeRow(index)} />
@@ -729,8 +853,19 @@ export default function MenuManagement() {
                           {stockIngredients.map((m) => <option key={m.id} value={m.id}>{m.material_name}</option>)}
                         </select>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                          <input type="text" value={row.qty} onChange={(e) => handleUpdateRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '45px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
-                          <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'bold' }}>{row.unit}</span>
+                          <input type="text" value={row.qty} onChange={(e) => handleUpdateRecipeRow(index, 'qty', e.target.value.replace(/[^0-9]/g, ''))} style={{ width: '40px', border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '12px', outline: 'none', textAlign: 'center' }} />
+                          {/* 🥄 [USAGE UNIT] Dropdown takaran: usage unit bahan ini (sdt, saset, siung, dst),
+                              fallback ke base unit (gram/ml/pcs) kalau bahan belum punya usage unit. */}
+                          <select
+                            value={row.usageUnitId || ''}
+                            onChange={(e) => handleUpdateRecipeRow(index, 'usageUnitId', e.target.value)}
+                            style={{ border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '11px', outline: 'none', backgroundColor: '#fff', color: '#4B5563', fontWeight: 'bold' }}
+                          >
+                            {(usageUnitsByMaterial[row.ingredientId] || []).map((u) => (
+                              <option key={u.id} value={u.id}>{u.unit_name}</option>
+                            ))}
+                            <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                          </select>
                         </div>
                         <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
                         <Trash size={14} color="#DC2626" style={{ cursor: 'pointer', justifySelf: 'center' }} onClick={() => handleRemoveRecipeRow(index)} />

@@ -125,14 +125,25 @@ export default function Dashboard() {
     const marginRatio = Math.round((profit / sales) * 100);
     
     if (profit < 0) {
-      return `⚠️ Brainy Danger Alert: Operasional ${targetOutletName} mengalami defisit akuntansi sebesar Rp ${Math.abs(profit).toLocaleString('id-ID')} minggu ini, Gar! Faktor utamanya adalah beban pengeluaran (OpEx) lu tembus Rp ${opex.toLocaleString('id-ID')}. Segera pangkas pengadaan bahan baku non-esensial!`;
+      const deficit = Math.abs(profit);
+      const cogsRatio = Math.round((cogs / sales) * 100);
+      const opexRatio = Math.round((opex / sales) * 100);
+      const biggestDriverLabel = opex >= cogs ? 'Operating Expenses' : 'COGS (HPP)';
+      const biggestDriverRatio = opex >= cogs ? opexRatio : cogsRatio;
+
+      // 🎯 Target margin sehat untuk F&B skala kafe: 15%. Hitung selisih Rp yang dibutuhkan
+      // (baik lewat pemangkasan biaya maupun kenaikan omset) supaya balik ke margin tsb.
+      const HEALTHY_MARGIN_TARGET = 0.15;
+      const gapToHealthyMargin = Math.round((sales * HEALTHY_MARGIN_TARGET) - profit);
+
+      return `Brainy Solution: ${targetOutletName} rugi Rp ${deficit.toLocaleString('id-ID')} minggu ini, Gar. Penyebab utamanya ${biggestDriverLabel} yang makan ${biggestDriverRatio}% dari omset — jauh di atas batas wajar. Pangkas ${biggestDriverLabel} atau naikkan omset sekitar Rp ${gapToHealthyMargin.toLocaleString('id-ID')} biar balik ke margin sehat 15%.`;
     }
 
     if (opex > sales * 0.4) {
-      return `💡 Brainy Optimization: Omset ${targetOutletName} berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, tapi margin tertekan ke bawah (${marginRatio}%) karena kebocoran pengeluaran riil (OpEx) mencapai Rp ${opex.toLocaleString('id-ID')}. Cek log aktivitas pengeluaran kasir lu!`;
+      return `Brainy Optimization: Omset ${targetOutletName} berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, tapi margin tertekan ke bawah (${marginRatio}%) karena kebocoran pengeluaran riil (OpEx) mencapai Rp ${opex.toLocaleString('id-ID')}. Cek log aktivitas pengeluaran kasir lu!`;
     }
 
-    return `✨ Brainy Insights: Omset ${targetOutletName} lu berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`;
+    return `Brainy Insights: Omset ${targetOutletName} lu berjalan lancar di angka Rp ${sales.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`;
   };
 
   const syncDashboardMetricsFromDB = async () => {
@@ -286,16 +297,17 @@ export default function Dashboard() {
       }
 
       // 🟩 2. HITUNG LOGIKA INSIGHT DENGAN NAMA OUTLET YANG ASLI
-      const dynamicInsight = totalSalesSum > 0 
-        ? `Brainy Insights: Omset ${resolvedOutletName} lu berjalan lancar di angka Rp ${totalSalesSum.toLocaleString('id-ID')}, Gar. Pertahankan margin sehat lu di ${marginRatio}%.`
-        : `Brainy Insights: Belum ada transaksi masuk dari kasir mobile di ${resolvedOutletName}. Dasbor saat ini menampilkan performa riil bernilai nol.`;
+      // 🐛 FIX: sebelumnya di sini ada template insight duplikat yang selalu positif,
+      // sehingga fungsi generateFinancialInsight() (yang sudah benar menangani kasus rugi)
+      // tidak pernah terpakai. Sekarang panggil langsung fungsi tsb sebagai satu-satunya sumber insight.
+      const dynamicInsight = generateFinancialInsight(totalSalesSum, calculatedNetProfit, calculatedCOGS, calculatedOpEx, resolvedOutletName);
 
       setFinancials({
         totalSales: totalSalesSum,
         netProfit: calculatedNetProfit,
         totalTransactions: totalTxCount,
         salesTrend: totalSalesSum > 0 ? '+15%' : '+0%',
-        profitTrend: calculatedNetProfit > 0 ? '+12%' : '+0%',
+        profitTrend: calculatedNetProfit > 0 ? '+12%' : (calculatedNetProfit < 0 ? 'RUGI' : '+0%'),
         tableRows: rowsCalculated,
         monthLabel: 'JUNE 2026',
         grossRevenue: totalSalesSum,
@@ -389,13 +401,15 @@ export default function Dashboard() {
           <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp {financials.totalSales.toLocaleString('id-ID')}</h2>
         </div>
 
-        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
+        <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: financials.netProfit < 0 ? '1px solid #FCA5A5' : '1px solid #E5E7EB' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: '#FEE2E2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>💵</div>
-            <div style={{ backgroundColor: '#E6F4EA', color: '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={12}/> {financials.profitTrend}</div>
+            <div style={{ backgroundColor: financials.netProfit < 0 ? '#FEE2E2' : '#E6F4EA', color: financials.netProfit < 0 ? '#DC2626' : '#006847', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {financials.netProfit < 0 ? <ChevronDown size={12}/> : <TrendingUp size={12}/>} {financials.profitTrend}
+            </div>
           </div>
           <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold', display: 'block' }}>PROFIT BERSIH</span>
-          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: '#111827' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</h2>
+          <h2 style={{ margin: '6px 0 0 0', fontSize: '24px', fontWeight: 'bold', color: financials.netProfit < 0 ? '#DC2626' : '#111827' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</h2>
         </div>
 
         <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
@@ -524,12 +538,12 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gross Revenue</span><strong style={{ color: '#111827' }}>Rp {financials.grossRevenue.toLocaleString('id-ID')}</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>COGS (HPP)</span><strong style={{ color: '#DC2626' }}>- Rp {financials.cogs.toLocaleString('id-ID')}</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #E5E7EB', paddingBottom: '12px' }}><span>Operating Expenses</span><strong style={{ color: '#DC2626' }}>- Rp {financials.operatingExpenses.toLocaleString('id-ID')}</strong></div>
-            <div style={{ backgroundColor: '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><span style={{ fontSize: '11px', color: '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: '#059669' }}>{financials.netProfitMarginLabel}</span></div>
-              <strong style={{ fontSize: '18px', color: '#006847' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</strong>
+            <div style={{ backgroundColor: financials.netProfit < 0 ? '#FEE2E2' : '#E6F4EA', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><span style={{ fontSize: '11px', color: financials.netProfit < 0 ? '#DC2626' : '#006847', fontWeight: 'bold', display: 'block' }}>NET PROFIT</span><span style={{ fontSize: '10px', color: financials.netProfit < 0 ? '#DC2626' : '#059669' }}>{financials.netProfitMarginLabel}</span></div>
+              <strong style={{ fontSize: '18px', color: financials.netProfit < 0 ? '#DC2626' : '#006847' }}>Rp {financials.netProfit.toLocaleString('id-ID')}</strong>
             </div>
-            <div style={{ backgroundColor: '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '15px' }}>💡</span>
+            <div style={{ backgroundColor: financials.netProfit < 0 ? '#DC2626' : '#006847', color: '#ffffff', padding: '14px', borderRadius: '12px', fontSize: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '15px' }}>{financials.netProfit < 0 ? '⚠️' : '💡'}</span>
               <p style={{ margin: 0, lineHeight: '1.45' }}>{financials.brainyInsightText}</p>
             </div>
           </div>
