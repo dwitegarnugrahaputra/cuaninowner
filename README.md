@@ -1,326 +1,57 @@
-# 🚀 CUANIN Owner Dashboard
+Markdown# 🚀 CUAN.in – AI-Integrated POS Owner Dashboard
 
 > **The Intelligent Business Command Center for Modern Merchants**
 
-CUANIN Owner Dashboard merupakan pusat kendali utama dari ekosistem **CUANIN POS**, sebuah platform Point of Sales modern yang menggabungkan teknologi digital dengan Artificial Intelligence (AI) untuk membantu pemilik usaha mengelola operasional bisnis secara efisien, aman, dan berbasis data.
-
-Dashboard ini dirancang khusus untuk **Owner** sebagai pengambil keputusan tertinggi dalam bisnis. Seluruh aktivitas penting seperti penjualan, inventori, laporan keuangan, pengelolaan cabang, hingga analisis bisnis berbasis AI dapat diakses melalui satu dashboard terintegrasi.
+**CUAN.in Owner Dashboard** merupakan pusat kendali utama dari ekosistem **CUAN.in POS**, sebuah platform Point of Sales modern yang menggabungkan manajemen retail digital dengan *Artificial Intelligence* (AI). Aplikasi ini dirancang khusus untuk membantu pemilik usaha mengelola operasional outlet, memantau pengeluaran, mengotomatisasi pelacakan inventaris, serta memperoleh insight bisnis yang mendalam secara real-time.
 
 ---
 
-# 📖 About Project
-
-CUANIN bukan hanya aplikasi kasir.
-
-CUANIN merupakan ekosistem digital yang terdiri dari beberapa aplikasi yang saling terhubung untuk mendukung seluruh aktivitas bisnis.
-
-Owner Dashboard adalah salah satu bagian utama dari ekosistem tersebut.
-
-Melalui dashboard ini, owner dapat melakukan monitoring terhadap seluruh aktivitas bisnis secara real-time tanpa harus berada langsung di lokasi usaha.
-
----
-
-# 🌐 CUANIN Ecosystem
+## 🌐 CUAN.in Ecosystem
 
 ```text
-                 CUANIN Ecosystem
-
-                  Owner Dashboard
+                 CUAN.in Ecosystem
                          │
-                         ▼
-                  REST API Gateway
+                  Owner Dashboard ─── [Supabase Auth & DB]
                          │
       ┌──────────────────┼──────────────────┐
       │                  │                  │
       ▼                  ▼                  ▼
- Cashier App      Customer App      AI Brainy Engine
-      │                  │                  │
-      └──────────────────┼──────────────────┘
-                         ▼
-                    Database Server
-```
-
-Setiap aplikasi memiliki fungsi yang berbeda namun tetap saling terintegrasi.
-
----
-
-# 🎯 Vision
-
-Membantu UMKM Indonesia melakukan transformasi digital melalui sistem Point of Sales modern yang didukung Artificial Intelligence.
-
----
-
-# 🎯 Mission
-
-* Digitalisasi operasional bisnis
-* Monitoring usaha secara real-time
-* Otomatisasi inventori
-* Mengurangi human error
-* Mendeteksi fraud transaksi
-* Memberikan business insight berbasis AI
-* Membantu owner mengambil keputusan lebih cepat
-
----
-
-# ✨ Main Features
-
-## 📊 Business Dashboard
-
-Dashboard utama yang menampilkan kondisi bisnis secara real-time.
-
-### Menampilkan
-
-* Total Revenue
-* Total Transactions
-* Today's Income
-* Monthly Revenue
-* Weekly Report
-* Peak Hours
-* Best Selling Product
-* Low Stock Product
-* Customer Statistics
-
----
-
-## 💰 Sales Monitoring
-
-Monitoring seluruh transaksi kasir.
-
-Fitur meliputi
-
-* Live Transaction Feed
-* Transaction Detail
-* Success Transaction
-* Failed Transaction
-* Void Transaction
-* Refund History
-* Sales Analytics
-
----
-
-## 📦 Inventory Intelligence
-
-Mengelola seluruh inventori bisnis.
-
-Fitur
-
-* Product Stock
-* Low Stock Alert
-* Restock History
-* Supplier Management
-* Purchase History
-* Stock Movement
-* Inventory Analytics
-
----
-
-## 🤖 Brainy AI
-
-Brainy merupakan AI Assistant bawaan CUANIN.
-
-Brainy membantu owner melalui:
-
-* Fraud Detection
-* Business Insight
-* Revenue Prediction
-* Product Recommendation
-* Inventory Recommendation
-* Customer Behaviour Analysis
-* Spending Analysis
-
----
-
-## 👥 Employee Management
-
-Mengelola seluruh karyawan.
-
-* Cashier
-* Admin
-* Manager
-
-Hak akses setiap pengguna dapat diatur secara terpisah menggunakan Role Based Access Control (RBAC).
-
----
-
-## 🏢 Branch Management
-
-Owner dapat mengelola banyak cabang sekaligus.
-
-Fitur
-
-* Multi Outlet
-* Branch Revenue
-* Branch Performance
-* Branch Inventory
-* Branch Employee
-
----
-
-## ⚙️ Settings
-
-Konfigurasi aplikasi.
-
-Meliputi
-
-* Business Information
-* Account Settings
-* Security
-* Language
-* Theme
-* AI Configuration
-* API Credential
-
----
-
-# 🏗️ System Architecture
-
-```text
-Presentation Layer
-        │
-        ▼
-React + Vite
-        │
-        ▼
-Business Logic Layer
-        │
-        ▼
-REST API
-        │
-        ▼
-Database
-```
-
----
-
-# 🛠 Tech Stack
-
-| Technology   | Purpose              |
-| ------------ | -------------------- |
-| React        | Frontend Framework   |
-| Vite         | Build Tool           |
-| React Router | Routing              |
-| Context API  | Global State         |
-| Lucide React | Icons                |
-| JavaScript   | Programming Language |
-| CSS          | Styling              |
-
----
-
-# 📂 Project Structure
-
-```text
-src/
-
-components/
-layouts/
-pages/
-hooks/
-services/
-context/
-assets/
-styles/
-utils/
-constants/
-```
-
----
-
-# ⚙️ Installation
-
-```bash
-git clone https://github.com/dwitegarnugrahaputra/cuaninowner.git
-
+ Sales & Expenses   Brainy AI Chat     Data Engineering
+ Monitoring App     (Consultant)       (Python Pipeline)
+Setiap modul di dalam dashboard ini dirancang agar saling terintegrasi demi menyajikan visibilitas penuh terhadap kesehatan finansial dan operasional bisnis Anda tanpa harus berada di lokasi.✨ Fitur Utama (Main Features)1. 📊 Centralized Business Dashboard & MonitoringMain Dashboard: Menyajikan metrik finansial krusial seperti total pendapatan, total transaksi, ringkasan performa penjualan harian, dan grafik statistik secara real-time.Sales Monitoring: Pelacakan dan dokumentasi live feed untuk setiap transaksi penjualan yang masuk.Expenses Management: Pencatatan, kategorisasi, dan pengelolaan menyeluruh atas pengeluaran atau biaya operasional outlet untuk kalkulasi margin keuntungan bersih yang akurat.2. 🧠 Fitur Pintar Berbasis AI (AI-Powered Insights)Stock Intelligence: Manajemen stok tingkat lanjut dengan analisis prediktif untuk mendeteksi batas minimum barang (low stock alert) guna mencegah terjadinya out-of-stock bahan baku.BrainyChat (AI Assistant): Asisten AI interaktif yang tertanam langsung di aplikasi. Owner dapat berkonsultasi secara personal seputar performa toko, strategi marketing, maupun analisis tren bisnis.Konfigurasi AI: Menu pengaturan khusus untuk melakukan kustomisasi parameter AI agar sesuai dengan model bisnis spesifik outlet.3. ⚙️ Manajemen Operasional & Manajemen CabangMenu Management: Kelola seluruh katalog produk, variasi menu, harga jual, serta ketersediaannya secara dinamis.Staff Management: Pengaturan hak akses, pendaftaran akun staf, dan monitoring performa kerja tim/karyawan.Localization & Security: Proteksi keamanan berlapis pada akun user (Security Settings) serta dukungan multi-bahasa yang fleksibel demi kenyamanan operasional.4. 🛠️ Data Engineering & Automated PipelineScraping Pipeline: Implementasi skrip otomatisasi untuk penarikan data eksternal guna memetakan tren komoditas pasar secara berkala.Coffee Brand Pipeline: Pipeline analitik khusus yang mengekstrak data pasar komoditas kopi ter-update demi akurasi penyesuaian harga menu hulu-hilir.🛠️ Tech StackFrontend & UIReact.js & Vite – Framework antarmuka yang cepat dan responsif.Tailwind CSS – Kerangka kerja styling berbasis utility-first untuk desain modern.React Router Dom v6 & Context API – Pengelolaan routing halaman dan manajemen global state (seperti autentikasi dan bahasa).Backend & AutomationSupabase Client Integration – Layanan Backend-as-a-Service (BaaS) untuk penanganan real-time database relasional, manajemen storage, dan Session Autentikasi (Login / Register).Python (Data Engineering) – Skrip automasi berbasis Python memanfaatkan pustaka pengumpul data (BeautifulSoup / Selenium) untuk pipeline intelijen pasar.GitHub Actions – Penjadwalan alur pipeline berkala secara otomatis via CI/CD workflow (commodity_pipeline.yml).📂 Struktur Repositori (Project Structure)Plaintextcuaninowner/
+├── .github/workflows/       # CI/CD & Automasi Schedule Data Pipeline
+├── public/                  # Ikon & Asset statis aplikasi global
+└── src/
+    ├── assets/              # Gambar & Grafis pendukung UI
+    ├── components/shared/   # Komponen UI global (Sidebar, TopBar)
+    ├── config/              # Inisialisasi & Konfigurasi Supabase Client
+    ├── context/             # State Management (AuthContext & Language)
+    ├── engineering/         # Modul Python (Scraping & Analisis Komoditas)
+    ├── views/               # Direktori Halaman Utama Aplikasi:
+    │   ├── ai-chat/         # BrainyChat AI Assistant View
+    │   ├── auth/            # Halaman Login & Registrasi Akun Owner
+    │   ├── dashboard/       # Dashboard Utama & Edit Profil 
+    │   ├── expenses/        # Manajemen Pengeluaran Finansial
+    │   ├── menu/            # Pengelolaan Katalog Menu & Produk
+    │   ├── sales/           # Monitoring Live Transaksi Kasir
+    │   ├── settings/        # Konfigurasi AI, Bahasa, Keamanan & Outlet
+    │   ├── staff/           # Manajemen Karyawan / Staf Outlet
+    │   └── stock/           # Modul Prediktif Stock Intelligence
+    ├── App.jsx              # Alur routing halaman global (React Router)
+    └── main.jsx             # Entry point utama React Application
+🚀 Memulai Pengembangan Lokal (Local Development)1. Kloning RepositoriBashgit clone [https://github.com/dwitegarnugrahaputra/cuaninowner.git](https://github.com/dwitegarnugrahaputra/cuaninowner.git)
 cd cuaninowner
-
+2. Jalankan Aplikasi Frontend (React + Vite)Pastikan Anda telah menginstal Node.js.Bash# Instalasi semua dependensi project
 npm install
 
+# Jalankan server lokal untuk development
 npm run dev
-```
+Buka tautan lokal yang muncul pada terminal Anda (biasanya http://localhost:5173).3. Eksekusi Skrip Python (Data Engineering)Jika ingin melakukan pengujian penarikan data komoditas secara manual dari lokal:Bash# Masuk ke direktori pipeline data
+cd src/engineering
 
----
-
-# 🔑 Environment Variables
-
-```env
-VITE_API_URL=
-
-VITE_APP_NAME=CUANIN
-
-VITE_AI_SERVICE=
-```
-
----
-
-# 📷 Screenshots
-
-Coming Soon
-
-* Dashboard
-* Sales
-* Inventory
-* AI
-* Settings
-* Reports
-
----
-
-# 🗺️ Roadmap
-
-## Version 1
-
-* Dashboard
-* Authentication
-* Sales
-* Inventory
-
-## Version 2
-
-* AI Brainy
-* OCR Receipt
-* Notification
-
-## Version 3
-
-* Multi Branch
-* Customer Loyalty
-* Mobile App
-
----
-
-# 📈 Development Status
-
-| Module         | Status     |
-| -------------- | ---------- |
-| Authentication | ✅          |
-| Dashboard      | ✅          |
-| Sales          | 🚧         |
-| Inventory      | 🚧         |
-| Reports        | 🚧         |
-| AI             | 🚧         |
-| OCR            | 📅 Planned |
-
----
-
-# 🤝 Contributing
-
-Saat ini repository masih bersifat private development.
-
-Contribution akan dibuka ketika project memasuki tahap public beta.
-
----
-
-# 👨‍💻 Developer
-
-**Dwi Tegar Nugraha Putra**
-
-Informatics Student
-
-Indonesia
-
----
-
-# 📄 License
-
-Copyright © 2026 CUANIN.
-
-All Rights Reserved.
+# Jalankan skrip pipeline scraping
+python scrapping_pipeline.py
+🔑 Variabel Lingkungan (Environment Variables)Buat file .env pada direktori root proyek ini dan sesuaikan kredensial berikut:Cuplikan kodeVITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
+VITE_AI_SERVICE_URL=your_ai_brainy_endpoint
+📈 Status Perkembangan (Development Status)Modul / FiturStatusDeskripsiAuthentication & Supabase DB✅Selesai (Sesi login & registrasi terproteksi)Main Dashboard & Profiling✅Selesai (Penyajian grafik & akumulasi finansial)Sales & Expenses Monitoring✅Selesai (Pelacakan transaksi & pengeluaran operasional)Menu & Staff Management✅Selesai (Modifikasi katalog menu dan akun karyawan)Stock Intelligence (AI)✅Selesai (Prediksi manajemen inventori & low-stock alert)Brainy AI Chat Assistant✅Selesai (Asisten chatbot untuk konsultasi bisnis)Automated Data Pipeline✅Selesai (Skrip scraping & integrasi GitHub Workflows)👨‍💻 DeveloperDwi Tegar Nugraha PutraInformatics Student – Indonesia📄 LisensiHak Cipta © 2026 CUAN.in. Seluruh Hak Dilindungi Undang-Undang.
