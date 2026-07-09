@@ -236,6 +236,10 @@ export default function MenuManagement() {
         .from('ingredient_usage_units')
         .select('id, unit_name, grams_per_unit')
         .eq('raw_material_id', materialId)
+        // 🔐 [BUGFIX MULTI-TENANT] Filter eksplisit owner_user_id, konsisten dengan
+        // pola filter di fetchStockIngredients/fetchMenuCatalog — jangan cuma
+        // mengandalkan RLS policy sebagai satu-satunya lapisan proteksi.
+        .eq('owner_user_id', ownerId)
         .order('unit_name', { ascending: true });
       if (error) throw error;
       const list = data || [];
@@ -346,7 +350,14 @@ export default function MenuManagement() {
     return recipe.every((ingredient) => {
       const material = stockIngredients.find((m) => m.id === ingredient.ingredientId);
       if (!material) return true; // bahan sudah dihapus dari master data, skip
-      return Number(material.current_stock) >= Number(ingredient.qty || 0);
+      // 🐛 [FIX USAGE UNIT] `ingredient.qty` ada dalam satuan pakai (usage unit,
+      // misal "3 siung"), sedangkan `current_stock` selalu dalam base_unit
+      // (gram/ml/pcs). Sebelumnya dua nilai beda satuan ini dibandingkan
+      // langsung tanpa konversi -> badge "Bahan Baku Habis" salah untuk resep
+      // yang pakai usage unit. `gramsPerUnit` default 1 untuk resep lama /
+      // yang pakai base_unit langsung, jadi tetap backward compatible.
+      const qtyInBaseUnit = Number(ingredient.qty || 0) * Number(ingredient.gramsPerUnit || 1);
+      return Number(material.current_stock) >= qtyInBaseUnit;
     });
   };
 
@@ -753,12 +764,20 @@ export default function MenuManagement() {
                             <select
                               value={row.usageUnitId || ''}
                               onChange={(e) => handleUpdateNewMenuRecipeRow(index, 'usageUnitId', e.target.value)}
+                              disabled={usageUnitsByMaterial[row.ingredientId] === undefined}
                               style={{ border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '11px', outline: 'none', backgroundColor: '#fff', color: '#4B5563', fontWeight: 'bold' }}
                             >
-                              {(usageUnitsByMaterial[row.ingredientId] || []).map((u) => (
-                                <option key={u.id} value={u.id}>{u.unit_name}</option>
-                              ))}
-                              <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                              {/* 🕒 [USAGE UNIT] Lihat catatan yang sama di modal edit. */}
+                              {usageUnitsByMaterial[row.ingredientId] === undefined ? (
+                                <option value="">Memuat takaran...</option>
+                              ) : (
+                                <>
+                                  {usageUnitsByMaterial[row.ingredientId].map((u) => (
+                                    <option key={u.id} value={u.id}>{u.unit_name}</option>
+                                  ))}
+                                  <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                                </>
+                              )}
                             </select>
                           </div>
                           <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
@@ -859,12 +878,23 @@ export default function MenuManagement() {
                           <select
                             value={row.usageUnitId || ''}
                             onChange={(e) => handleUpdateRecipeRow(index, 'usageUnitId', e.target.value)}
+                            disabled={usageUnitsByMaterial[row.ingredientId] === undefined}
                             style={{ border: '1px solid #D1D5DB', padding: '4px', borderRadius: '6px', fontSize: '11px', outline: 'none', backgroundColor: '#fff', color: '#4B5563', fontWeight: 'bold' }}
                           >
-                            {(usageUnitsByMaterial[row.ingredientId] || []).map((u) => (
-                              <option key={u.id} value={u.id}>{u.unit_name}</option>
-                            ))}
-                            <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                            {/* 🕒 [USAGE UNIT] usageUnitsByMaterial[id] === undefined artinya
+                                masih fetching -> dropdown dinonaktifkan sementara supaya
+                                owner tidak salah pilih fallback base_unit padahal usage unit
+                                sebenarnya masih dalam proses dimuat. */}
+                            {usageUnitsByMaterial[row.ingredientId] === undefined ? (
+                              <option value="">Memuat takaran...</option>
+                            ) : (
+                              <>
+                                {usageUnitsByMaterial[row.ingredientId].map((u) => (
+                                  <option key={u.id} value={u.id}>{u.unit_name}</option>
+                                ))}
+                                <option value="">{computeFallbackUnit(stockIngredients.find(m => m.id === row.ingredientId))}</option>
+                              </>
+                            )}
                           </select>
                         </div>
                         <span style={{ fontWeight: 'bold', color: '#111827' }}>Rp {(row.cost || 0).toLocaleString('id-ID')}</span>
