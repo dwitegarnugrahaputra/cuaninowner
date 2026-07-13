@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="TS_UJI_MasterData" time="191.101" tests="5" passed="5" failures="0" errors="0" incompleted="0" skipped="0">
+   <testsuite name="TS_UJI_MasterData" tests="5" passed="5" failures="0" errors="0" incompleted="0" skipped="0" time="191.101" timestamp="2026-07-12T16:57:07.808Z" hostname="LENOVO - LAPTOP-HA1VD8R3" id="Test Suites/TS_UJI_MasterData" status="PASSED">
+      <properties>
+         <property name="deviceName" value=""/>
+         <property name="devicePlatform"/>
+         <property name="logFolder" value="D:\\Capstone\\cuanin\\cuaninowner\\Testing_Cuanin\\Reports\\20260712_235626\\TS_UJI_MasterData\\20260712_235627"/>
+         <property name="logFiles" value="D:\\Capstone\\cuanin\\cuaninowner\\Testing_Cuanin\\Reports\\20260712_235626\\TS_UJI_MasterData\\20260712_235627\\console0.log, D:\\Capstone\\cuanin\\cuaninowner\\Testing_Cuanin\\Reports\\20260712_235626\\TS_UJI_MasterData\\20260712_235627\\execution0.log"/>
+         <property name="attachments" value=""/>
+         <property name="executionBindingVariables" value="[&#xa;  {&#xa;    &quot;value&quot;: &quot;$%^\u0026*(\u0026*^&quot;,&#xa;    &quot;isDefault&quot;: false,&#xa;    &quot;name&quot;: &quot;var_nama_baru&quot;,&#xa;    &quot;masked&quot;: false&#xa;  }&#xa;]"/>
+         <property name="hostName" value="LENOVO - LAPTOP-HA1VD8R3"/>
+         <property name="os" value="Windows 11 64bit"/>
+         <property name="katalonVersion" value="11.3.0.0"/>
+         <property name="browser" value="Chrome 150.0.7871.101"/>
+         <property name="userFullName" value="Dwi tegar Nugraha putra"/>
+         <property name="hostAddress" value="10.10.10.9"/>
+         <property name="sessionId" value="953ea60128a640cc5084e7c8c28d5e23"/>
+         <property name="projectName" value="Testing_Cuanin"/>
+         <property name="seleniumVersion" value="4.39.0"/>
+         <property name="proxyInformation" value="ProxyInformation { proxyOption=NO_PROXY, proxyServerType=HTTP, username=, password=********, proxyServerAddress=, proxyServerPort=0, executionList=&quot;&quot;, isApplyToDesiredCapabilities=true }"/>
+         <property name="platform" value="Windows 11"/>
+      </properties>
+      <testcase name="Test Cases/New Test Case" time="49.18" classname="Test Cases/New Test Case" status="PASSED">
+         <properties>
+            <property name="data_binding"><![CDATA[{"var_nama_baru":"Espresso"}]]></property>
+         </properties>
+         <system-out><![CDATA[12-07-2026T23:57:08 - [TEST_CASE][PASSED] - Test Cases/New Test Case: Test Cases/New Test Case
+
+12-07-2026T23:57:08 - [TEST_STEP][PASSED] - openBrowser(null): Browser is opened with url: 'null'
+
+12-07-2026T23:57:08 - [MESSAGE][INFO] - Starting 'Chrome' driver
+
+12-07-2026T23:57:08 - [MESSAGE][INFO] - Action delay is set to 0 milliseconds
+
+12-07-2026T23:57:11 - [MESSAGE][PASSED] - Browser is opened with url: 'null'
+
+12-07-2026T23:57:11 - [TEST_STEP][PASSED] - navigateToUrl("http://localhost:5173/"): Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:57:12 - [MESSAGE][PASSED] - Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:57:12 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_namabisnis.id"), "dwitegar2121@gmail.com"): Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:57:13 - [MESSAGE][PASSED] - Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:57:13 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:57:13 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:57:13 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input__1"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:57:14 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:57:14 - [TEST_STEP][PASSED] - sendKeys(findTestObject("Page_cuaninowner/input__1"), Keys.chord(ENTER)): Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:57:14 - [MESSAGE][PASSED] - Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:57:14 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Menu Management")): Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:57:18 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:57:18 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Add New Item")): Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:57:19 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:57:19 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_Contoh_ Americano Ice"), var_nama_baru): Text 'Espresso' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:57:20 - [MESSAGE][PASSED] - Text 'Espresso' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:57:20 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "rLvs2r7lbdw="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:57:21 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:57:21 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Non-Coffee")): Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:57:21 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:57:21 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Tambah Bahan")): Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:57:22 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:57:22 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral"), "83121e1d-3522-4570-b806-31127ed0938d", false): All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:57:23 - [MESSAGE][PASSED] - All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:57:23 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1"), "8e6cce60-f6ab-459f-924f-2b1e6c79a01f", false): All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:57:33 - [MESSAGE][INFO] - [AI Self-Healing] Recovering element locator by using AI Self-Healing...
+
+12-07-2026T23:57:38 - [MESSAGE][INFO] - [AI Self-Healing] Found "2" possible locators:
+ [
+  {
+    "type": "CSS",
+    "value": "select",
+    "semanticLocator": "Stock bahan dropdown",
+    "confidence": 0.99,
+    "reason": "Matched textContent option label \u0027-- Pilih Stok Bahan --\u0027 and the select role from the broken test object; page source contains a unique \u003cselect\u003e for choosing ingredients."
+  },
+  {
+    "type": "XPATH",
+    "value": "//select[option[normalize-space(.)\u003d\u0027-- Pilih Stok Bahan --\u0027]]",
+    "semanticLocator": "Stock bahan selector",
+    "confidence": 0.98,
+    "reason": "Matched textContent \u0027-- Pilih Stok Bahan --\u0027 from the broken test object; page source shows one unique select element whose first option has this label."
+  }
+]
+
+12-07-2026T23:57:38 - [MESSAGE][INFO] - [AI Self-Healing] Verifying locator: "select"
+
+12-07-2026T23:57:38 - [MESSAGE][INFO] - [AI Self-Healing] Found valid locator: "select"
+
+12-07-2026T23:57:38 - [MESSAGE][INFO] - [AI Self-Healing] Screenshot: D:/Capstone/cuanin/cuaninowner/Testing_Cuanin/Reports/Self-healing/Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1_XPATH.png
+
+12-07-2026T23:57:38 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:57:39 - [MESSAGE][PASSED] - All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:57:39 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2"), "b31a8159-969a-4ec8-a869-182f3ff8e044", false): All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:57:49 - [MESSAGE][INFO] - [AI Self-Healing] Recovering element locator by using AI Self-Healing...
+
+12-07-2026T23:57:53 - [MESSAGE][INFO] - [AI Self-Healing] Found "3" possible locators:
+ [
+  {
+    "type": "CSS",
+    "value": "select",
+    "semanticLocator": "Stock ingredient dropdown",
+    "confidence": 0.98,
+    "reason": "Matched select tag and textContent starting with \u0027-- Pilih Stok Bahan --\u0027 from the broken test object."
+  },
+  {
+    "type": "XPATH",
+    "value": "//select[option[normalize-space(.)\u003d\u0027Air Mineral\u0027] and option[normalize-space(.)\u003d\u0027Whipping Cream 1L\u0027]]",
+    "semanticLocator": "Stock ingredient dropdown",
+    "confidence": 0.95,
+    "reason": "Matched textContent options including \u0027Air Mineral\u0027 and \u0027Whipping Cream 1L\u0027 from the broken test object."
+  },
+  {
+    "type": "XPATH",
+    "value": "//label[normalize-space(.)\u003d\u0027Bahan Baku\u0027]/following::select[1]",
+    "semanticLocator": "Recipe material selector",
+    "confidence": 0.86,
+    "reason": "Matched role as a select element and textContent for the stock bahan list from the broken test object."
+  }
+]
+
+12-07-2026T23:57:53 - [MESSAGE][INFO] - [AI Self-Healing] Verifying locator: "select"
+
+12-07-2026T23:57:53 - [MESSAGE][INFO] - [AI Self-Healing] Found valid locator: "select"
+
+12-07-2026T23:57:53 - [MESSAGE][INFO] - [AI Self-Healing] Screenshot: D:/Capstone/cuanin/cuaninowner/Testing_Cuanin/Reports/Self-healing/Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2_XPATH.png
+
+12-07-2026T23:57:53 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:57:54 - [MESSAGE][PASSED] - All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:57:54 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/input_https")): Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:57:55 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:57:55 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Upload")): Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:57:55 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:57:55 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Kamera")): Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:57:55 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:57:55 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Ambil Foto")): Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:57:56 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:57:56 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Simpan Menu")): Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on
+
+12-07-2026T23:57:57 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on]]></system-out>
+         <system-err><![CDATA[]]></system-err>
+      </testcase>
+      <testcase name="Test Cases/New Test Case" time="35.654" classname="Test Cases/New Test Case" status="PASSED">
+         <properties>
+            <property name="data_binding"><![CDATA[{"var_nama_baru":"Matcha Latte"}]]></property>
+         </properties>
+         <system-out><![CDATA[12-07-2026T23:57:57 - [TEST_CASE][PASSED] - Test Cases/New Test Case: Test Cases/New Test Case
+
+12-07-2026T23:57:57 - [TEST_STEP][PASSED] - openBrowser(null): Browser is opened with url: 'null'
+
+12-07-2026T23:57:57 - [MESSAGE][WARNING] - A browser is already opened. Closing browser and opening a new one
+
+12-07-2026T23:57:57 - [MESSAGE][INFO] - Starting 'Chrome' driver
+
+12-07-2026T23:57:57 - [MESSAGE][INFO] - Action delay is set to 0 milliseconds
+
+12-07-2026T23:57:59 - [MESSAGE][PASSED] - Browser is opened with url: 'null'
+
+12-07-2026T23:57:59 - [TEST_STEP][PASSED] - navigateToUrl("http://localhost:5173/"): Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:57:59 - [MESSAGE][PASSED] - Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:57:59 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_namabisnis.id"), "dwitegar2121@gmail.com"): Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:58:00 - [MESSAGE][PASSED] - Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:58:00 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:00 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:00 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input__1"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:01 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:01 - [TEST_STEP][PASSED] - sendKeys(findTestObject("Page_cuaninowner/input__1"), Keys.chord(ENTER)): Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:01 - [MESSAGE][PASSED] - Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:01 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Menu Management")): Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:58:04 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:58:04 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Add New Item")): Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:58:05 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:58:05 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_Contoh_ Americano Ice"), var_nama_baru): Text 'Matcha Latte' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:58:06 - [MESSAGE][PASSED] - Text 'Matcha Latte' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:58:06 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "rLvs2r7lbdw="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:06 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:06 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Non-Coffee")): Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:58:07 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:58:07 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Tambah Bahan")): Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:58:07 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:58:07 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral"), "83121e1d-3522-4570-b806-31127ed0938d", false): All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:58:08 - [MESSAGE][PASSED] - All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:58:08 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1"), "8e6cce60-f6ab-459f-924f-2b1e6c79a01f", false): All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:58:19 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:58:19 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:58:19 - [MESSAGE][PASSED] - All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:58:19 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2"), "b31a8159-969a-4ec8-a869-182f3ff8e044", false): All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:58:29 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:58:29 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:58:29 - [MESSAGE][PASSED] - All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:58:29 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/input_https")): Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:58:30 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:58:30 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Upload")): Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:58:31 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:58:31 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Kamera")): Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:58:31 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:58:31 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Ambil Foto")): Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:58:32 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:58:32 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Simpan Menu")): Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on
+
+12-07-2026T23:58:32 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on]]></system-out>
+         <system-err><![CDATA[]]></system-err>
+      </testcase>
+      <testcase name="Test Cases/New Test Case" time="35.354" classname="Test Cases/New Test Case" status="PASSED">
+         <properties>
+            <property name="data_binding"><![CDATA[{"var_nama_baru":"Roti Bakar Coklat"}]]></property>
+         </properties>
+         <system-out><![CDATA[12-07-2026T23:58:32 - [TEST_CASE][PASSED] - Test Cases/New Test Case: Test Cases/New Test Case
+
+12-07-2026T23:58:32 - [TEST_STEP][PASSED] - openBrowser(null): Browser is opened with url: 'null'
+
+12-07-2026T23:58:32 - [MESSAGE][WARNING] - A browser is already opened. Closing browser and opening a new one
+
+12-07-2026T23:58:33 - [MESSAGE][INFO] - Starting 'Chrome' driver
+
+12-07-2026T23:58:33 - [MESSAGE][INFO] - Action delay is set to 0 milliseconds
+
+12-07-2026T23:58:34 - [MESSAGE][PASSED] - Browser is opened with url: 'null'
+
+12-07-2026T23:58:34 - [TEST_STEP][PASSED] - navigateToUrl("http://localhost:5173/"): Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:58:34 - [MESSAGE][PASSED] - Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:58:34 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_namabisnis.id"), "dwitegar2121@gmail.com"): Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:58:35 - [MESSAGE][PASSED] - Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:58:35 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:36 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:36 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input__1"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:36 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:36 - [TEST_STEP][PASSED] - sendKeys(findTestObject("Page_cuaninowner/input__1"), Keys.chord(ENTER)): Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:37 - [MESSAGE][PASSED] - Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:58:37 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Menu Management")): Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:58:39 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:58:39 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Add New Item")): Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:58:40 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:58:40 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_Contoh_ Americano Ice"), var_nama_baru): Text 'Roti Bakar Coklat' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:58:41 - [MESSAGE][PASSED] - Text 'Roti Bakar Coklat' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:58:41 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "rLvs2r7lbdw="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:42 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:58:42 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Non-Coffee")): Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:58:42 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:58:42 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Tambah Bahan")): Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:58:42 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:58:42 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral"), "83121e1d-3522-4570-b806-31127ed0938d", false): All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:58:43 - [MESSAGE][PASSED] - All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:58:43 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1"), "8e6cce60-f6ab-459f-924f-2b1e6c79a01f", false): All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:58:54 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:58:54 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:58:54 - [MESSAGE][PASSED] - All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:58:54 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2"), "b31a8159-969a-4ec8-a869-182f3ff8e044", false): All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:59:05 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:59:05 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:59:05 - [MESSAGE][PASSED] - All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:59:05 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/input_https")): Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:59:06 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:59:06 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Upload")): Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:59:06 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:59:06 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Kamera")): Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:59:07 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:59:07 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Ambil Foto")): Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:59:07 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:59:07 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Simpan Menu")): Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on
+
+12-07-2026T23:59:08 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on]]></system-out>
+         <system-err><![CDATA[]]></system-err>
+      </testcase>
+      <testcase name="Test Cases/New Test Case" time="35.257" classname="Test Cases/New Test Case" status="PASSED">
+         <properties>
+            <property name="data_binding"><![CDATA[{"(Default) var_n...":""}]]></property>
+         </properties>
+         <system-out><![CDATA[12-07-2026T23:59:08 - [TEST_CASE][PASSED] - Test Cases/New Test Case: Test Cases/New Test Case
+
+12-07-2026T23:59:08 - [TEST_STEP][PASSED] - openBrowser(null): Browser is opened with url: 'null'
+
+12-07-2026T23:59:08 - [MESSAGE][WARNING] - A browser is already opened. Closing browser and opening a new one
+
+12-07-2026T23:59:08 - [MESSAGE][INFO] - Starting 'Chrome' driver
+
+12-07-2026T23:59:08 - [MESSAGE][INFO] - Action delay is set to 0 milliseconds
+
+12-07-2026T23:59:10 - [MESSAGE][PASSED] - Browser is opened with url: 'null'
+
+12-07-2026T23:59:10 - [TEST_STEP][PASSED] - navigateToUrl("http://localhost:5173/"): Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:59:10 - [MESSAGE][PASSED] - Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:59:10 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_namabisnis.id"), "dwitegar2121@gmail.com"): Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:59:11 - [MESSAGE][PASSED] - Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:59:11 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:11 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:11 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input__1"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:12 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:12 - [TEST_STEP][PASSED] - sendKeys(findTestObject("Page_cuaninowner/input__1"), Keys.chord(ENTER)): Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:12 - [MESSAGE][PASSED] - Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:12 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Menu Management")): Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:59:15 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:59:15 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Add New Item")): Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:59:16 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:59:16 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_Contoh_ Americano Ice"), var_nama_baru): Text '' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:59:16 - [MESSAGE][PASSED] - Text '' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:59:16 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "rLvs2r7lbdw="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:17 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:17 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Non-Coffee")): Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:59:17 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:59:17 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Tambah Bahan")): Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:59:18 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:59:18 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral"), "83121e1d-3522-4570-b806-31127ed0938d", false): All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:59:19 - [MESSAGE][PASSED] - All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:59:19 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1"), "8e6cce60-f6ab-459f-924f-2b1e6c79a01f", false): All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:59:29 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:59:29 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:59:29 - [MESSAGE][PASSED] - All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+12-07-2026T23:59:29 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2"), "b31a8159-969a-4ec8-a869-182f3ff8e044", false): All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:59:40 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+12-07-2026T23:59:40 - [MESSAGE][WARNING] - Waiting for element timed out
+
+12-07-2026T23:59:40 - [MESSAGE][PASSED] - All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+12-07-2026T23:59:40 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/input_https")): Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:59:41 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+12-07-2026T23:59:41 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Upload")): Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:59:41 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+12-07-2026T23:59:41 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Kamera")): Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:59:42 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+12-07-2026T23:59:42 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Ambil Foto")): Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:59:42 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+12-07-2026T23:59:42 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Simpan Menu")): Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on
+
+12-07-2026T23:59:43 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on]]></system-out>
+         <system-err><![CDATA[]]></system-err>
+      </testcase>
+      <testcase name="Test Cases/New Test Case" time="35.376" classname="Test Cases/New Test Case" status="PASSED">
+         <properties>
+            <property name="data_binding"><![CDATA[{"var_nama_baru":"$%^\u0026*(\u0026*^"}]]></property>
+         </properties>
+         <system-out><![CDATA[12-07-2026T23:59:43 - [TEST_CASE][PASSED] - Test Cases/New Test Case: Test Cases/New Test Case
+
+12-07-2026T23:59:43 - [TEST_STEP][PASSED] - openBrowser(null): Browser is opened with url: 'null'
+
+12-07-2026T23:59:43 - [MESSAGE][WARNING] - A browser is already opened. Closing browser and opening a new one
+
+12-07-2026T23:59:44 - [MESSAGE][INFO] - Starting 'Chrome' driver
+
+12-07-2026T23:59:44 - [MESSAGE][INFO] - Action delay is set to 0 milliseconds
+
+12-07-2026T23:59:45 - [MESSAGE][PASSED] - Browser is opened with url: 'null'
+
+12-07-2026T23:59:45 - [TEST_STEP][PASSED] - navigateToUrl("http://localhost:5173/"): Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:59:45 - [MESSAGE][PASSED] - Navigate to 'http://localhost:5173/' successfully
+
+12-07-2026T23:59:45 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_namabisnis.id"), "dwitegar2121@gmail.com"): Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:59:46 - [MESSAGE][PASSED] - Text 'dwitegar2121@gmail.com' is set on object 'Object Repository/Page_cuaninowner/input_namabisnis.id'
+
+12-07-2026T23:59:46 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:47 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:47 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input__1"), "SkBtNjsS+FHxnnrRXbFqtA=="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:47 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:47 - [TEST_STEP][PASSED] - sendKeys(findTestObject("Page_cuaninowner/input__1"), Keys.chord(ENTER)): Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:47 - [MESSAGE][PASSED] - Keys 'ENTER + ' sent to object: 'Object Repository/Page_cuaninowner/input__1'
+
+12-07-2026T23:59:47 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Menu Management")): Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:59:50 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Menu Management' is clicked on
+
+12-07-2026T23:59:50 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Add New Item")): Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:59:51 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Add New Item' is clicked on
+
+12-07-2026T23:59:51 - [TEST_STEP][PASSED] - setText(findTestObject("Page_cuaninowner/input_Contoh_ Americano Ice"), var_nama_baru): Text '$%^&*(&*^' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:59:52 - [MESSAGE][PASSED] - Text '$%^&*(&*^' is set on object 'Object Repository/Page_cuaninowner/input_Contoh_ Americano Ice'
+
+12-07-2026T23:59:52 - [TEST_STEP][PASSED] - setEncryptedText(findTestObject("Page_cuaninowner/input_"), "rLvs2r7lbdw="): Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:52 - [MESSAGE][PASSED] - Text ****** has been set on object 'Object Repository/Page_cuaninowner/input_'
+
+12-07-2026T23:59:52 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Non-Coffee")): Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:59:53 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Non-Coffee' is clicked on
+
+12-07-2026T23:59:53 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/span_Tambah Bahan")): Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:59:53 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/span_Tambah Bahan' is clicked on
+
+12-07-2026T23:59:53 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral"), "83121e1d-3522-4570-b806-31127ed0938d", false): All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:59:54 - [MESSAGE][PASSED] - All options with value '83121e1d-3522-4570-b806-31127ed0938d' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral' 
+
+12-07-2026T23:59:54 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1"), "8e6cce60-f6ab-459f-924f-2b1e6c79a01f", false): All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+13-07-2026T00:00:04 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+13-07-2026T00:00:04 - [MESSAGE][WARNING] - Waiting for element timed out
+
+13-07-2026T00:00:05 - [MESSAGE][PASSED] - All options with value '8e6cce60-f6ab-459f-924f-2b1e6c79a01f' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1' 
+
+13-07-2026T00:00:05 - [TEST_STEP][PASSED] - selectOptionByValue(findTestObject("Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2"), "b31a8159-969a-4ec8-a869-182f3ff8e044", false): All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+13-07-2026T00:00:15 - [MESSAGE][WARNING] - The current locator of test object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' was broken. Propose an alternative one: '//div[@id='root']/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select'.
+
+13-07-2026T00:00:15 - [MESSAGE][WARNING] - Waiting for element timed out
+
+13-07-2026T00:00:16 - [MESSAGE][PASSED] - All options with value 'b31a8159-969a-4ec8-a869-182f3ff8e044' are selected in object 'Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2' 
+
+13-07-2026T00:00:16 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/input_https")): Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+13-07-2026T00:00:16 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/input_https' is clicked on
+
+13-07-2026T00:00:16 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Upload")): Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+13-07-2026T00:00:17 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Upload' is clicked on
+
+13-07-2026T00:00:17 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Kamera")): Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+13-07-2026T00:00:17 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Kamera' is clicked on
+
+13-07-2026T00:00:17 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Ambil Foto")): Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+13-07-2026T00:00:18 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Ambil Foto' is clicked on
+
+13-07-2026T00:00:18 - [TEST_STEP][PASSED] - click(findTestObject("Page_cuaninowner/button_Simpan Menu")): Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on
+
+13-07-2026T00:00:18 - [MESSAGE][PASSED] - Object: 'Object Repository/Page_cuaninowner/button_Simpan Menu' is clicked on]]></system-out>
+         <system-err><![CDATA[]]></system-err>
+      </testcase>
+      <system-out><![CDATA[12-07-2026T23:57:07 - [TEST_SUITE][PASSED] - TS_UJI_MasterData: null]]></system-out>
+      <system-err><![CDATA[]]></system-err>
+   </testsuite>
+</testsuites>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Layers, Edit2, Trash2, X, Info, FileSpreadsheet, Trash, Save, Loader2,
-  Link, Upload, Camera, Image, AlertTriangle
+  Link, Upload, Camera, Image, AlertTriangle, Search
 } from 'lucide-react';
 
 import { supabase } from '../../config/supabaseClient';
@@ -189,6 +189,7 @@ export default function MenuManagement() {
   const [selectedCategory, setSelectedCategory] = useState('Coffee');
 
   const [menus, setMenus] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [stockIngredients, setStockIngredients] = useState([]);
   const [menuSummary, setMenuSummary] = useState({ totalItems: 0, totalCategories: 0, outOfStockCount: 0 });
@@ -608,6 +609,16 @@ export default function MenuManagement() {
     setRecipeRows(updatedRows);
   };
 
+  // 🔍 Filter menu berdasarkan search query (nama menu, kategori, atau ID) — auto filter saat mengetik
+  const filteredMenus = menus.filter((item) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    const nameMatch = (item.menu_name || '').toLowerCase().includes(query);
+    const categoryMatch = (item.category || '').toLowerCase().includes(query);
+    const idMatch = (item.id || '').toString().toLowerCase().includes(query);
+    return nameMatch || categoryMatch || idMatch;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', boxSizing: 'border-box', width: '100%', position: 'relative' }}>
       
@@ -619,6 +630,35 @@ export default function MenuManagement() {
         <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#006847', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0, 104, 71, 0.1)' }}>
           <Plus size={16} /> Add New Item
         </button>
+      </div>
+
+      {/* 🔍 SEARCH BAR — auto filter menu saat diketik */}
+      <div style={{ position: 'relative', maxWidth: '360px' }}>
+        <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Cari menu berdasarkan nama, kategori, atau ID..."
+          style={{
+            width: '100%',
+            padding: '10px 14px 10px 38px',
+            border: '1px solid #D1D5DB',
+            borderRadius: '10px',
+            fontSize: '13px',
+            outline: 'none',
+            boxSizing: 'border-box',
+            backgroundColor: '#ffffff',
+          }}
+        />
+        {searchQuery && (
+          <X
+            size={14}
+            color="#9CA3AF"
+            style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}
+            onClick={() => setSearchQuery('')}
+          />
+        )}
       </div>
 
       {/* THREE HEAD METRICS */}
@@ -641,7 +681,7 @@ export default function MenuManagement() {
         <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
           <Loader2 size={16} className="animate-spin" /> Memuat katalog menu cuanin.id...
         </div>
-      ) : menus.length > 0 ? (
+      ) : filteredMenus.length > 0 ? (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
             <thead>
@@ -654,7 +694,7 @@ export default function MenuManagement() {
               </tr>
             </thead>
             <tbody>
-              {menus.map((item) => (
+              {filteredMenus.map((item) => (
                 <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                   <td style={{ padding: '16px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -694,8 +734,10 @@ export default function MenuManagement() {
         </div>
       ) : (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '64px 32px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-          <div style={{ fontSize: '28px' }}>☕</div>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#4B5563', marginTop: '12px' }}>Katalog Menu Masih Kosong</h3>
+          <div style={{ fontSize: '28px' }}>{searchQuery ? '🔍' : '☕'}</div>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#4B5563', marginTop: '12px' }}>
+            {searchQuery ? `Menu "${searchQuery}" tidak ditemukan` : 'Katalog Menu Masih Kosong'}
+          </h3>
         </div>
       )}
 

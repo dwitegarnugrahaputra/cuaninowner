@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description></description>
+   <name>TC_tambahMenuBaru</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>32ae729d-c556-4320-84df-65d456a3698f</testCaseGuid>
+   <variableLinks>
+      <testDataLinkId></testDataLinkId>
+      <type>DEFAULT</type>
+      <value></value>
+      <variableId>0a0d02ee-4cb5-483f-9e03-3b0a1ae9c3a6</variableId>
+   </variableLinks>
+   <variableLinks>
+      <testDataLinkId></testDataLinkId>
+      <type>DEFAULT</type>
+      <value></value>
+      <variableId>a02dc33e-d7f7-488d-a009-11a45ee6a0bd</variableId>
+   </variableLinks>
+   <variableLinks>
+      <testDataLinkId></testDataLinkId>
+      <type>DEFAULT</type>
+      <value></value>
+      <variableId>0e1e4f73-d78b-46c6-aca8-a69277dc8890</variableId>
+   </variableLinks>
+   <variable>
+      <defaultValue>'Americano Ice'</defaultValue>
+      <description></description>
+      <id>0a0d02ee-4cb5-483f-9e03-3b0a1ae9c3a6</id>
+      <masked>false</masked>
+      <name>nama_menu</name>
+   </variable>
+   <variable>
+      <defaultValue>''</defaultValue>
+      <description></description>
+      <id>a02dc33e-d7f7-488d-a009-11a45ee6a0bd</id>
+      <masked>false</masked>
+      <name>kategori</name>
+   </variable>
+   <variable>
+      <defaultValue>'15000'</defaultValue>
+      <description></description>
+      <id>0e1e4f73-d78b-46c6-aca8-a69277dc8890</id>
+      <masked>false</masked>
+      <name>harga</name>
+   </variable>
+</TestCaseEntity>

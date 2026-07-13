@@ -1,0 +1,24 @@
+{
+  "brokenTestObjects": [
+    {
+      "approved": true,
+      "testObjectId": "Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1",
+      "brokenLocator": "//*[(name() \u003d \u0027div\u0027) and (position() \u003d 3)]/select",
+      "brokenLocatorMethod": "XPATH",
+      "proposedLocator": "//div[@id\u003d\u0027root\u0027]/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select",
+      "proposedLocatorMethod": "XPATH",
+      "recoveryMethod": "XPATH",
+      "pathToScreenshot": "Reports/Self-healing/Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1_XPATH.png"
+    },
+    {
+      "approved": true,
+      "testObjectId": "Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2",
+      "brokenLocator": "//*[(name() \u003d \u0027div\u0027) and (position() \u003d 4)]/select",
+      "brokenLocatorMethod": "XPATH",
+      "proposedLocator": "//div[@id\u003d\u0027root\u0027]/div/div[2]/div[2]/div/div[4]/div/div[2]/div/div[2]/div[2]/div[2]/select",
+      "proposedLocatorMethod": "XPATH",
+      "recoveryMethod": "XPATH",
+      "pathToScreenshot": "Reports/Self-healing/Object Repository/Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2_XPATH.png"
+    }
+  ]
+}

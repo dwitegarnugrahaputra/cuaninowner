@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WebElementEntity>
+   <description></description>
+   <name>input_0</name>
+   <tag></tag>
+   <elementGuidId>6838abcb-cee9-4cf1-946b-2bcc9f494d8e</elementGuidId>
+   <selectorCollection>
+      <entry>
+         <key>CSS</key>
+         <value>div:nth-child(1) div:nth-child(1) div div:nth-child(2) div:nth-child(1) > div > [type=&quot;text&quot;]</value>
+      </entry>
+      <entry>
+         <key>XPATH</key>
+         <value>//*[(name() = 'div') and (position() = 1)]//*[(name() = 'div') and (position() = 1)]//div//*[(name() = 'div') and (position() = 2)]//*[(name() = 'div') and (position() = 1)]/div/*[@type = 'text']</value>
+      </entry>
+   </selectorCollection>
+   <selectorMethod>XPATH</selectorMethod>
+   <smartLocatorCollection>
+      <entry>
+         <key>SMART_LOCATOR</key>
+         <value>internal:attr=[placeholder=&quot;0&quot;i]</value>
+      </entry>
+   </smartLocatorCollection>
+   <smartLocatorEnabled>false</smartLocatorEnabled>
+   <useRalativeImagePath>true</useRalativeImagePath>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>tag</name>
+      <type>Main</type>
+      <value>input</value>
+      <webElementGuid>ee7c1dcf-0ca5-4a0d-86b6-414bab255e0a</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>true</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>placeholder</name>
+      <type>Main</type>
+      <value>0</value>
+      <webElementGuid>acc7241c-b105-443f-b73a-a43b53d6a60c</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>true</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>type</name>
+      <type>Main</type>
+      <value>text</value>
+      <webElementGuid>8d35998c-6903-4a4e-ac46-dda21123361b</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>value</name>
+      <type>Main</type>
+      <value>1</value>
+      <webElementGuid>4273c2bc-68b4-4601-a19d-25389da3c231</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>parent</name>
+      <type>Main</type>
+      <value>md5.v1-595479a486043f525f70721bbf8adbb5</value>
+      <webElementGuid>fc211fb2-a6ca-4fcc-9536-80e9eeb73646</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>xpath</name>
+      <type>Main</type>
+      <value>//*[(name() = 'div') and (position() = 1)]//*[(name() = 'div') and (position() = 1)]//div//*[(name() = 'div') and (position() = 2)]//*[(name() = 'div') and (position() = 1)]/div/*[@type = 'text']</value>
+      <webElementGuid>b6680ebf-6110-49e0-a494-650dc5343d48</webElementGuid>
+   </webElementProperties>
+   <webElementXpaths>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>xpath:attributes</name>
+      <type>Main</type>
+      <value>//*[(name() = 'div') and (position() = 1)]//*[(name() = 'div') and (position() = 1)]//div//*[(name() = 'div') and (position() = 2)]//*[(name() = 'div') and (position() = 1)]/div/*[@type = 'text']</value>
+      <webElementGuid>178f669a-8cb3-496b-9648-dccdc3374880</webElementGuid>
+   </webElementXpaths>
+   <webElementXpaths>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>xpath:customAttributes</name>
+      <type>Main</type>
+      <value>//input[@placeholder = '0' and @type = 'text']</value>
+      <webElementGuid>d01a41eb-4003-4627-bc04-c2d54159d96e</webElementGuid>
+   </webElementXpaths>
+</WebElementEntity>

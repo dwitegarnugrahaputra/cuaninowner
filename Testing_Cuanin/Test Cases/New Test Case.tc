@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description></description>
+   <name>New Test Case</name>
+   <tag></tag>
+   <comment></comment>
+   <origin>WEB_RECORDER</origin>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>147c57c5-ab15-41e9-b8ad-b54239f5ecfa</testCaseGuid>
+   <variableLinks>
+      <testDataLinkId></testDataLinkId>
+      <type>DEFAULT</type>
+      <value></value>
+      <variableId>6290c39f-d3ae-49ba-9eb7-a1398301a819</variableId>
+   </variableLinks>
+   <variable>
+      <defaultValue>''</defaultValue>
+      <description></description>
+      <id>6290c39f-d3ae-49ba-9eb7-a1398301a819</id>
+      <masked>false</masked>
+      <name>var_nama_baru</name>
+   </variable>
+</TestCaseEntity>

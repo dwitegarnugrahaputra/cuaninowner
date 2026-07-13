@@ -1,0 +1,692 @@
+Suite/Test/Step Name,Browser,Description,Tag,Start time,End time,Duration,Status
+testsuitanyar,Chrome 150.0.7871.101,,,13-07-2026 01:05:22,13-07-2026 01:23:07,17m - 44.766s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:05:22,13-07-2026 01:06:01,38.869s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 1""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:05:22,13-07-2026 01:05:25,3.069s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:05:25,13-07-2026 01:05:26,0.350s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:05:26,13-07-2026 01:05:27,1.133s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:05:27,13-07-2026 01:05:27,0.504s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:05:27,13-07-2026 01:05:28,0.447s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:05:28,13-07-2026 01:05:28,0.358s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:28,13-07-2026 01:05:32,3.883s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:32,13-07-2026 01:05:33,1.035s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:05:33,13-07-2026 01:05:34,1.082s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:05:34,13-07-2026 01:05:35,0.465s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:35,13-07-2026 01:05:35,0.344s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:35,13-07-2026 01:05:35,0.378s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:05:35,13-07-2026 01:05:37,1.053s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:05:37,13-07-2026 01:05:47,10.784s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:05:47,13-07-2026 01:05:58,10.682s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:58,13-07-2026 01:05:59,0.773s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:59,13-07-2026 01:05:59,0.347s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:05:59,13-07-2026 01:06:00,0.577s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:00,13-07-2026 01:06:00,0.656s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:00,13-07-2026 01:06:01,0.511s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:06:01,13-07-2026 01:06:37,35.868s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 2""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:06:01,13-07-2026 01:06:03,1.939s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:06:03,13-07-2026 01:06:03,0.320s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:06:03,13-07-2026 01:06:04,1.078s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:04,13-07-2026 01:06:05,0.449s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:05,13-07-2026 01:06:05,0.489s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:06:05,13-07-2026 01:06:05,0.310s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:05,13-07-2026 01:06:08,2.758s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:08,13-07-2026 01:06:09,0.958s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:06:09,13-07-2026 01:06:10,1.035s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:10,13-07-2026 01:06:11,0.435s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:11,13-07-2026 01:06:11,0.331s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:11,13-07-2026 01:06:11,0.380s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:11,13-07-2026 01:06:12,0.995s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:12,13-07-2026 01:06:23,10.777s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:23,13-07-2026 01:06:34,10.667s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:34,13-07-2026 01:06:34,0.575s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:34,13-07-2026 01:06:35,0.555s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:35,13-07-2026 01:06:36,0.558s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:36,13-07-2026 01:06:36,0.636s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:36,13-07-2026 01:06:37,0.595s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:06:37,13-07-2026 01:07:12,35.468s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 3""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:06:37,13-07-2026 01:06:39,1.792s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:06:39,13-07-2026 01:06:39,0.310s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:06:39,13-07-2026 01:06:40,1.055s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:40,13-07-2026 01:06:40,0.411s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:40,13-07-2026 01:06:41,0.448s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:06:41,13-07-2026 01:06:41,0.314s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:41,13-07-2026 01:06:44,2.801s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:44,13-07-2026 01:06:45,0.817s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:06:45,13-07-2026 01:06:46,1.025s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:06:46,13-07-2026 01:06:46,0.418s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:46,13-07-2026 01:06:47,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:06:47,13-07-2026 01:06:47,0.366s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:47,13-07-2026 01:06:48,0.968s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:48,13-07-2026 01:06:59,10.698s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:06:59,13-07-2026 01:07:09,10.643s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:09,13-07-2026 01:07:10,0.972s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:10,13-07-2026 01:07:11,0.327s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:11,13-07-2026 01:07:11,0.549s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:11,13-07-2026 01:07:12,0.603s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:12,13-07-2026 01:07:12,0.596s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:07:12,13-07-2026 01:07:47,35.110s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 4""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:07:12,13-07-2026 01:07:14,1.753s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:07:14,13-07-2026 01:07:14,0.304s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:07:14,13-07-2026 01:07:15,0.997s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:15,13-07-2026 01:07:16,0.413s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:16,13-07-2026 01:07:16,0.473s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:07:16,13-07-2026 01:07:17,0.299s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:17,13-07-2026 01:07:19,2.699s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:19,13-07-2026 01:07:20,0.958s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:07:20,13-07-2026 01:07:21,1.044s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:21,13-07-2026 01:07:22,0.413s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:22,13-07-2026 01:07:22,0.326s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:22,13-07-2026 01:07:22,0.361s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:07:22,13-07-2026 01:07:23,0.938s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:07:23,13-07-2026 01:07:34,10.728s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:07:34,13-07-2026 01:07:45,10.604s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:45,13-07-2026 01:07:45,0.699s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:45,13-07-2026 01:07:46,0.354s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:46,13-07-2026 01:07:46,0.541s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:46,13-07-2026 01:07:47,0.606s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:47,13-07-2026 01:07:47,0.570s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:07:47,13-07-2026 01:08:23,35.457s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 5""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:07:47,13-07-2026 01:07:49,1.806s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:07:49,13-07-2026 01:07:50,0.304s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:07:50,13-07-2026 01:07:51,1.018s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:51,13-07-2026 01:07:51,0.404s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:51,13-07-2026 01:07:51,0.445s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:07:51,13-07-2026 01:07:52,0.307s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:52,13-07-2026 01:07:54,2.757s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:54,13-07-2026 01:07:55,0.921s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:07:55,13-07-2026 01:07:56,1.051s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:07:56,13-07-2026 01:07:57,0.414s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:57,13-07-2026 01:07:57,0.334s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:07:57,13-07-2026 01:07:58,0.357s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:07:58,13-07-2026 01:07:59,0.957s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:07:59,13-07-2026 01:08:09,10.744s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:08:09,13-07-2026 01:08:20,10.801s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:20,13-07-2026 01:08:21,0.751s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:21,13-07-2026 01:08:21,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:21,13-07-2026 01:08:22,0.542s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:22,13-07-2026 01:08:22,0.612s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:22,13-07-2026 01:08:23,0.574s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:08:23,13-07-2026 01:08:58,35.239s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 6""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:08:23,13-07-2026 01:08:25,1.761s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:08:25,13-07-2026 01:08:25,0.307s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:08:25,13-07-2026 01:08:26,1.007s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:08:26,13-07-2026 01:08:26,0.436s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:08:26,13-07-2026 01:08:27,0.450s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:08:27,13-07-2026 01:08:27,0.312s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:27,13-07-2026 01:08:30,2.821s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:30,13-07-2026 01:08:31,0.855s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:08:31,13-07-2026 01:08:32,1.042s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:08:32,13-07-2026 01:08:32,0.422s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:32,13-07-2026 01:08:33,0.333s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:33,13-07-2026 01:08:33,0.363s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:08:33,13-07-2026 01:08:34,0.967s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:08:34,13-07-2026 01:08:45,10.690s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:08:45,13-07-2026 01:08:55,10.620s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:55,13-07-2026 01:08:56,0.768s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:56,13-07-2026 01:08:56,0.322s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:56,13-07-2026 01:08:57,0.539s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:57,13-07-2026 01:08:58,0.606s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:08:58,13-07-2026 01:08:58,0.590s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:08:58,13-07-2026 01:09:34,35.527s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 7""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:08:58,13-07-2026 01:09:00,1.701s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:09:00,13-07-2026 01:09:00,0.304s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:09:00,13-07-2026 01:09:01,1.000s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:01,13-07-2026 01:09:02,0.406s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:02,13-07-2026 01:09:02,0.432s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:09:02,13-07-2026 01:09:02,0.302s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:02,13-07-2026 01:09:05,2.927s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:05,13-07-2026 01:09:06,0.951s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:09:06,13-07-2026 01:09:07,1.057s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:07,13-07-2026 01:09:08,0.399s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:08,13-07-2026 01:09:08,0.316s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:08,13-07-2026 01:09:08,0.367s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:08,13-07-2026 01:09:09,0.954s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:09,13-07-2026 01:09:20,10.720s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:20,13-07-2026 01:09:31,10.834s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:31,13-07-2026 01:09:32,0.765s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:32,13-07-2026 01:09:32,0.337s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:32,13-07-2026 01:09:32,0.543s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:32,13-07-2026 01:09:33,0.604s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:33,13-07-2026 01:09:34,0.587s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:09:34,13-07-2026 01:10:09,35.471s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 8""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:09:34,13-07-2026 01:09:36,1.827s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:09:36,13-07-2026 01:09:36,0.311s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:09:36,13-07-2026 01:09:37,1.001s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:37,13-07-2026 01:09:37,0.412s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:37,13-07-2026 01:09:38,0.418s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:09:38,13-07-2026 01:09:38,0.307s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:38,13-07-2026 01:09:41,2.745s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:41,13-07-2026 01:09:42,1.037s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:09:42,13-07-2026 01:09:43,1.087s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:09:43,13-07-2026 01:09:43,0.404s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:43,13-07-2026 01:09:44,0.319s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:09:44,13-07-2026 01:09:44,0.366s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:44,13-07-2026 01:09:45,0.963s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:45,13-07-2026 01:09:56,10.729s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:09:56,13-07-2026 01:10:06,10.649s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:06,13-07-2026 01:10:07,0.709s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:07,13-07-2026 01:10:07,0.348s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:07,13-07-2026 01:10:08,0.571s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:08,13-07-2026 01:10:09,0.652s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:09,13-07-2026 01:10:09,0.596s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:10:09,13-07-2026 01:10:45,35.514s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 9""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:10:09,13-07-2026 01:10:11,1.778s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:10:11,13-07-2026 01:10:11,0.333s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:10:11,13-07-2026 01:10:12,1.001s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:12,13-07-2026 01:10:13,0.398s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:13,13-07-2026 01:10:13,0.431s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:10:13,13-07-2026 01:10:13,0.296s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:13,13-07-2026 01:10:16,2.691s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:16,13-07-2026 01:10:17,0.851s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:10:17,13-07-2026 01:10:18,1.081s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:18,13-07-2026 01:10:19,0.499s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:19,13-07-2026 01:10:19,0.342s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:19,13-07-2026 01:10:19,0.366s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:10:19,13-07-2026 01:10:20,0.947s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:10:20,13-07-2026 01:10:31,10.738s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:10:31,13-07-2026 01:10:42,10.847s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:42,13-07-2026 01:10:43,0.746s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:43,13-07-2026 01:10:43,0.335s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:43,13-07-2026 01:10:43,0.555s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:43,13-07-2026 01:10:44,0.683s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:44,13-07-2026 01:10:45,0.574s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:10:45,13-07-2026 01:11:20,35.459s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 10""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:10:45,13-07-2026 01:10:47,1.842s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:10:47,13-07-2026 01:10:47,0.307s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:10:47,13-07-2026 01:10:48,1.008s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:48,13-07-2026 01:10:48,0.398s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:48,13-07-2026 01:10:49,0.443s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:10:49,13-07-2026 01:10:49,0.305s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:49,13-07-2026 01:10:52,2.721s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:52,13-07-2026 01:10:53,0.938s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:10:53,13-07-2026 01:10:54,1.088s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:10:54,13-07-2026 01:10:54,0.396s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:54,13-07-2026 01:10:55,0.334s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:10:55,13-07-2026 01:10:55,0.365s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:10:55,13-07-2026 01:10:56,0.955s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:10:56,13-07-2026 01:11:07,10.735s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:11:07,13-07-2026 01:11:17,10.796s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:17,13-07-2026 01:11:18,0.767s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:18,13-07-2026 01:11:18,0.322s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:18,13-07-2026 01:11:19,0.558s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:19,13-07-2026 01:11:20,0.605s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:20,13-07-2026 01:11:20,0.550s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:11:20,13-07-2026 01:11:56,35.790s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 11""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:11:20,13-07-2026 01:11:22,1.773s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:11:22,13-07-2026 01:11:22,0.285s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:11:22,13-07-2026 01:11:23,1.132s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:11:23,13-07-2026 01:11:24,0.394s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:11:24,13-07-2026 01:11:24,0.438s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:11:24,13-07-2026 01:11:25,0.302s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:25,13-07-2026 01:11:27,2.887s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:27,13-07-2026 01:11:28,0.949s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:11:28,13-07-2026 01:11:30,1.144s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:11:30,13-07-2026 01:11:30,0.375s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:30,13-07-2026 01:11:30,0.320s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:30,13-07-2026 01:11:31,0.369s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:11:31,13-07-2026 01:11:32,0.971s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:11:32,13-07-2026 01:11:42,10.729s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:11:42,13-07-2026 01:11:53,10.833s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:53,13-07-2026 01:11:54,0.763s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:54,13-07-2026 01:11:54,0.336s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:54,13-07-2026 01:11:55,0.550s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:55,13-07-2026 01:11:55,0.664s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:11:55,13-07-2026 01:11:56,0.553s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:11:56,13-07-2026 01:12:31,35.377s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 12""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:11:56,13-07-2026 01:11:58,1.710s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:11:58,13-07-2026 01:11:58,0.292s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:11:58,13-07-2026 01:11:59,1.002s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:11:59,13-07-2026 01:11:59,0.415s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:11:59,13-07-2026 01:12:00,0.442s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:12:00,13-07-2026 01:12:00,0.292s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:00,13-07-2026 01:12:03,2.651s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:03,13-07-2026 01:12:04,0.944s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:12:04,13-07-2026 01:12:05,1.087s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:12:05,13-07-2026 01:12:05,0.402s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:05,13-07-2026 01:12:06,0.326s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:06,13-07-2026 01:12:06,0.365s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:06,13-07-2026 01:12:07,0.960s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:07,13-07-2026 01:12:18,10.821s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:18,13-07-2026 01:12:29,10.823s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:29,13-07-2026 01:12:29,0.748s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:29,13-07-2026 01:12:30,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:30,13-07-2026 01:12:30,0.546s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:30,13-07-2026 01:12:31,0.617s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:31,13-07-2026 01:12:31,0.587s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:12:31,13-07-2026 01:13:07,35.503s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 13""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:12:31,13-07-2026 01:12:33,1.768s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:12:33,13-07-2026 01:12:33,0.310s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:12:33,13-07-2026 01:12:34,0.996s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:12:34,13-07-2026 01:12:35,0.394s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:12:35,13-07-2026 01:12:35,0.448s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:12:35,13-07-2026 01:12:36,0.313s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:36,13-07-2026 01:12:38,2.643s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:38,13-07-2026 01:12:39,0.967s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:12:39,13-07-2026 01:12:40,1.093s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:12:40,13-07-2026 01:12:41,0.393s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:41,13-07-2026 01:12:41,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:12:41,13-07-2026 01:12:41,0.361s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:41,13-07-2026 01:12:42,0.957s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:42,13-07-2026 01:12:53,10.746s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:12:53,13-07-2026 01:13:04,10.682s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:04,13-07-2026 01:13:05,0.983s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:05,13-07-2026 01:13:05,0.335s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:05,13-07-2026 01:13:06,0.555s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:06,13-07-2026 01:13:06,0.620s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:06,13-07-2026 01:13:07,0.591s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:13:07,13-07-2026 01:13:42,35.477s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 14""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:13:07,13-07-2026 01:13:09,1.748s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:13:09,13-07-2026 01:13:09,0.334s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:13:09,13-07-2026 01:13:10,1.013s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:10,13-07-2026 01:13:10,0.390s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:10,13-07-2026 01:13:11,0.430s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:13:11,13-07-2026 01:13:11,0.292s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:11,13-07-2026 01:13:14,2.739s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:14,13-07-2026 01:13:15,0.852s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:13:15,13-07-2026 01:13:16,1.126s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:16,13-07-2026 01:13:16,0.443s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:16,13-07-2026 01:13:17,0.338s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:17,13-07-2026 01:13:17,0.378s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:13:17,13-07-2026 01:13:18,0.986s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:13:18,13-07-2026 01:13:29,10.714s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:13:29,13-07-2026 01:13:40,10.825s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:40,13-07-2026 01:13:40,0.760s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:40,13-07-2026 01:13:41,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:41,13-07-2026 01:13:41,0.549s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:41,13-07-2026 01:13:42,0.658s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:42,13-07-2026 01:13:42,0.555s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:13:42,13-07-2026 01:14:18,35.557s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 15""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:13:42,13-07-2026 01:13:44,1.705s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:13:44,13-07-2026 01:13:44,0.313s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:13:44,13-07-2026 01:13:45,1.015s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:45,13-07-2026 01:13:46,0.419s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:46,13-07-2026 01:13:46,0.420s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:13:46,13-07-2026 01:13:47,0.298s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:47,13-07-2026 01:13:49,2.707s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:49,13-07-2026 01:13:50,0.955s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:13:50,13-07-2026 01:13:51,1.100s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:13:51,13-07-2026 01:13:52,0.420s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:52,13-07-2026 01:13:52,0.325s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:13:52,13-07-2026 01:13:52,0.368s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:13:52,13-07-2026 01:13:54,1.058s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:13:54,13-07-2026 01:14:04,10.735s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:14:04,13-07-2026 01:14:15,10.731s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:15,13-07-2026 01:14:16,0.868s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:16,13-07-2026 01:14:16,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:16,13-07-2026 01:14:17,0.563s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:17,13-07-2026 01:14:17,0.646s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:17,13-07-2026 01:14:18,0.569s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:14:18,13-07-2026 01:14:54,35.718s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 16""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:14:18,13-07-2026 01:14:20,1.781s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:14:20,13-07-2026 01:14:20,0.377s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:14:20,13-07-2026 01:14:21,1.011s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:14:21,13-07-2026 01:14:22,0.406s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:14:22,13-07-2026 01:14:22,0.417s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:14:22,13-07-2026 01:14:22,0.298s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:22,13-07-2026 01:14:25,2.923s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:25,13-07-2026 01:14:26,0.846s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:14:26,13-07-2026 01:14:27,1.085s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:14:27,13-07-2026 01:14:28,0.391s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:28,13-07-2026 01:14:28,0.330s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:28,13-07-2026 01:14:28,0.385s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:14:28,13-07-2026 01:14:29,1.058s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:14:29,13-07-2026 01:14:40,10.751s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:14:40,13-07-2026 01:14:51,10.786s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:51,13-07-2026 01:14:52,0.769s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:52,13-07-2026 01:14:52,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:52,13-07-2026 01:14:53,0.559s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:53,13-07-2026 01:14:53,0.643s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:53,13-07-2026 01:14:54,0.555s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:14:54,13-07-2026 01:15:29,35.230s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 17""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:14:54,13-07-2026 01:14:55,1.639s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:14:55,13-07-2026 01:14:56,0.306s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:14:56,13-07-2026 01:14:57,0.990s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:14:57,13-07-2026 01:14:57,0.412s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:14:57,13-07-2026 01:14:57,0.400s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:14:57,13-07-2026 01:14:58,0.289s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:14:58,13-07-2026 01:15:00,2.686s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:00,13-07-2026 01:15:01,0.966s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:15:01,13-07-2026 01:15:03,1.080s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:15:03,13-07-2026 01:15:03,0.393s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:03,13-07-2026 01:15:03,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:03,13-07-2026 01:15:04,0.370s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:04,13-07-2026 01:15:05,1.057s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:05,13-07-2026 01:15:15,10.688s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:15,13-07-2026 01:15:26,10.827s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:26,13-07-2026 01:15:27,0.762s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:27,13-07-2026 01:15:27,0.320s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:27,13-07-2026 01:15:28,0.542s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:28,13-07-2026 01:15:28,0.601s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:28,13-07-2026 01:15:29,0.553s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:15:29,13-07-2026 01:16:05,35.525s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 18""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:15:29,13-07-2026 01:15:31,1.739s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:15:31,13-07-2026 01:15:31,0.293s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:15:31,13-07-2026 01:15:32,1.012s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:15:32,13-07-2026 01:15:32,0.400s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:15:32,13-07-2026 01:15:33,0.432s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:15:33,13-07-2026 01:15:33,0.307s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:33,13-07-2026 01:15:36,2.836s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:36,13-07-2026 01:15:37,0.961s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:15:37,13-07-2026 01:15:38,1.114s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:15:38,13-07-2026 01:15:38,0.392s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:38,13-07-2026 01:15:39,0.326s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:15:39,13-07-2026 01:15:39,0.366s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:39,13-07-2026 01:15:40,0.984s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:40,13-07-2026 01:15:51,10.708s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:15:51,13-07-2026 01:16:02,10.807s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:02,13-07-2026 01:16:02,0.751s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:02,13-07-2026 01:16:03,0.315s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:03,13-07-2026 01:16:03,0.562s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:03,13-07-2026 01:16:04,0.643s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:04,13-07-2026 01:16:05,0.557s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:16:05,13-07-2026 01:16:40,35.558s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 19""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:16:05,13-07-2026 01:16:06,1.727s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:16:06,13-07-2026 01:16:07,0.311s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:16:07,13-07-2026 01:16:08,1.014s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:08,13-07-2026 01:16:08,0.399s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:08,13-07-2026 01:16:08,0.459s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:16:08,13-07-2026 01:16:09,0.288s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:09,13-07-2026 01:16:12,2.790s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:12,13-07-2026 01:16:12,0.953s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:16:12,13-07-2026 01:16:14,1.114s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:14,13-07-2026 01:16:14,0.392s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:14,13-07-2026 01:16:14,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:14,13-07-2026 01:16:15,0.366s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:16:15,13-07-2026 01:16:16,1.060s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:16:16,13-07-2026 01:16:27,10.783s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:16:27,13-07-2026 01:16:37,10.759s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:37,13-07-2026 01:16:38,0.759s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:38,13-07-2026 01:16:38,0.334s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:38,13-07-2026 01:16:39,0.532s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:39,13-07-2026 01:16:40,0.612s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:40,13-07-2026 01:16:40,0.561s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:16:40,13-07-2026 01:17:15,35.367s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 20""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:16:40,13-07-2026 01:16:42,1.760s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:16:42,13-07-2026 01:16:42,0.298s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:16:42,13-07-2026 01:16:43,0.982s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:43,13-07-2026 01:16:44,0.390s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:44,13-07-2026 01:16:44,0.459s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:16:44,13-07-2026 01:16:44,0.291s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:44,13-07-2026 01:16:47,2.657s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:47,13-07-2026 01:16:48,0.981s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:16:48,13-07-2026 01:16:49,1.091s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:16:49,13-07-2026 01:16:49,0.385s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:49,13-07-2026 01:16:50,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:16:50,13-07-2026 01:16:50,0.358s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:16:50,13-07-2026 01:16:51,0.969s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:16:51,13-07-2026 01:17:02,10.736s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:02,13-07-2026 01:17:13,10.811s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:13,13-07-2026 01:17:13,0.790s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:13,13-07-2026 01:17:14,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:14,13-07-2026 01:17:14,0.540s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:14,13-07-2026 01:17:15,0.633s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:15,13-07-2026 01:17:15,0.555s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:17:15,13-07-2026 01:17:49,33.995s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 21""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:17:16,13-07-2026 01:17:17,1.855s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:17:17,13-07-2026 01:17:18,0.308s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:17:18,13-07-2026 01:17:19,1.023s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:19,13-07-2026 01:17:19,0.404s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:19,13-07-2026 01:17:20,0.442s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:17:20,13-07-2026 01:17:20,0.294s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:20,13-07-2026 01:17:21,1.042s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:21,13-07-2026 01:17:22,0.937s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:17:22,13-07-2026 01:17:23,1.105s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:23,13-07-2026 01:17:23,0.378s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:23,13-07-2026 01:17:24,0.333s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:24,13-07-2026 01:17:24,0.368s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:24,13-07-2026 01:17:25,0.960s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:25,13-07-2026 01:17:36,10.705s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:36,13-07-2026 01:17:46,10.767s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:46,13-07-2026 01:17:47,0.970s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:47,13-07-2026 01:17:48,0.344s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:48,13-07-2026 01:17:48,0.540s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:48,13-07-2026 01:17:49,0.618s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:49,13-07-2026 01:17:49,0.588s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:17:50,13-07-2026 01:18:23,33.677s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 22""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:17:50,13-07-2026 01:17:51,1.784s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:17:51,13-07-2026 01:17:52,0.306s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:17:52,13-07-2026 01:17:53,1.002s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:53,13-07-2026 01:17:53,0.397s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:53,13-07-2026 01:17:53,0.435s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:17:53,13-07-2026 01:17:54,0.295s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:54,13-07-2026 01:17:55,1.036s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:55,13-07-2026 01:17:56,0.903s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:17:56,13-07-2026 01:17:57,1.121s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:17:57,13-07-2026 01:17:57,0.381s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:57,13-07-2026 01:17:58,0.320s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:17:58,13-07-2026 01:17:58,0.374s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:58,13-07-2026 01:17:59,0.957s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:17:59,13-07-2026 01:18:10,10.732s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:18:10,13-07-2026 01:18:20,10.788s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:20,13-07-2026 01:18:21,0.763s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:21,13-07-2026 01:18:21,0.336s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:21,13-07-2026 01:18:22,0.540s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:22,13-07-2026 01:18:23,0.634s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:23,13-07-2026 01:18:23,0.556s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:18:23,13-07-2026 01:18:59,35.503s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 23""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:18:23,13-07-2026 01:18:25,1.754s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:18:25,13-07-2026 01:18:25,0.317s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:18:25,13-07-2026 01:18:26,0.994s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:18:26,13-07-2026 01:18:27,0.386s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:18:27,13-07-2026 01:18:27,0.439s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:18:27,13-07-2026 01:18:27,0.294s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:27,13-07-2026 01:18:30,2.834s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:30,13-07-2026 01:18:31,0.971s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:18:31,13-07-2026 01:18:32,1.079s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:18:32,13-07-2026 01:18:33,0.383s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:33,13-07-2026 01:18:33,0.339s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:33,13-07-2026 01:18:33,0.372s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:18:33,13-07-2026 01:18:34,0.979s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:18:34,13-07-2026 01:18:45,10.748s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:18:45,13-07-2026 01:18:56,10.763s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:56,13-07-2026 01:18:57,0.763s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:57,13-07-2026 01:18:57,0.322s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:57,13-07-2026 01:18:57,0.544s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:57,13-07-2026 01:18:58,0.610s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:18:58,13-07-2026 01:18:59,0.595s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:18:59,13-07-2026 01:19:34,35.216s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 24""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:18:59,13-07-2026 01:19:00,1.722s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:19:00,13-07-2026 01:19:01,0.305s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:19:01,13-07-2026 01:19:02,1.007s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:02,13-07-2026 01:19:02,0.402s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:02,13-07-2026 01:19:03,0.418s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:19:03,13-07-2026 01:19:03,0.287s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:03,13-07-2026 01:19:06,2.635s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:06,13-07-2026 01:19:06,0.874s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:19:06,13-07-2026 01:19:08,1.133s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:08,13-07-2026 01:19:08,0.432s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:08,13-07-2026 01:19:08,0.318s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:08,13-07-2026 01:19:09,0.368s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:09,13-07-2026 01:19:10,0.960s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:10,13-07-2026 01:19:20,10.740s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:20,13-07-2026 01:19:31,10.769s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:31,13-07-2026 01:19:32,0.763s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:32,13-07-2026 01:19:32,0.327s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:32,13-07-2026 01:19:33,0.536s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:33,13-07-2026 01:19:33,0.611s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:33,13-07-2026 01:19:34,0.597s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:19:34,13-07-2026 01:20:09,35.212s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 25""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:19:34,13-07-2026 01:19:36,1.780s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:19:36,13-07-2026 01:19:36,0.279s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:19:36,13-07-2026 01:19:37,0.989s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:37,13-07-2026 01:19:37,0.404s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:37,13-07-2026 01:19:38,0.409s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:19:38,13-07-2026 01:19:38,0.295s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:38,13-07-2026 01:19:41,2.699s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:41,13-07-2026 01:19:42,0.928s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:19:42,13-07-2026 01:19:43,1.078s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:19:43,13-07-2026 01:19:43,0.386s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:43,13-07-2026 01:19:44,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:19:44,13-07-2026 01:19:44,0.370s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:44,13-07-2026 01:19:45,0.972s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:45,13-07-2026 01:19:56,10.703s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:19:56,13-07-2026 01:20:06,10.760s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:06,13-07-2026 01:20:07,0.751s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:07,13-07-2026 01:20:07,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:07,13-07-2026 01:20:08,0.534s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:08,13-07-2026 01:20:09,0.608s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:09,13-07-2026 01:20:09,0.589s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:20:09,13-07-2026 01:20:44,35.196s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 26""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:20:09,13-07-2026 01:20:11,1.729s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:20:11,13-07-2026 01:20:11,0.299s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:20:11,13-07-2026 01:20:12,0.997s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:12,13-07-2026 01:20:13,0.388s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:13,13-07-2026 01:20:13,0.432s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:20:13,13-07-2026 01:20:13,0.300s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:13,13-07-2026 01:20:16,2.668s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:16,13-07-2026 01:20:17,0.840s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:20:17,13-07-2026 01:20:18,1.154s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:18,13-07-2026 01:20:18,0.424s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:18,13-07-2026 01:20:19,0.329s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:19,13-07-2026 01:20:19,0.382s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:20:19,13-07-2026 01:20:20,0.971s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:20:20,13-07-2026 01:20:31,10.734s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:20:31,13-07-2026 01:20:42,10.777s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:42,13-07-2026 01:20:42,0.751s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:42,13-07-2026 01:20:43,0.323s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:43,13-07-2026 01:20:43,0.539s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:43,13-07-2026 01:20:44,0.599s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:44,13-07-2026 01:20:44,0.541s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:20:44,13-07-2026 01:21:20,35.436s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 27""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:20:44,13-07-2026 01:20:46,1.770s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:20:46,13-07-2026 01:20:46,0.296s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:20:46,13-07-2026 01:20:47,1.000s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:47,13-07-2026 01:20:48,0.406s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:48,13-07-2026 01:20:48,0.436s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:20:48,13-07-2026 01:20:49,0.300s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:49,13-07-2026 01:20:51,2.608s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:51,13-07-2026 01:20:52,0.990s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:20:52,13-07-2026 01:20:53,1.131s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:20:53,13-07-2026 01:20:54,0.426s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:54,13-07-2026 01:20:54,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:20:54,13-07-2026 01:20:54,0.374s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:20:54,13-07-2026 01:20:55,0.971s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:20:55,13-07-2026 01:21:06,10.718s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:21:06,13-07-2026 01:21:17,10.798s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:17,13-07-2026 01:21:18,0.785s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:18,13-07-2026 01:21:18,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:18,13-07-2026 01:21:19,0.546s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:19,13-07-2026 01:21:19,0.650s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:19,13-07-2026 01:21:20,0.557s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:21:20,13-07-2026 01:21:55,35.236s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 28""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:21:20,13-07-2026 01:21:22,1.720s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:21:22,13-07-2026 01:21:22,0.316s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:21:22,13-07-2026 01:21:23,1.066s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:21:23,13-07-2026 01:21:23,0.398s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:21:23,13-07-2026 01:21:24,0.411s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:21:24,13-07-2026 01:21:24,0.286s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:24,13-07-2026 01:21:27,2.724s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:27,13-07-2026 01:21:28,0.998s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:21:28,13-07-2026 01:21:29,1.108s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:21:29,13-07-2026 01:21:29,0.402s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:29,13-07-2026 01:21:30,0.325s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:30,13-07-2026 01:21:30,0.360s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:21:30,13-07-2026 01:21:31,0.955s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:21:31,13-07-2026 01:21:42,10.708s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:21:42,13-07-2026 01:21:52,10.631s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:52,13-07-2026 01:21:53,0.748s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:53,13-07-2026 01:21:53,0.328s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:53,13-07-2026 01:21:54,0.548s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:54,13-07-2026 01:21:55,0.608s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:55,13-07-2026 01:21:55,0.581s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:21:55,13-07-2026 01:22:30,35.380s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 29""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:21:55,13-07-2026 01:21:57,1.722s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:21:57,13-07-2026 01:21:57,0.283s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:21:57,13-07-2026 01:21:58,0.990s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:21:58,13-07-2026 01:21:59,0.401s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:21:59,13-07-2026 01:21:59,0.437s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:21:59,13-07-2026 01:21:59,0.306s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:21:59,13-07-2026 01:22:02,2.681s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:02,13-07-2026 01:22:03,0.943s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:22:03,13-07-2026 01:22:04,1.093s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:22:04,13-07-2026 01:22:05,0.391s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:05,13-07-2026 01:22:05,0.325s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:05,13-07-2026 01:22:05,0.368s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:05,13-07-2026 01:22:06,0.952s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:06,13-07-2026 01:22:17,10.732s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:17,13-07-2026 01:22:28,10.792s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:28,13-07-2026 01:22:28,0.751s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:28,13-07-2026 01:22:29,0.323s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:29,13-07-2026 01:22:29,0.542s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:29,13-07-2026 01:22:30,0.629s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:30,13-07-2026 01:22:30,0.566s,PASSED
+,,,,,,,
+Test Cases/New Test Case,Chrome 150.0.7871.101,,,13-07-2026 01:22:31,13-07-2026 01:23:06,35.385s,PASSED
+"DATA BINDING - {""var_nama_baru"":""Menu 30""}",,,,,,,
+openBrowser(null),Chrome 150.0.7871.101,,,13-07-2026 01:22:31,13-07-2026 01:22:32,1.771s,PASSED
+"navigateToUrl(""http://localhost:5173/"")",Chrome 150.0.7871.101,,,13-07-2026 01:22:32,13-07-2026 01:22:33,0.301s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_namabisnis.id""), ""dwitegar2121@gmail.com"")",Chrome 150.0.7871.101,,,13-07-2026 01:22:33,13-07-2026 01:22:34,1.021s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:22:34,13-07-2026 01:22:34,0.414s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input__1""), ""SkBtNjsS+FHxnnrRXbFqtA=="")",Chrome 150.0.7871.101,,,13-07-2026 01:22:34,13-07-2026 01:22:34,0.435s,PASSED
+"sendKeys(findTestObject(""Page_cuaninowner/input__1""), Keys.chord(ENTER))",Chrome 150.0.7871.101,,,13-07-2026 01:22:34,13-07-2026 01:22:35,0.298s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Menu Management""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:35,13-07-2026 01:22:37,2.694s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Add New Item""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:37,13-07-2026 01:22:38,0.865s,PASSED
+"setText(findTestObject(""Page_cuaninowner/input_Contoh_ Americano Ice""), var_nama_baru)",Chrome 150.0.7871.101,,,13-07-2026 01:22:38,13-07-2026 01:22:39,1.157s,PASSED
+"setEncryptedText(findTestObject(""Page_cuaninowner/input_""), ""rLvs2r7lbdw="")",Chrome 150.0.7871.101,,,13-07-2026 01:22:39,13-07-2026 01:22:40,0.430s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Non-Coffee""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:40,13-07-2026 01:22:40,0.331s,PASSED
+"click(findTestObject(""Page_cuaninowner/span_Tambah Bahan""))",Chrome 150.0.7871.101,,,13-07-2026 01:22:40,13-07-2026 01:22:41,0.368s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral""), ""83121e1d-3522-4570-b806-31127ed0938d"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:41,13-07-2026 01:22:42,0.973s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_1""), ""8e6cce60-f6ab-459f-924f-2b1e6c79a01f"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:42,13-07-2026 01:22:52,10.693s,PASSED
+"selectOptionByValue(findTestObject(""Page_cuaninowner/select_Pilih Stok Bahan -Air MineralAir Mineral_2""), ""b31a8159-969a-4ec8-a869-182f3ff8e044"", false)",Chrome 150.0.7871.101,,,13-07-2026 01:22:52,13-07-2026 01:23:03,10.788s,PASSED
+"click(findTestObject(""Page_cuaninowner/input_https""))",Chrome 150.0.7871.101,,,13-07-2026 01:23:03,13-07-2026 01:23:04,0.762s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Upload""))",Chrome 150.0.7871.101,,,13-07-2026 01:23:04,13-07-2026 01:23:04,0.332s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Kamera""))",Chrome 150.0.7871.101,,,13-07-2026 01:23:04,13-07-2026 01:23:05,0.543s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Ambil Foto""))",Chrome 150.0.7871.101,,,13-07-2026 01:23:05,13-07-2026 01:23:05,0.644s,PASSED
+"click(findTestObject(""Page_cuaninowner/button_Simpan Menu""))",Chrome 150.0.7871.101,,,13-07-2026 01:23:05,13-07-2026 01:23:06,0.550s,PASSED
